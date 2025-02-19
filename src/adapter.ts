@@ -1,4 +1,5 @@
 export interface System {
-	getGpu: () => GPU
+	getGpu(): GPU
+	dispose(): void
 }
 export const system: Partial<System> = {}

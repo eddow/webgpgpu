@@ -5,7 +5,7 @@
 	},
 	"javascript": {
 		"formatter": {
-			"lineWidth": 120,
+			"lineWidth": 100,
 			"quoteStyle": "single",
 			"semicolons": "asNeeded",
 			"trailingCommas": "es5",
@@ -34,7 +34,9 @@
 			"performance": {
 				"noAccumulatingSpread": "off"
 			},
-			"complexity": {},
+			"complexity": {
+				"useArrowFunction": "off"
+			},
 			"security": {},
 			"correctness": {},
 			"nursery": {}

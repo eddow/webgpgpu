@@ -55,6 +55,7 @@
 		"vitest": "^3.0.6"
 	},
 	"dependencies": {
+		"@petamoriken/float16": "^3.9.1",
 		"webgpu": "^0.2.9"
 	}
 }

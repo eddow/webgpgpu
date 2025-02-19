@@ -12,7 +12,7 @@
 		"strictNullChecks": true,
 		"strictBindCallApply": false,
 		"baseUrl": ".",
-		"types": ["@webgpu/types", "node", "jest"]
+		"types": ["vitest"]
 	},
 	"include": ["./**/*.ts"]
 }

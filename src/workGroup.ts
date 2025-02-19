@@ -26,12 +26,18 @@ export function workgroupSize(
 		},
 	} = adapter
 	let remainingSize = maxComputeInvocationsPerWorkgroup
-	const remainingWorkGroupSize = [maxComputeWorkgroupSizeX, maxComputeWorkgroupSizeY, maxComputeWorkgroupSizeZ]
+	const remainingWorkGroupSize = [
+		maxComputeWorkgroupSizeX,
+		maxComputeWorkgroupSizeY,
+		maxComputeWorkgroupSizeZ,
+	]
 	const workGroupCount = [...size] as WorkSize
 	const workGroupSize = workGroupCount.map(() => 1) as WorkSize
 	while (remainingSize > 1) {
 		// Try to find an even dimension (no overhead)
-		let chosenIndex = workGroupCount.findIndex((v, i) => v % 2 === 0 && remainingWorkGroupSize[i] > 1)
+		let chosenIndex = workGroupCount.findIndex(
+			(v, i) => v % 2 === 0 && remainingWorkGroupSize[i] > 1
+		)
 		if (chosenIndex === -1) {
 			/*
 [5, 7] = 35 : try to parallelize while keeping the overall size as minimal as possible
@@ -41,9 +47,13 @@ ceil(size/2)*2 =>
 
 So, optimal = divide the max(size) if ceiling is involved
 */
-			const maxSizeValue = Math.max(...workGroupCount.map((v, i) => (remainingWorkGroupSize[i] === 1 ? 0 : v)))
+			const maxSizeValue = Math.max(
+				...workGroupCount.map((v, i) => (remainingWorkGroupSize[i] === 1 ? 0 : v))
+			)
 			if (maxSizeValue <= 1) break
-			chosenIndex = workGroupCount.findIndex((v) => v === maxSizeValue && remainingWorkGroupSize[v] > 1)
+			chosenIndex = workGroupCount.findIndex(
+				(v) => v === maxSizeValue && remainingWorkGroupSize[v] > 1
+			)
 		}
 		workGroupCount[chosenIndex] = ceilDiv2(workGroupCount[chosenIndex])
 		workGroupSize[chosenIndex] <<= 1
@@ -51,4 +61,8 @@ So, optimal = divide the max(size) if ceiling is involved
 		remainingSize >>= 1
 	}
 	return { workGroupSize, workGroupCount }
+}
+
+export function workGroupCount(workSize: WorkSize, workGroupSize: WorkSize): WorkSize {
+	return workSize.map((v, i) => Math.ceil(v / (workGroupSize[i] ?? 1))) as WorkSize
 }

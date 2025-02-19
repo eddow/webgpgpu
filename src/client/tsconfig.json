@@ -1,8 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"lib": ["esnext", "DOM", "WebWorker"],
-		"moduleResolution": "bundler"
+		"lib": ["esnext", "DOM", "WebWorker"]
 	},
 	"include": ["./**/*.ts"]
 }
