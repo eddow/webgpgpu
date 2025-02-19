@@ -1,10 +1,13 @@
 import { system } from './adapter'
-
-if (!system.getGpu) throw new Error('Library should be imported from server or client')
+if (!system.getGpu) throw new Error('Wrongly linked library usage') // client/server index makes the link
 
 export async function initWebGPU() {
 	const adapter = (await system.getGpu!().requestAdapter()) as GPUAdapter
 	const device = await adapter.requestDevice()
+
+	const limits = adapter.limits
+	console.log(limits.maxComputeInvocationsPerWorkgroup) // Max threads per workgroup
+	console.log(limits.maxComputeWorkgroupSizeX, limits.maxComputeWorkgroupSizeY, limits.maxComputeWorkgroupSizeZ)
 
 	const vertexData = new Float32Array([0.0, 1.0, 1.0, -1.0, -1.0, -1.0])
 	const vertexBuffer = device.createBuffer({
@@ -20,7 +23,7 @@ export async function initWebGPU() {
 
 	const readBuffer = device.createBuffer({
 		size: vertexData.byteLength,
-		usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU readback
+		usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU read back
 	})
 
 	const computeShaderCode = /*wgsl*/ `

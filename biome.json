@@ -5,7 +5,7 @@
 	},
 	"javascript": {
 		"formatter": {
-			"lineWidth": 100,
+			"lineWidth": 120,
 			"quoteStyle": "single",
 			"semicolons": "asNeeded",
 			"trailingCommas": "es5",
@@ -15,6 +15,7 @@
 	"linter": {
 		"rules": {
 			"style": {
+				"noParameterAssign": "off",
 				"noNonNullAssertion": "off",
 				"useSingleVarDeclarator": {
 					"level": "warn",
