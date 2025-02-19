@@ -12,7 +12,7 @@ export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
 
 // TODO: Structs
 
-export abstract class GpGpuData<
+export class GpGpuData<
 	Buffer extends TypedArray,
 	FlatArray extends any[],
 	Element extends number | number[],
@@ -21,10 +21,26 @@ export abstract class GpGpuData<
 	constructor(
 		protected readonly bufferType: any,
 		public readonly elementSize: number,
-		public readonly wgslSpecification: string
+		public readonly wgslSpecification: string,
+		protected elementConvert?: (element: OriginElement) => Element,
+		protected elementRecover?: (element: Element) => OriginElement
 	) {}
-	protected elementConvert?: (element: OriginElement) => Element
-	protected elementRecover?: (element: Element) => OriginElement
+	transform<NewOriginElement>(
+		elementConvert: (element: NewOriginElement) => OriginElement,
+		elementRecover: (element: OriginElement) => NewOriginElement
+	): GpGpuData<Buffer, FlatArray, Element, NewOriginElement> {
+		return new GpGpuData(
+			this.bufferType,
+			this.elementSize,
+			this.wgslSpecification,
+			this.elementConvert
+				? (element: NewOriginElement) => this.elementConvert!(elementConvert(element))
+				: (((element: NewOriginElement) => elementConvert(element)) as any),
+			this.elementRecover
+				? (element: Element) => elementRecover(this.elementRecover!(element))
+				: (element: Element) => elementRecover(element as any)
+		)
+	}
 	writeArray(data: Buffer | OriginElement[] | FlatArray, size: number): Buffer {
 		if (data instanceof this.bufferType) return data as Buffer
 		if (Array.isArray(data)) {

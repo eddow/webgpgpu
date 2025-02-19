@@ -66,3 +66,7 @@ So, optimal = divide the max(size) if ceiling is involved
 export function workGroupCount(workSize: WorkSize, workGroupSize: WorkSize): WorkSize {
 	return workSize.map((v, i) => Math.ceil(v / (workGroupSize[i] ?? 1))) as WorkSize
 }
+
+export function explicitWorkSize(workSize: WorkSize) {
+	return Array.from({ length: 3 }, (_, i) => workSize[i] ?? 1) as [number, number, number]
+}

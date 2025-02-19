@@ -1,6 +1,6 @@
 import { system } from './adapter'
 import type { GpGpuData, TypedArray } from './dataTypes'
-import { type WorkSize, workGroupCount } from './workGroup'
+import { type WorkSize, explicitWorkSize, workGroupCount } from './workGroup'
 
 interface WgslTypedData {
 	name: string
@@ -16,6 +16,7 @@ const outputBindGroupIndex = 2
 
 let reservedBindGroupLayout: GPUBindGroupLayout | undefined
 let root: Promise<WebGpGpu | undefined> | undefined
+let disposed = false
 export class WebGpGpu {
 	/**
 	 * Get the root WebGpGpu instance
@@ -42,6 +43,7 @@ export class WebGpGpu {
 		root = Promise.resolve(undefined)
 		reservedBindGroupLayout = undefined
 		system.dispose?.()
+		disposed = true
 	}
 	private constructor(
 		public readonly device: GPUDevice,
@@ -93,7 +95,8 @@ export class WebGpGpu {
 			{ wgslType: type.wgslSpecification, array: type.writeUnique(value), unique: true, name },
 		])
 	}
-	createFunction(workGroupSize: WorkSize, compute: string) {
+	kernel(workGroupSize: WorkSize, compute: string) {
+		if (disposed) throw new Error('GPU has been disposed')
 		const { device } = this
 		const commonBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
 		const commonBindGroupEntries: GPUBindGroupEntry[] = []
@@ -163,7 +166,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			layout: pipeline.getBindGroupLayout(commonBindGroupIndex),
 			entries: commonBindGroupEntries,
 		})
-		return async function executeFunction(workSize: WorkSize) {
+		const rv = async function executeFunction(workSize: WorkSize) {
+			if (disposed) throw new Error('GPU has been disposed')
 			const messages = (await shaderModuleCompilationInfo).messages
 			if (messages.length > 0) {
 				let hasError = false
@@ -178,14 +182,14 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 				if (hasError) throw new Error('Compilation error')
 			}
-			const explicitWorkSize = Array.from({ length: 3 }, (_, i) => workSize[i] ?? 1) as WorkSize
-			const workGroups = workGroupCount(explicitWorkSize, workGroupSize) as [number, number, number]
+			const explicit = explicitWorkSize(workSize)
+			const workGroups = workGroupCount(explicit, workGroupSize) as [number, number, number]
 
 			const workSizeBuffer = device.createBuffer({
 				size: 12,
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			})
-			device.queue.writeBuffer(workSizeBuffer, 0, new Uint32Array(explicitWorkSize))
+			device.queue.writeBuffer(workSizeBuffer, 0, new Uint32Array(explicit))
 
 			const reservedBindGroup = device.createBindGroup({
 				layout: reservedBindGroupLayout!,
@@ -228,5 +232,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			outputBuffer.unmap()
 			return result
 		}
+		rv.toString = () => code
+		return rv
 	}
 }
