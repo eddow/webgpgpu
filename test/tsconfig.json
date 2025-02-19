@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ESNext",
+		"lib": ["esnext"],
+		"declaration": false,
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": false,
+		"forceConsistentCasingInFileNames": true,
+		"strictNullChecks": true,
+		"strictBindCallApply": false,
+		"baseUrl": ".",
+		"types": ["@webgpu/types", "node", "jest"]
+	},
+	"include": ["./**/*.ts"]
+}
