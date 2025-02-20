@@ -67,6 +67,6 @@ export function workGroupCount(workSize: WorkSize, workGroupSize: WorkSize): Wor
 	return workSize.map((v, i) => Math.ceil(v / (workGroupSize[i] ?? 1))) as WorkSize
 }
 
-export function explicitWorkSize(workSize: WorkSize) {
+export function explicitWorkSize(workSize: [] | WorkSize) {
 	return Array.from({ length: 3 }, (_, i) => workSize[i] ?? 1) as [number, number, number]
 }

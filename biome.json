@@ -35,7 +35,8 @@
 				"noAccumulatingSpread": "off"
 			},
 			"complexity": {
-				"useArrowFunction": "off"
+				"useArrowFunction": "off",
+				"noBannedTypes": "info"
 			},
 			"security": {},
 			"correctness": {},

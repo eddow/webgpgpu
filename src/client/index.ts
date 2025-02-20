@@ -1,6 +1,6 @@
-import { system } from '../adapter'
+import { provideGpu } from '../system'
 
 if (!navigator.gpu) throw new Error('WebGPU not supported by browser')
-system.getGpu = () => navigator.gpu!
+provideGpu(() => navigator.gpu!)
 
 export * from '..'

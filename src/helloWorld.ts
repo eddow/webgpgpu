@@ -1,4 +1,4 @@
-import { system } from './adapter'
+import { system } from './system'
 
 export async function initWebGPU() {
 	const adapter = (await system.getGpu!().requestAdapter()) as GPUAdapter
