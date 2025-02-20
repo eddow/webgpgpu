@@ -12,9 +12,8 @@ import {
 	assertSize,
 	inferSize,
 	isTypedArrayXD,
+	resolvedSize,
 } from './typedArrays'
-
-export class SizeInferError extends Error {}
 
 export function elementsToTypedArray<
 	Buffer extends TypedArray,
@@ -26,13 +25,7 @@ export function elementsToTypedArray<
 	data: any,
 	size: SizeSpec[]
 ): Buffer {
-	function inferredSizes<SS extends SizeSpec[]>(size: SS) {
-		return size.map((s) => {
-			if (typeof s !== 'number') throw new SizeInferError('Size should have been inferred - TODO')
-			return s
-		}) as NumericSizesSpec<SS>
-	}
-	const { bufferType, elementSize, elementConvert } = specification
+	const { bufferType, elementSize, elementConvert, transformSize } = specification
 	// #region 0D
 	if (size.length === 0) {
 		if (data instanceof bufferType) {
@@ -40,7 +33,7 @@ export function elementsToTypedArray<
 			return data as Buffer
 		}
 		const elm = elementConvert
-			? elementConvert(data as OriginElement, inferredSizes(specification.transformSize))
+			? elementConvert(data as OriginElement, resolvedSize(transformSize, workSizeInfer))
 			: data
 		return elm instanceof bufferType ? elm : new bufferType(elm)
 	}
@@ -50,7 +43,7 @@ export function elementsToTypedArray<
 		if (data instanceof bufferType) {
 			if ((data as Buffer).length % elementSize !== 0)
 				throw new ArraySizeValidationError(
-					`Size mismatch in dimension 1: ${data.length} is not a multiple of ${elementSize}`
+					`Size mismatch in dimension 0: ${data.length} is not a multiple of ${elementSize}`
 				)
 			assertSize([(data as Buffer).length / elementSize], [size[0]], workSizeInfer)
 			return data as Buffer
@@ -63,7 +56,12 @@ export function elementsToTypedArray<
 		// Make the `if` early not to not make it in the loop
 		if (elementConvert) {
 			for (const element of data as OriginElement[]) {
-				rv.set(elementConvert(element, inferredSizes(specification.transformSize)), dst)
+				rv.set(
+					elementConvert(element, [
+						/*todo*/
+					] as NumericSizesSpec<InputSizesSpec>),
+					dst
+				)
 				dst += elementSize
 			}
 		} else
@@ -144,7 +142,7 @@ export class BufferReader<Buffer extends TypedArray, OriginElement> {
 		const {
 			size,
 			buffer,
-			specification: { elementSize, elementRecover },
+			specification: { elementSize, elementRecover, transformSize },
 		} = this
 		if (index.length !== size.length)
 			throw new ArraySizeValidationError(

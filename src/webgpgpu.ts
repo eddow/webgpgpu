@@ -1,8 +1,9 @@
+import { elementsToTypedArray } from 'buffers'
 import type { Buffable, InputType } from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { getGpu, log } from './system'
-import type { AnyInput, InputXD, TypedArray, WorkSizeInfer } from './typedArrays'
-import { type WorkSize, explicitWorkSize, workGroupCount } from './workGroup'
+import { type AnyInput, type TypedArray, type WorkSizeInfer, resolvedSize } from './typedArrays'
+import { type WorkSize, explicitWorkSize, workGroupCount, workgroupSize } from './workGroup'
 
 const reservedBindGroupIndex = 0
 const commonBindGroupIndex = 1
@@ -16,6 +17,12 @@ let disposed = false
 interface BindingEntryDescription {
 	layoutEntry: GPUBindGroupLayoutEntry
 	description: string
+}
+
+interface BoundDataEntry {
+	name: string
+	type: Buffable
+	resource: GPUBindingResource
 }
 
 export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
@@ -59,11 +66,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 	public readonly adapter: GPUAdapter
 	protected readonly workSizeInfer: WorkSizeInfer
 	protected readonly definitions: string[]
-	protected readonly commonData: {
-		name: string
-		typedArray: TypedArray
-		type: Buffable
-	}[]
+	protected readonly commonData: BoundDataEntry[]
 	protected readonly inputs: Record<string, Buffable>
 	protected readonly workGroupSize: [number, number, number] | null
 	private constructor(
@@ -81,7 +84,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			adapter: GPUAdapter
 			workSizeInfer: WorkSizeInfer
 			definitions: string[]
-			commonData: { name: string; typedArray: TypedArray; type: Buffable }[]
+			commonData: BoundDataEntry[]
 			inputs: Record<string, Buffable>
 			workGroupSize: [number, number, number] | null
 		}>
@@ -99,45 +102,38 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			definitions: [...this.definitions, ...definitions],
 		})
 	}
-	/* TODO: common
-	common<Buffer extends TypedArray, Element extends number | number[], OriginElement>(
-		name: string,
-		type: GpGpuData<Buffer, Element, OriginElement>,
-		value: InputXD<OriginElement>,
-		size: SizeSpec[] = []
-	) {
+	common<Specs extends Partial<Inputs>>(commons: Specs): WebGpGpu<Omit<Inputs, keyof Specs>> {
+		const { device } = this
 		const workSizeInfer = { ...this.workSizeInfer }
+		const newInputs = { ...this.inputs }
+		const newCommons = [...this.commonData]
+		for (const [name, data] of Object.entries(commons)) {
+			const buffable = newInputs[name]
+			delete newInputs[name]
+			const typedArray = buffable.toTypedArray(workSizeInfer, data)
+			newCommons.push({
+				name,
+				type: buffable,
+				resource: dimensionalEntry(
+					device,
+					name,
+					resolvedSize(buffable.size, workSizeInfer),
+					typedArray
+				),
+			})
+		}
+
 		return new WebGpGpu(this, {
 			workSizeInfer,
-			commonData: [
-				...this.commonData,
-				{
-					type: {
-						wgslType: type.wgslSpecification,
-						name,
-						byteLength: type.bufferType.BYTES_PER_ELEMENT,
-					},
-					typedArray: elementsToTypedArray(type, workSizeInfer, value, size),
-				},
-			],
+			commonData: newCommons,
+			inputs: newInputs,
 		})
-	}*/
-	input<Spec extends Buffable>(
-		name: string,
-		specification: Spec
-	): WebGpGpu<Inputs & { [key: typeof name]: InputType<Spec> }>
+	}
 	input<Specs extends Record<string, Buffable>>(
 		inputs: Specs
-	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>>
-	input(input: string | Record<string, Buffable>, specification?: Buffable) {
-		if (typeof input === 'string') {
-			if (specification === undefined) throw new Error('Missing specification')
-			return this.input({ [input]: specification })
-		}
-		const inputs = { ...this.inputs }
-		for (const [name, specification] of Object.entries(input)) inputs[name] = specification
+	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>> {
 		return new WebGpGpu(this, {
-			inputs,
+			inputs: { ...this.inputs, ...inputs },
 		})
 	}
 	workGroup(...size: WorkSize) {
@@ -155,23 +151,24 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			const inputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
 			const inputBindGroupDescription: string[] = []
 			const inputsDescription: [string, number, Buffable][] = []
-			/* TODO: common
-		for (const { type, typedArray } of this.commonData) {
-			const binding = commonBindGroupLayoutEntries.length
-			const { resource, layoutEntry, description, write } = dimensionalEntry(
-				device,
-				type,
-				typedArray.byteLength,
-				binding
-			)
-			write(typedArray)
-			commonBindGroupLayoutEntries.push(layoutEntry)
-			commonBindGroupDescription.push(description)
-			commonBindGroupEntries.push({
-				binding,
-				resource,
-			})
-		}*/
+
+			for (const { name, resource, type: buffable } of this.commonData) {
+				const binding = commonBindGroupLayoutEntries.length
+
+				const { layoutEntry, description } = dimensionalEntryDescription(
+					name,
+					buffable,
+					commonBindGroupIndex,
+					binding,
+					true
+				)
+				commonBindGroupLayoutEntries.push(layoutEntry)
+				commonBindGroupDescription.push(description)
+				commonBindGroupEntries.push({
+					binding,
+					resource,
+				})
+			}
 			for (const [name, specification] of Object.entries(this.inputs)) {
 				const binding = inputBindGroupLayoutEntries.length
 				const { layoutEntry, description } = dimensionalEntryDescription(
@@ -194,9 +191,11 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 				label: 'input-bind-group-layout',
 				entries: inputBindGroupLayoutEntries,
 			})
-			const workGroupSize = this.workGroupSize!
 			const workSizeInfer = { ...this.workSizeInfer }
-			// TODO use workSizeInfer instead of kernel' argument: then remove the argument
+			const workGroupSize =
+				this.workGroupSize ||
+				workgroupSize([workSizeInfer.x, workSizeInfer.y, workSizeInfer.z], this.device)
+
 			const code = /*wgsl*/ `
 @group(${reservedBindGroupIndex}) @binding(0) var<uniform> threads : vec3u;
 ${commonBindGroupDescription.join('\n')}
@@ -236,6 +235,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			})
 
 			const commonBindGroup = device.createBindGroup({
+				label: 'common-bind-group',
 				layout: pipeline.getBindGroupLayout(commonBindGroupIndex),
 				entries: commonBindGroupEntries,
 			})
@@ -257,7 +257,34 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 						if (hasError) throw new Error('Compilation error', { cause: messages })
 					}
 					const callWorkSizeInfer = { ...workSizeInfer }
-					const explicit = explicitWorkSize(workSize)
+
+					const inputBindGroupEntries: GPUBindGroupEntry[] = []
+					for (const [name, binding, buffable] of inputsDescription) {
+						// TODO: default values
+						const typeArray = buffable.toTypedArray(callWorkSizeInfer, inputs[name]!)
+						const resource = dimensionalEntry(
+							device,
+							name,
+							resolvedSize(buffable.size, callWorkSizeInfer),
+							typeArray
+						)
+						inputBindGroupEntries.push({
+							binding,
+							resource,
+						})
+					}
+					const inputBindGroup = device.createBindGroup({
+						label: 'input-bind-group',
+						layout: pipeline.getBindGroupLayout(inputBindGroupIndex),
+						entries: inputBindGroupEntries,
+					})
+
+					// #region Reserved bind group
+
+					const explicit = [callWorkSizeInfer.x, callWorkSizeInfer.y, callWorkSizeInfer.z].map(
+						(v) => v ?? workSize.shift() ?? 1
+					) as [number, number, number]
+
 					const workGroups = workGroupCount(explicit, workGroupSize) as [number, number, number]
 
 					const workSizeBuffer = device.createBuffer({
@@ -265,8 +292,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 						usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 					})
 					device.queue.writeBuffer(workSizeBuffer, 0, new Uint32Array(explicit))
-
 					const reservedBindGroup = device.createBindGroup({
+						label: 'reserved-bind-group',
 						layout: reservedBindGroupLayout!,
 						entries: [
 							{
@@ -275,40 +302,25 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 							},
 						],
 					})
-					const inputBindGroupEntries: GPUBindGroupEntry[] = []
-					for (const [name, binding, buffable] of inputsDescription) {
-						const data = inputs[name]!
 
-						const resource = dimensionalEntry(
-							device,
-							name,
-							buffable.size.map((_, i) => workSize[i]),
-							buffable.toTypedArray(callWorkSizeInfer, data)
-						)
-						inputBindGroupEntries.push({
-							binding,
-							resource,
-						})
-					}
-					const inputBindGroup = device.createBindGroup({
-						layout: pipeline.getBindGroupLayout(inputBindGroupIndex),
-						entries: inputBindGroupEntries,
-					})
+					// #endregion
 
 					const outputBuffer = device.createBuffer({
-						size: workSize[0]! * 4,
+						size: explicit[0]! * 4,
 						usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC, // Used in compute shader
 					})
 
 					const readBuffer = device.createBuffer({
-						size: workSize[0]! * 4,
+						size: explicit[0]! * 4,
 						usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU read back
 					})
 					const outputBindGroup = device.createBindGroup({
+						label: 'output-bind-group',
 						layout: outputBindGroupLayout,
 						entries: [{ binding: 0, resource: { buffer: outputBuffer } }],
 					})
-					// 🔹 Encode and dispatch work
+
+					// Encode and dispatch work
 					const commandEncoder = device.createCommandEncoder()
 					const passEncoder = commandEncoder.beginComputePass()
 					passEncoder.setPipeline(pipeline)
@@ -319,8 +331,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 					passEncoder.dispatchWorkgroups(...workGroups)
 					passEncoder.end()
 
-					commandEncoder.copyBufferToBuffer(outputBuffer, 0, readBuffer, 0, workSize[0]! * 4)
-					// 🔹 Submit commands
+					commandEncoder.copyBufferToBuffer(outputBuffer, 0, readBuffer, 0, explicit[0]! * 4)
+					// Submit commands
 					device.queue.submit([commandEncoder.finish()])
 					let result: Float32Array
 					try {

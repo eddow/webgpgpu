@@ -1,3 +1,5 @@
+import { SizeSpec } from 'typedArrays'
+
 /**
  * Parallelizing loops, these are the imbricated loops sizes
  * @example [10, 20] => for(int x = 0; x < 10; x++) for(int y = 0; y < 20; y++) {...}
@@ -11,12 +13,9 @@ function ceilDiv2(value: number): number {
  * "best" here means the most divided (biggest workgroup-size) while having the lowest overhead (ceiling when dividing by 2)
  * @param size
  * @param maxSize Maximum parallelization size for workgroups
- * @returns { workGroupSize, workGroupCount } The optimized workgroup size and the corresponding count of workgroups
+ * @returns workGroupSize The optimized workgroup size and the corresponding count of workgroups
  */
-export function workgroupSize(
-	size: WorkSize,
-	adapter: GPUAdapter
-): { workGroupSize: WorkSize; workGroupCount: WorkSize } {
+export function workgroupSize(size: (number | undefined)[], device: GPUDevice): WorkSize {
 	const {
 		limits: {
 			maxComputeInvocationsPerWorkgroup,
@@ -24,14 +23,14 @@ export function workgroupSize(
 			maxComputeWorkgroupSizeY,
 			maxComputeWorkgroupSizeZ,
 		},
-	} = adapter
+	} = device
 	let remainingSize = maxComputeInvocationsPerWorkgroup
 	const remainingWorkGroupSize = [
 		maxComputeWorkgroupSizeX,
 		maxComputeWorkgroupSizeY,
 		maxComputeWorkgroupSizeZ,
 	]
-	const workGroupCount = [...size] as WorkSize
+	const workGroupCount = size.map((v) => v ?? 1) as WorkSize
 	const workGroupSize = workGroupCount.map(() => 1) as WorkSize
 	while (remainingSize > 1) {
 		// Try to find an even dimension (no overhead)
@@ -52,7 +51,7 @@ So, optimal = divide the max(size) if ceiling is involved
 			)
 			if (maxSizeValue <= 1) break
 			chosenIndex = workGroupCount.findIndex(
-				(v) => v === maxSizeValue && remainingWorkGroupSize[v] > 1
+				(v, i) => v === maxSizeValue && remainingWorkGroupSize[i] > 1
 			)
 		}
 		workGroupCount[chosenIndex] = ceilDiv2(workGroupCount[chosenIndex])
@@ -60,7 +59,23 @@ So, optimal = divide the max(size) if ceiling is involved
 		remainingWorkGroupSize[chosenIndex] >>= 1
 		remainingSize >>= 1
 	}
-	return { workGroupSize, workGroupCount }
+	while (remainingSize > 1) {
+		// If we remain with available division BUT no more dimension to divide,
+		// then divide the not-yet inferred dimension (undefined)
+		const notInferredIndex = size.findIndex(
+			(v, i) => v === undefined && remainingWorkGroupSize[i] > 1
+		)
+		if (notInferredIndex === -1) break
+		// Here, no ceiling: we play with powers of 2
+		const affected = Math.min(
+			remainingSize,
+			remainingWorkGroupSize[notInferredIndex] / workGroupSize[notInferredIndex]
+		)
+		remainingSize /= affected
+		workGroupSize[notInferredIndex] *= affected
+		remainingWorkGroupSize[notInferredIndex] /= affected
+	}
+	return workGroupSize
 }
 
 export function workGroupCount(workSize: WorkSize, workGroupSize: WorkSize): WorkSize {

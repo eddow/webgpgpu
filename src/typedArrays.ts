@@ -1,16 +1,8 @@
 import { Float16Array } from '@petamoriken/float16'
-import type { Buffable } from './dataTypes'
+import type { Buffable, NumericSizesSpec } from './dataTypes'
 
 export class ArraySizeValidationError extends Error {}
 
-// With manually removed types not supported by WebGPU
-//| Float64Array
-//| BigUint64Array
-//| BigInt64Array
-//| Uint16Array
-//| Int16Array
-//| Uint8Array
-//| Int8Array
 export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
 
 export type TypedArrayXD<T extends TypedArray = TypedArray> = T & {
@@ -126,12 +118,6 @@ export type WorkSizeInfer = {
 	z?: number
 }
 
-export function inferSize(size: SizeSpec[], workSizeInfer: WorkSizeInfer) {
-	const revealed = size.map((s) => (typeof s === 'number' ? s : workSizeInfer[threadAxis[s]]))
-	if (!revealed.every((r) => r !== undefined)) throw new Error('Size inference failed') // TODO: be specific + multidimensional
-	return revealed.reduce((a, b) => a * b, 1)
-}
-
 export function assertSize(given: number[], expected: SizeSpec[], workSizeInfer: WorkSizeInfer) {
 	if (given.length !== expected.length)
 		throw new ArraySizeValidationError(
@@ -141,7 +127,7 @@ export function assertSize(given: number[], expected: SizeSpec[], workSizeInfer:
 		if (typeof expected[i] === 'number') {
 			if (expected[i] === given[i]) continue
 			throw new ArraySizeValidationError(
-				`Size mismatch in dimension ${i}: ${given[i]} !== ${expected[i] as number}`
+				`Size mismatch in on threads.${'xyz'[i]}: ${given[i]} !== ${expected[i] as number}`
 			)
 		}
 		if (!(expected[i] in threadAxis))
@@ -155,7 +141,7 @@ export function assertSize(given: number[], expected: SizeSpec[], workSizeInfer:
 		}
 		if (workSizeInfer[dIndex] !== given[i])
 			throw new ArraySizeValidationError(
-				`Size mismatch in dimension ${i}: ${given[i]} !== ${workSizeInfer[dIndex]}`
+				`Size mismatch on threads.${'xyz'[i]}: ${given[i]} !== ${workSizeInfer[dIndex]}`
 			)
 	}
 }
@@ -165,17 +151,26 @@ export function assertElementSize(given: any, expected: number) {
 			`Element size mismatch: ${given} received while expecting ${expected}`
 		)
 }
-/*
-export type InputType<Spec extends Buffable<any, SizeSpec[]>> = Spec extends Buffable<
-	infer OriginElement,
-	[]
->
-	? Input0D<OriginElement>
-	: Spec extends Buffable<infer OriginElement, [SizeSpec]>
-		? Input1D<OriginElement>
-		: Spec extends Buffable<infer OriginElement, [SizeSpec, SizeSpec]>
-			? Input2D<OriginElement>
-			: Spec extends Buffable<infer OriginElement, [SizeSpec, SizeSpec, SizeSpec]>
-				? Input3D<OriginElement>
-				: never
-*/
+
+export class SizeInferError extends Error {}
+/**
+ * Expect all sizes to be inferred, returns them
+ */
+export function resolvedSize<SS extends SizeSpec[]>(
+	size: SS,
+	workSizeInfer: WorkSizeInfer
+): NumericSizesSpec<SS> {
+	return size.map((s) => {
+		const rv = typeof s === 'number' ? s : workSizeInfer[threadAxis[s]]
+		if (rv === undefined)
+			throw new SizeInferError(`Size ${threadAxis[s as keyof typeof threadAxis]} not inferred`)
+		return rv
+	}) as NumericSizesSpec<SS>
+}
+
+/**
+ * Expect all sizes to be inferred, returns their product
+ */
+export function inferSize(size: SizeSpec[], workSizeInfer: WorkSizeInfer) {
+	return resolvedSize(size, workSizeInfer).reduce((a, b) => a * b, 1)
+}

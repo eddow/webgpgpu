@@ -1,5 +1,4 @@
 export { setLog } from './system'
-export * from './helloWorld'
 export * from './workGroup'
 export * from './dataTypesList'
 export * from './webgpgpu'
