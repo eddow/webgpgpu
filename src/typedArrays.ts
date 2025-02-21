@@ -4,7 +4,9 @@ export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
 	[K in keyof SizesSpec]: number
 }
 
-export class ArraySizeValidationError extends Error {
+export class WebGpGpuError extends Error {}
+
+export class ArraySizeValidationError extends WebGpGpuError {
 	name = 'ArraySizeValidationError'
 }
 
