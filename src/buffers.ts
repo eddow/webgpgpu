@@ -1,13 +1,13 @@
-import type { Buffable, NumericSizesSpec } from 'dataTypes'
+import type { Buffable } from 'dataTypes'
 import { log } from './log'
 import {
 	ArraySizeValidationError,
+	type NumericSizesSpec,
 	type SizeSpec,
 	type TypedArray,
 	type WorkSizeInfer,
 	assertElementSize,
 	assertSize,
-	inferSize,
 	isTypedArrayXD,
 	resolvedSize,
 } from './typedArrays'
@@ -36,7 +36,7 @@ export function elementsToTypedArray<
 		const elm = elementConvert
 			? elementConvert(data as OriginElement, resolvedSize(transformSize, workSizeInfer))
 			: data
-		return elm instanceof bufferType ? elm : new bufferType(elm)
+		return elm instanceof bufferType ? (elm as Buffer) : new bufferType(elm)
 	}
 	// #endregion 0D
 	// #region 1D
@@ -105,7 +105,7 @@ export function elementsToTypedArray<
 		if (!rv) {
 			itemSize = subBuffer.length
 			// TODO: multidimensional inferring
-			rv = new bufferType(inferSize(size, workSizeInfer))
+			rv = new bufferType(resolvedSize(size, workSizeInfer).reduce((a, b) => a * b, 1))
 		} else if (subBuffer.length !== itemSize)
 			throw new ArraySizeValidationError(
 				`Size mismatch in dimension ${size.length}: Buffer length ${subBuffer.length} was expected to be ${itemSize}`
@@ -127,7 +127,7 @@ function bufferPosition(index: number[], size: number[], elementSize: number): n
 }
 
 function nextXdIndex(index: number[], size: number[]): boolean {
-	for (let i = index.length - 1; i > 0; i--) {
+	for (let i = index.length - 1; i >= 0; i--) {
 		index[i]++
 		if (index[i] < size[i]) return true
 		index[i] = 0
@@ -135,17 +135,23 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 	return false
 }
 
-export class BufferReader<Buffer extends TypedArray, OriginElement> {
+export class BufferReader<
+	Buffer extends TypedArray = TypedArray,
+	OriginElement = any,
+	SizesSpec extends SizeSpec[] = SizeSpec[],
+	InputSizesSpec extends SizeSpec[] = [],
+	InputSpec extends number[] = number[],
+> {
 	constructor(
-		public readonly specification: Buffable<Buffer, OriginElement, SizeSpec[]>,
+		public readonly buffable: Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>,
 		public readonly buffer: Buffer,
 		public readonly size: number[]
 	) {}
-	element(...index: number[]): OriginElement {
+	element(...index: InputSpec): OriginElement {
 		const {
 			size,
 			buffer,
-			specification: { elementSize, elementRecover, transformSize },
+			buffable: { elementSize, elementRecover, transformSize },
 		} = this
 		if (index.length !== size.length)
 			throw new ArraySizeValidationError(
@@ -153,36 +159,51 @@ export class BufferReader<Buffer extends TypedArray, OriginElement> {
 			)
 		const pos = bufferPosition(index, size, elementSize)
 		const element = buffer.subarray(pos, pos + elementSize)
+		// @ts-expect-error TODO: fix size
 		return (elementRecover?.(element, [
 			/*todo*/
 		]) ?? element) as OriginElement
 	}
-	*elements(): Generator<[number[], OriginElement]> {
+	*entries(): Generator<[InputSpec, OriginElement]> {
 		const {
 			size,
 			buffer,
-			specification: { elementSize, elementRecover },
+			buffable: { elementSize, elementRecover },
 		} = this
+		if (size.some((s) => s === 0)) {
+			log.warn('Zero size buffer as output')
+			return
+		}
 		const index: number[] = size.map(() => 0)
 		let pos = 0
 		if (elementRecover)
-			while (nextXdIndex(index, size)) {
+			do {
 				yield [
-					[...index],
+					[...index] as InputSpec,
+					// @ts-expect-error TODO: fix size
 					elementRecover(buffer.subarray(pos, pos + elementSize), [
 						/*todo*/
 					]),
 				]
 				pos += elementSize
-			}
+			} while (nextXdIndex(index, size))
 		else
-			while (nextXdIndex(index, size)) {
-				yield [[...index], buffer.subarray(pos, pos + elementSize) as OriginElement]
+			do {
+				yield [[...index] as InputSpec, buffer.subarray(pos, pos + elementSize) as OriginElement]
 				pos += elementSize
-			}
+			} while (nextXdIndex(index, size))
 	}
-	slice(...index: [number, ...number[]]): BufferReader<Buffer, OriginElement> {
-		const { size, buffer, specification } = this
+	*values(): Generator<OriginElement> {
+		yield* this.entries().map(([_, v]) => v)
+	}
+	toArray(): OriginElement[] {
+		return [...this.values()]
+	}
+	// TODO: type
+	slice(
+		...index: [number, ...number[]]
+	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+		const { size, buffer, buffable: specification } = this
 		const { elementSize } = specification
 		if (!this.size.length)
 			throw new ArraySizeValidationError(`Cannot slice a ${this.size.length}-D buffer`)
@@ -193,7 +214,7 @@ export class BufferReader<Buffer extends TypedArray, OriginElement> {
 		const subSize = size.slice(index.length)
 		const subLength = subSize.reduce((a, b) => a * b, 1)
 		const pos = bufferPosition(index, size, elementSize) * subLength
-		return new BufferReader<Buffer, OriginElement>(
+		return new BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>(
 			specification,
 			buffer.subarray(pos, pos + subLength) as Buffer,
 			subSize

@@ -156,7 +156,6 @@ const kernel = webGpGpu
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
 
-
 ### workGroup
 
 If you know what a workgroup is and really want to specify its size, do it here.

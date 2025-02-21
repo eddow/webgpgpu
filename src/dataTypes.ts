@@ -1,22 +1,34 @@
 import { Float16Array } from '@petamoriken/float16'
-import { elementsToTypedArray } from './buffers'
-import type { InputXD, SizeSpec, TypedArray, WorkSizeInfer } from './typedArrays'
-
-export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
-	[K in keyof SizesSpec]: number
-}
+import { BufferReader, elementsToTypedArray } from './buffers'
+import {
+	type InputXD,
+	type NumericSizesSpec,
+	type SizeSpec,
+	type TypedArray,
+	type WorkSizeInfer,
+	resolvedSize,
+} from './typedArrays'
 
 export type ValuedBuffable<
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
 	SizesSpec extends SizeSpec[] = SizeSpec[],
 	InputSizesSpec extends SizeSpec[] = [],
-	InputSpec extends number[] = any,
+	InputSpec extends number[] = number[],
 > = {
 	buffable: Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	value: InputXD<OriginElement, InputSpec, Buffer>
 }
 
+export type TypedArrayConstructor<TArray extends TypedArray> = {
+	new (content: number[] | number): TArray
+	new (ab: ArrayBuffer): TArray
+	BYTES_PER_ELEMENT: number
+}
+
+export function isBuffable(buffable: any): buffable is Buffable {
+	return buffable instanceof GpGpuData
+}
 /**
  * Interface is used for type inference
  */
@@ -25,7 +37,7 @@ export interface Buffable<
 	OriginElement = any,
 	SizesSpec extends SizeSpec[] = SizeSpec[],
 	InputSizesSpec extends SizeSpec[] = [],
-	InputSpec extends number[] = any,
+	InputSpec extends number[] = number[],
 > {
 	readonly elementConvert?: (
 		element: OriginElement,
@@ -36,10 +48,7 @@ export interface Buffable<
 		size: NumericSizesSpec<InputSizesSpec>
 	) => OriginElement
 	readonly size: SizesSpec
-	readonly bufferType: {
-		new (content: number[] | number): Buffer
-		BYTES_PER_ELEMENT: number
-	}
+	readonly bufferType: TypedArrayConstructor<Buffer>
 	toTypedArray(
 		workSizeInfer: WorkSizeInfer,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
@@ -51,9 +60,15 @@ export interface Buffable<
 	readonly wgslSpecification: string
 	readonly elementSize: number
 	readonly transformSize: InputSizesSpec
+	readTypedArray(
+		buffer: Buffer,
+		workSizeInferred: WorkSizeInfer
+	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 }
 
 export type InputType<T extends Buffable> = Parameters<T['value']>[0]
+export type OutputType<T extends Buffable> = ReturnType<T['readTypedArray']>
+
 class GpGpuData<
 	Buffer extends TypedArray,
 	OriginElement,
@@ -63,10 +78,7 @@ class GpGpuData<
 > implements Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 {
 	constructor(
-		public readonly bufferType: {
-			new (content: number[] | number): Buffer
-			BYTES_PER_ELEMENT: number
-		},
+		public readonly bufferType: TypedArrayConstructor<Buffer>,
 		public readonly elementSize: number,
 		public readonly wgslSpecification: string,
 		public readonly size: SizesSpec,
@@ -118,6 +130,16 @@ class GpGpuData<
 			data,
 			this.size,
 			required
+		)
+	}
+	readTypedArray(
+		buffer: Buffer,
+		workSizeInferred: WorkSizeInfer
+	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+		return new BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>(
+			this,
+			buffer,
+			resolvedSize(this.size, workSizeInferred)
 		)
 	}
 	array<SubSizesSpec extends SizeSpec[]>(...size: SubSizesSpec) {

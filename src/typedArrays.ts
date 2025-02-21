@@ -1,5 +1,8 @@
 import { Float16Array } from '@petamoriken/float16'
-import type { Buffable, NumericSizesSpec } from './dataTypes'
+
+export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
+	[K in keyof SizesSpec]: number
+}
 
 export class ArraySizeValidationError extends Error {
 	name = 'ArraySizeValidationError'
@@ -216,11 +219,4 @@ export function applyDefaultInfer(
 			)
 	}
 	return rv
-}
-
-/**
- * Expect all sizes to be inferred, returns their product
- */
-export function inferSize(size: SizeSpec[], workSizeInfer: WorkSizeInfer) {
-	return resolvedSize(size, workSizeInfer).reduce((a, b) => a * b, 1)
 }

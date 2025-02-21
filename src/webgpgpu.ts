@@ -1,4 +1,12 @@
-import type { Buffable, InputType, ValuedBuffable } from './dataTypes'
+import type { BufferReader } from 'buffers'
+import {
+	type Buffable,
+	type InputType,
+	type OutputType,
+	type TypedArrayConstructor,
+	type ValuedBuffable,
+	isBuffable,
+} from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { type Log, log } from './log'
 import {
@@ -31,6 +39,13 @@ interface BindingEntryDescription {
 	description: string
 }
 
+interface OutputEntryDescription {
+	name: string
+	resource: GPUBindingResource
+	encoder(commandEncoder: GPUCommandEncoder): void
+	read(): Promise<TypedArray>
+}
+
 interface BoundDataEntry {
 	name: string
 	type: Buffable
@@ -43,11 +58,9 @@ interface RootInfo {
 	readonly reservedBindGroupLayout: GPUBindGroupLayout
 }
 
-type AnyOutput = any
-
 export class WebGpGpu<
-	Inputs extends Record<string, AnyInput> = {} /*,
-	Outputs extends Record<string, AnyOutput> = {},*/,
+	Inputs extends Record<string, AnyInput> = {},
+	Outputs extends Record<string, BufferReader> = {},
 > {
 	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): WebGpGpu
 	static createRoot(
@@ -83,6 +96,7 @@ export class WebGpGpu<
 					definitions: [],
 					commonData: [],
 					inputs: {},
+					outputs: {},
 					workGroupSize: null,
 					usedNames: new Set(['thread', 'threads']),
 				},
@@ -136,17 +150,19 @@ export class WebGpGpu<
 	private readonly definitions: readonly string[]
 	private readonly commonData: readonly BoundDataEntry[]
 	private readonly inputs: Record<string, Buffable>
+	private readonly outputs: Record<string, Buffable>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
 	public static readonly log: Log = log
 	private constructor(
-		parent: WebGpGpu<any> | undefined,
+		parent: WebGpGpu<any, any> | undefined,
 		{
 			workSizeInfer,
 			definitions,
 			commonData,
 			inputs,
+			outputs,
 			workGroupSize,
 			usedNames,
 		}: Partial<{
@@ -154,6 +170,7 @@ export class WebGpGpu<
 			definitions: string[]
 			commonData: BoundDataEntry[]
 			inputs: Record<string, Buffable>
+			outputs: Record<string, Buffable>
 			workGroupSize: [number, number, number] | null
 			usedNames: Set<string>
 		}>,
@@ -163,6 +180,7 @@ export class WebGpGpu<
 		this.definitions = definitions ?? parent!.definitions
 		this.commonData = commonData ?? parent!.commonData
 		this.inputs = inputs ?? parent!.inputs
+		this.outputs = outputs ?? parent!.outputs
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
 		this.usedNames = usedNames ?? parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
@@ -175,26 +193,25 @@ export class WebGpGpu<
 	}
 
 	defined(...definitions: string[]) {
-		return new WebGpGpu<Inputs>(this, {
+		return new WebGpGpu<Inputs, Outputs>(this, {
 			definitions: [...this.definitions, ...definitions],
 		})
 	}
 	common<Specs extends Record<string, ValuedBuffable>>(
 		commons: Specs
-	): WebGpGpu<Omit<Inputs, keyof Specs>> {
+	): WebGpGpu<Omit<Inputs, keyof Specs>, Outputs> {
 		const usedNames = this.checkNameConflicts(...Object.keys(commons))
 		const { device } = this
 		const workSizeInfer = { ...this.workSizeInfer }
-		const newInputs = { ...this.inputs }
 		const newCommons = [...this.commonData]
 		for (const [name, { buffable, value }] of Object.entries(commons)) {
-			if (!buffable) throw new ParameterError(`Unknown input: ${name}`)
-			delete newInputs[name]
+			if (!isBuffable(buffable) || !value)
+				throw new ParameterError(`Bad parameter for common \`${name}\``)
 			const typedArray = buffable.toTypedArray(workSizeInfer, value, `common \`${name}\``)
 			newCommons.push({
 				name,
 				type: buffable,
-				resource: dimensionalEntry(
+				resource: dimensionalInput(
 					device,
 					name,
 					resolvedSize(buffable.size, workSizeInfer),
@@ -211,22 +228,24 @@ export class WebGpGpu<
 	}
 	input<Specs extends Record<string, Buffable>>(
 		inputs: Specs
-	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>> /*, Outputs*/> {
+	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>, Outputs> {
+		for (const [name, buffable] of Object.entries(inputs))
+			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 		return new WebGpGpu(this, {
 			inputs: { ...this.inputs, ...inputs },
 			usedNames: this.checkNameConflicts(...Object.keys(inputs)),
 		})
-	} /*
+	}
 	output<Specs extends Record<string, Buffable>>(
-		inputs: Specs
-	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>> {
+		outputs: Specs
+	): WebGpGpu<Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>> {
 		return new WebGpGpu(this, {
-			inputs: { ...this.inputs, ...inputs },
-			usedNames: this.checkNameConflicts(...Object.keys(inputs)),
+			outputs: { ...this.outputs, ...outputs },
+			usedNames: this.checkNameConflicts(...Object.keys(outputs)),
 		})
-	}*/
+	}
 	workGroup(...size: WorkSize) {
-		return new WebGpGpu<Inputs>(this, {
+		return new WebGpGpu<Inputs, Outputs>(this, {
 			workGroupSize: size.length ? explicitWorkSize(size) : null,
 		})
 	}
@@ -236,13 +255,12 @@ export class WebGpGpu<
 				device,
 				rootInfo: { reservedBindGroupLayout },
 			} = this
+
+			// #region Common
+
 			const commonBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
 			const commonBindGroupEntries: GPUBindGroupEntry[] = []
 			const commonBindGroupDescription: string[] = []
-			const inputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
-			const inputBindGroupDescription: string[] = []
-			const inputsDescription: [string, number, Buffable][] = []
-
 			for (const { name, resource, type: buffable } of this.commonData) {
 				const binding = commonBindGroupLayoutEntries.length
 
@@ -260,28 +278,64 @@ export class WebGpGpu<
 					resource,
 				})
 			}
-			for (const [name, specification] of Object.entries(this.inputs)) {
+			const commonBindGroupLayout = device.createBindGroupLayout({
+				label: 'common-bind-group-layout',
+				entries: commonBindGroupLayoutEntries,
+			})
+
+			// #endregion Common
+
+			// #region Input
+			const inputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
+			const inputBindGroupDescription: string[] = []
+			const inputsDescription: [string, number, Buffable][] = []
+
+			for (const [name, buffable] of Object.entries(this.inputs)) {
 				const binding = inputBindGroupLayoutEntries.length
 				const { layoutEntry, description } = dimensionalEntryDescription(
 					name,
-					specification,
+					buffable,
 					inputBindGroupIndex,
 					binding,
 					true
 				)
 				inputBindGroupLayoutEntries.push(layoutEntry)
 				inputBindGroupDescription.push(description)
-				inputsDescription.push([name, binding, specification])
+				inputsDescription.push([name, binding, buffable])
 			}
-
-			const commonBindGroupLayout = device.createBindGroupLayout({
-				label: 'common-bind-group-layout',
-				entries: commonBindGroupLayoutEntries,
-			})
 			const inputBindGroupLayout = device.createBindGroupLayout({
 				label: 'input-bind-group-layout',
 				entries: inputBindGroupLayoutEntries,
 			})
+
+			// #endregion Input
+
+			// #region Output
+
+			const outputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
+			const outputBindGroupDescription: string[] = []
+			const outputDescription: { name: string; binding: number; buffable: Buffable }[] = []
+
+			for (const [name, buffable] of Object.entries(this.outputs)) {
+				const binding = outputBindGroupLayoutEntries.length
+				const { layoutEntry, description } = dimensionalEntryDescription(
+					name,
+					buffable,
+					outputBindGroupIndex,
+					binding,
+					false
+				)
+				outputBindGroupLayoutEntries.push(layoutEntry)
+				outputBindGroupDescription.push(description)
+				outputDescription.push({ name, binding, buffable })
+			}
+			const outputBindGroupLayout = device.createBindGroupLayout({
+				label: 'output-bind-group-layout',
+				entries: outputBindGroupLayoutEntries,
+			})
+
+			// #endregion Output
+
 			const workSizeInfer = applyDefaultInfer(
 				this.workSizeInfer,
 				kernelWorkInf,
@@ -296,8 +350,7 @@ export class WebGpGpu<
 @group(${reservedBindGroupIndex}) @binding(0) var<uniform> threads : vec3u;
 ${commonBindGroupDescription.join('\n')}
 ${inputBindGroupDescription.join('\n')}
-
-@group(${outputBindGroupIndex}) @binding(0) var<storage, read_write> outputBuffer : array<f32>;
+${outputBindGroupDescription.join('\n')}
 
 ${this.definitions.join('\n')}
 
@@ -311,11 +364,6 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			//Compile the shader module
 			const shaderModule = device.createShaderModule({ code })
 			const shaderModuleCompilationInfo = shaderModule.getCompilationInfo()
-
-			const outputBindGroupLayout = device.createBindGroupLayout({
-				label: 'output-bind-group-layout',
-				entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }],
-			})
 			//Create pipeline
 			const pipeline = device.createComputePipeline({
 				label: 'compute-pipeline',
@@ -344,7 +392,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 					inputs: Inputs,
 					callWorkInf: WorkSizeInfer = {},
 					callRequiredInf: RequiredAxis = ''
-				) {
+				): Promise<Outputs> {
 					try {
 						// Check for device disposition and make sure it's not referenced by a scope
 						const device = getDevice()
@@ -362,12 +410,15 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 							if (hasError) throw new CompilationError(messages)
 						}
+						// Inference can be done here as non-compulsory inference are not compelling
 						const callWorkSizeInfer = applyDefaultInfer(
 							workSizeInfer,
 							callWorkInf,
 							callRequiredInf,
 							'Kernel call'
 						)
+
+						// #region Input
 
 						const usedInputs = new Set<string>()
 						const inputBindGroupEntries: GPUBindGroupEntry[] = []
@@ -380,7 +431,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 								inputs[name]!,
 								`input \`${name}\``
 							)
-							const resource = dimensionalEntry(
+							const resource = dimensionalInput(
 								device,
 								name,
 								resolvedSize(buffable.size, callWorkSizeInfer),
@@ -395,15 +446,19 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 						if (unusedInputs.length) log.warn(`Unused inputs: ${unusedInputs.join(', ')}`)
 						const inputBindGroup = device.createBindGroup({
 							label: 'input-bind-group',
-							layout: pipeline.getBindGroupLayout(inputBindGroupIndex),
+							layout: inputBindGroupLayout,
 							entries: inputBindGroupEntries,
 						})
 
+						// #endregion
 						// #region Reserved bind group
 
-						const explicit = [callWorkSizeInfer.x, callWorkSizeInfer.y, callWorkSizeInfer.z].map(
-							(v) => v ?? 1
-						) as [number, number, number]
+						for (const c of 'xyz') callWorkSizeInfer[c as 'x' | 'y' | 'z'] ??= 1
+						const explicit = [callWorkSizeInfer.x, callWorkSizeInfer.y, callWorkSizeInfer.z] as [
+							number,
+							number,
+							number,
+						]
 
 						const workGroups = workGroupCount(explicit, workGroupSize) as [number, number, number]
 
@@ -425,22 +480,37 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 						// #endregion
 
-						const outputBuffer = device.createBuffer({
-							size: explicit[0]! * 4,
-							usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC, // Used in compute shader
-						})
+						// #region Output
 
-						const readBuffer = device.createBuffer({
-							size: explicit[0]! * 4,
-							usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU read back
-						})
+						const outputBindGroupEntries: GPUBindGroupEntry[] = []
+						const outputBuffers: OutputEntryDescription[] = []
+						for (const { name, binding, buffable } of outputDescription) {
+							const OutputEntryDescription = dimensionalOutput(
+								device,
+								name,
+								resolvedSize(buffable.size, callWorkSizeInfer),
+								buffable.elementSize,
+								buffable.bufferType
+							)
+							const { resource } = OutputEntryDescription
+							outputBindGroupEntries.push({
+								binding,
+								resource,
+							})
+							outputBuffers.push(OutputEntryDescription)
+						}
 						const outputBindGroup = device.createBindGroup({
 							label: 'output-bind-group',
 							layout: outputBindGroupLayout,
-							entries: [{ binding: 0, resource: { buffer: outputBuffer } }],
+							entries: outputBindGroupEntries,
 						})
+
+						// #endregion
 						// Encode and dispatch work
-						const commandEncoder = device.createCommandEncoder()
+
+						const commandEncoder = device.createCommandEncoder({
+							label: 'webGpGpu-encoder',
+						})
 						const passEncoder = commandEncoder.beginComputePass()
 						passEncoder.setPipeline(pipeline)
 						passEncoder.setBindGroup(reservedBindGroupIndex, reservedBindGroup)
@@ -450,19 +520,21 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 						passEncoder.dispatchWorkgroups(...workGroups)
 						passEncoder.end()
 
-						commandEncoder.copyBufferToBuffer(outputBuffer, 0, readBuffer, 0, explicit[0]! * 4)
+						// Add the "copy from output-buffer to read-buffer" command
+						for (const { encoder } of outputBuffers) encoder(commandEncoder)
+
 						// Submit commands
 						device.queue.submit([commandEncoder.finish()])
-						let result: Float32Array
-						try {
-							await readBuffer.mapAsync(GPUMapMode.READ)
-							result = new Float32Array(readBuffer.getMappedRange())
-						} catch (e) {
-							log.error((e as Error).message ?? e)
-							throw new Error('GPU error', { cause: e })
+
+						const reads = await Promise.all(outputBuffers.map(({ read }) => read()))
+
+						const result: Record<string, BufferReader> = {}
+						for (let i = 0; i < outputDescription.length; i++) {
+							const { name, buffable } = outputDescription[i]
+							result[name] = buffable.readTypedArray(reads[i], callWorkSizeInfer)
 						}
-						outputBuffer.unmap()
-						return result
+
+						return result as Outputs
 					} catch (e) {
 						log.error(`Uncaught kernel error: ${(e as Error).message ?? e}`)
 						throw e
@@ -502,7 +574,7 @@ function dimensionalEntryDescription(
 				layoutEntry: {
 					binding,
 					visibility: GPUShaderStage.COMPUTE,
-					buffer: { type: 'read-only-storage' },
+					buffer: { type: readOnly ? 'read-only-storage' : 'storage' },
 				},
 				description: `@group(${group}) @binding(${binding}) var<storage, ${readOnly ? 'read' : 'read_write'}> ${name} : array<${buffable.wgslSpecification}>;`,
 			}
@@ -515,7 +587,7 @@ function dimensionalEntryDescription(
 	}
 }
 
-function dimensionalEntry(
+function dimensionalInput(
 	device: GPUDevice,
 	name: string,
 	size: number[],
@@ -539,6 +611,47 @@ function dimensionalEntry(
 			})
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }
+		}
+		/* TODO: Textures
+		case 2:
+		case 3:*/
+		default:
+			throw new Error('Not implemented')
+	}
+}
+
+function dimensionalOutput(
+	device: GPUDevice,
+	name: string,
+	size: number[],
+	elementSize: number,
+	bufferType: TypedArrayConstructor<TypedArray>
+): OutputEntryDescription {
+	const totalSize = elementSize * bufferType.BYTES_PER_ELEMENT * size.reduce((a, b) => a * b, 1)
+	switch (size.length) {
+		//case 0: impossible - throws on layout
+		case 1: {
+			const outputBuffer = device.createBuffer({
+				label: `${name}-output-buffer`,
+				size: totalSize,
+				usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC, // Used in compute shader
+			})
+			const readBuffer = device.createBuffer({
+				label: `${name}-read-buffer`,
+				size: totalSize,
+				usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU read back
+			})
+			function encoder(commandEncoder: GPUCommandEncoder) {
+				commandEncoder.copyBufferToBuffer(outputBuffer, 0, readBuffer, 0, totalSize)
+			}
+			async function read() {
+				await readBuffer.mapAsync(GPUMapMode.READ)
+				// `getMappedRange` returns a view in the GPU memory - it has to be copied then unmapped (to free GPU memory)
+				const rv = new bufferType(readBuffer.getMappedRange().slice(0))
+				readBuffer.unmap()
+				return rv
+			}
+			return { resource: { buffer: outputBuffer }, encoder, read, name }
 		}
 		/* TODO: Textures
 		case 2:
