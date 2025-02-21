@@ -1,14 +1,18 @@
-import { afterAll, describe, expect, test } from 'vitest'
-import { b } from 'vitest/dist/chunks/suite.qtkXWc6R.js'
-import { Vector2, WebGpGpu, f32, threads, vec2f } from '../src/server'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import createWebGpGpu, { Vector2, type WebGpGpu, f32, threads, vec2f } from '../src/server'
 import { ArraySizeValidationError } from '../src/typedArrays'
 
+let webGpGpu: WebGpGpu
+
+beforeAll(async () => {
+	webGpGpu = await createWebGpGpu()
+})
 afterAll(() => {
-	WebGpGpu.dispose()
+	webGpGpu.dispose()
 })
 describe('overall', () => {
 	test('toString', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu.workGroup(42).kernel('')
 		expect(kernel).toBeDefined()
 		expect(kernel).toBeInstanceOf(Function)
@@ -23,7 +27,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 `)
 	})
 	test('no argument', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu.workGroup(3).kernel('outputBuffer[thread.x] = 42;')
 		const rv = await kernel({}, { x: 3 })
 		expect(rv).toBeDefined()
@@ -33,21 +37,21 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 describe('inputs', () => {
 	test('a uniform - TypedArray', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu.workGroup(3).input({ a: f32 }).kernel('outputBuffer[thread.x] = a;')
 		const rv = await kernel({ a: Float32Array.from([43]) }, { x: 3 })
 		expect(rv).toBeDefined()
 		expect(rv).toMatchObject(Float32Array.from([43, 43, 43]))
 	})
 	test('a uniform - value', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu.workGroup(3).input({ a: f32 }).kernel('outputBuffer[thread.x] = a;')
 		const rv = await kernel({ a: 44 }, { x: 3 })
 		expect(rv).toBeDefined()
 		expect(rv).toMatchObject(Float32Array.from([44, 44, 44]))
 	})
 	test('an float array - TypedArray', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
@@ -57,7 +61,7 @@ describe('inputs', () => {
 		expect(rv).toMatchObject(Float32Array.from([33, 36, 39]))
 	})
 	test('an float array - value', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
@@ -67,7 +71,7 @@ describe('inputs', () => {
 		expect(rv).toMatchObject(Float32Array.from([33, 36, 39]))
 	})
 	test('an vec2 array - TypedArray', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
@@ -77,7 +81,7 @@ describe('inputs', () => {
 		expect(rv).toMatchObject(Float32Array.from([36, 42, 48]))
 	})
 	test('an vec2 array - value', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
@@ -96,7 +100,7 @@ describe('inputs', () => {
 		expect(rv).toMatchObject(Float32Array.from([36, 42, 48]))
 	})
 	test('an vec2 array - transform', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: Vector2.array(3) })
@@ -115,7 +119,7 @@ describe('inputs', () => {
 		expect(rv).toMatchObject(Float32Array.from([36, 42, 48]))
 	})
 	test('two arguments', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3), b: f32 })
@@ -133,17 +137,17 @@ describe('inputs', () => {
 })
 describe('size inference', () => {
 	test('infer', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.common({
 				a: f32.array(threads.x).value([1, 2, 3]),
-				b: f32.array(threads.x).value([4, 5, 6, 7, 8]),
+				b: f32.array(threads.y).value([4, 5, 6, 7, 8]),
 			})
 			.kernel('')
 		expect(kernel.toString()).toMatch('@workgroup_size(4,8,') // The last one depends on the hardware configuration
 	})
 	test('assert', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		expect(() =>
 			webGpGpu.common({
 				a: f32.array(threads.x).value([1, 2, 3]),
@@ -152,7 +156,7 @@ describe('size inference', () => {
 		).toThrowError(ArraySizeValidationError)
 	})
 	test('effect - common', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.common({ a: f32.array(threads.x).value([1, 2, 3]) })
 			.kernel('outputBuffer[thread.x] = a[thread.x]+3.;')
@@ -162,7 +166,7 @@ describe('size inference', () => {
 		expect(rv).toMatchObject(Float32Array.from([4, 5, 6]))
 	})
 	test('effect - input', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.input({ a: f32.array(threads.x) })
 			.kernel('outputBuffer[thread.x] = a[thread.x]+2.;')
@@ -174,7 +178,7 @@ describe('size inference', () => {
 })
 describe('diverse', () => {
 	test('defined', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu
 			.input({ a: f32.array(threads.x) })
 			.common({ b: f32.array(threads.x).value([2, 4, 6]) })
@@ -187,7 +191,7 @@ fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 		expect(rv).toMatchObject(Float32Array.from([3, 6, 9]))
 	})
 	test('name conflict', async () => {
-		const webGpGpu = await WebGpGpu.root
+		//const webGpGpu = await webGpGpuPromise!
 		const kernel = webGpGpu.input({ a: f32.array(threads.x) })
 		// @ts-expect-error b is not defined
 		expect(() => kernel.common({ b: [2, 4, 6] })).toThrowError()

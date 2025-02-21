@@ -190,6 +190,7 @@ export const mat4x4i = new GpGpuXInt32<
 >(16, 'mat4x4<i32>')
 
 // #endregion GpGpu4x4
+// #region f16
 
 export let f16: GpGpuSingleton<number> = f32
 export let vec2h: GpGpuSingleton<[number, number]> = vec2f
@@ -329,3 +330,5 @@ export function activateF16(available: boolean) {
 		(v) => ({ r: v[0], g: v[1], b: v[2], a: v[3] })
 	)
 }
+
+// #endregion f16

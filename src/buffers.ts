@@ -1,5 +1,5 @@
 import type { Buffable, NumericSizesSpec } from 'dataTypes'
-import { log } from './system'
+import { log } from './log'
 import {
 	ArraySizeValidationError,
 	type SizeSpec,

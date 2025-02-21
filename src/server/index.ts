@@ -1,15 +1,18 @@
 import { create, globals } from 'webgpu'
 export { create, globals }
-import { provideGpu } from '../system'
+import { WebGpGpu } from '../webgpgpu'
 
-export let gpuOptions: string[] = []
 /**
  * Has to be called *before* accessing WebGpGpu.root !
- * @param options
+ * @param options Options passed to `webgpu`
+ * @see https://github.com/dawn-gpu/node-webgpu?tab=readme-ov-file#usage
  */
-export function setWebGpuOptions(...options: string[]) {
-	gpuOptions = options
+export default function createWebGpGpu(
+	adapterOptions?: GPURequestAdapterOptions,
+	deviceDescriptor?: GPUDeviceDescriptor,
+	...options: string[]
+) {
+	return WebGpGpu.createRoot(create(options), { deviceDescriptor, adapterOptions })
 }
-provideGpu(() => create(gpuOptions)!)
 Object.assign(globalThis, globals)
 export * from '..'

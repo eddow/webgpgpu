@@ -13,10 +13,10 @@ npm install webgpgpu
 ### Usage
 
 ```ts
-import { WebGpGpu, f32, threads } from 'webgpgpu'
+import createWebGpGpu, { f32, threads } from 'webgpgpu'
 
 async function main() {
-	const webGpGpu = await WebGpGpu.root
+	const webGpGpu = await createWebGpGpu()
 
 	const kernel = webGpGpu
 		.input({
@@ -109,6 +109,8 @@ outputBuffer[thread.x] = a[thread.x] * b;
 	`)
 ```
 
+> Note: The kernel function retrieves the *whole* generated code on `toString()`
+
 ### defined
 
 Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`.
@@ -198,7 +200,7 @@ These "shaped" types use `f16` for the precision
 
 16-bit float is a thing in gpus and should be taken into account as it's a bit the "native" or "optimized" work size (important when working with mobile devices for ex). The big draw back is that *all devices don't support it*.
 
-Hence, in order to know if it's supported, `webGpGpu.f16` tells if it exists and all the f16 types (`f16`, `vec2h`, `mat2x2h`, etc.) will be available, and set back to their `f32` equivalent when `WebGpGpu.root` is ready, in case of non-availability.
+Hence, in order to know if it's supported, `webGpGpu.f16` tells if it exists and all the f16 types (`f16`, `vec2h`, `mat2x2h`, etc.) will be set to their `f32` equivalent until when the first `WebGpGpu` is ready and confirms their availability.
 
 The system has not yet been completely tested and remains the question of writing f16 immediate values &c.
 
@@ -283,29 +285,70 @@ TODO
 
 ## System calls
 
-### setLog
+### Creation
 
-Allows you to catch all the logs. (compilation errors, warnings like "Unused inputs", etc.)
-Defaults to `console.log` equivalent
-
+The library exposes a function `createWebGpGpu` that creates a root `WebGpGpu` object.
 ```ts
-import { setLog } from 'webgpgpu'
-
-setLog({
-	warn(message: string): void {...},
-	error(message: string): void {...}
-})
+function createWebGpGpu(
+	adapterOptions?: GPURequestAdapterOptions,
+	deviceDescriptor?: GPUDeviceDescriptor,
+	[...WebGPUOptions: string[]]
+)
 ```
 
-### node.js only - setWebGpuOptions
+#### Node.js only
 
-The library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who allows giving parameters when creating the GPU object. These can be specified here *before* accessing `WebGpGpu.root` (it is a property-get who launches the process the first time it is called).
+The `WebGPUOptions` are only available to the node.js clients.
+The library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who allows giving parameters when creating the GPU object. These parameters can be given to the default creation export.
 
 ```ts
-import { setWebGpuOptions } from 'webgpgpu'
+import createWebGpGpu from 'webgpgpu'
 
-setWebGpuOptions('enable-dawn-features=allow_unsafe_apis,dump_shaders,disable_symbol_renaming', ...)
+async function main() {
+	const webGpGpu = createWebGpGpu({}, {}, 'enable-dawn-features=allow_unsafe_apis,dump_shaders,disable_symbol_renaming', ...)
+	...
+}
 ```
+
+#### Hand-made
+
+If you manage to have your own, want to share a device, ...
+`WebGpGpu` exposes :
+```ts
+class WebGpGpu {
+	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): WebGpGpu
+	static createRoot(
+		root: GPUAdapter,
+		options?: { dispose?: () => void; deviceDescriptor?: GPUDeviceDescriptor }
+	): Promise<WebGpGpu>
+	static createRoot(
+		root: GPU,
+		options?: {
+			dispose?: () => void
+			deviceDescriptor?: GPUDeviceDescriptor
+			adapterOptions?: GPURequestAdapterOptions
+		}
+	): Promise<WebGpGpu>
+
+	get device(): GPUDevice
+	dispose(): void
+}
+```
+
+Note: the `dispose` function disposes the all the WebGpGpu objects from the root (created by `createWebGpGpu` or `WebGpGpu.createRoot`)
+
+### Logging
+
+`WebGpGpu` exposes:
+```ts
+WebGpGpu.log: {
+	warn(message: string): void,
+	error(message: string): void,
+}
+```
+
+`warn` and `error` can be set separately as the whole library uses it. (mainly for compilation messages) or extreme cases as "uploaded size(0) array", ...
+Note that a `log.error` will always have its associated exception throw.
 
 ## Exceptions
 
@@ -321,3 +364,7 @@ setWebGpuOptions('enable-dawn-features=allow_unsafe_apis,dump_shaders,disable_sy
 ## TODOs
 
 - Texture management (for now, only 0/1-D)
+- structures
+- Perhaps some canvas output ?
+- Chaining (output become input of next kernel without transfer in CPU memory)
+  - Even more complex pipeline management?

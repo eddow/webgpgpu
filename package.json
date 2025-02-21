@@ -2,7 +2,8 @@
 	"name": "webgpgpu",
 	"version": "1.0.0",
 	"scripts": {
-		"test": "vitest",
+		"test": "vitest run",
+		"test:watch": "vitest watch",
 		"test:coverage": "vitest --coverage",
 		"build": "rollup -c",
 		"watch": "rollup -c -w",
