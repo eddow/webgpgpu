@@ -1,4 +1,4 @@
-import type { Buffable, InputType } from './dataTypes'
+import type { Buffable, InputType, ValuedBuffable } from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { getGpu, log } from './system'
 import {
@@ -126,16 +126,24 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			definitions: [...this.definitions, ...definitions],
 		})
 	}
-	common<Specs extends Partial<Inputs>>(commons: Specs): WebGpGpu<Omit<Inputs, keyof Specs>> {
+	checkNameConflicts(...names: string[]) {
+		const conflicts = names.filter((name) => this.usedNames.has(name))
+		if (conflicts.length)
+			throw new ParameterError(`Parameter name conflict: ${conflicts.join(', ')}`)
+		return new Set([...this.usedNames, ...names])
+	}
+	common<Specs extends Record<string, ValuedBuffable>>(
+		commons: Specs
+	): WebGpGpu<Omit<Inputs, keyof Specs>> {
+		const usedNames = this.checkNameConflicts(...Object.keys(commons))
 		const { device } = this
 		const workSizeInfer = { ...this.workSizeInfer }
 		const newInputs = { ...this.inputs }
 		const newCommons = [...this.commonData]
-		for (const [name, data] of Object.entries(commons)) {
-			const buffable = newInputs[name]
+		for (const [name, { buffable, value }] of Object.entries(commons)) {
 			if (!buffable) throw new ParameterError(`Unknown input: ${name}`)
 			delete newInputs[name]
-			const typedArray = buffable.toTypedArray(workSizeInfer, data, `Setting common ${name}`)
+			const typedArray = buffable.toTypedArray(workSizeInfer, value, `common \`${name}\``)
 			newCommons.push({
 				name,
 				type: buffable,
@@ -151,19 +159,15 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 		return new WebGpGpu(this, {
 			workSizeInfer,
 			commonData: newCommons,
-			inputs: newInputs,
+			usedNames,
 		})
 	}
 	input<Specs extends Record<string, Buffable>>(
 		inputs: Specs
 	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>> {
-		const newNames = Object.keys(inputs)
-		const conflicts = newNames.filter((name) => this.usedNames.has(name))
-		if (conflicts.length)
-			throw new ParameterError(`Parameter name conflict: ${conflicts.join(', ')}`)
 		return new WebGpGpu(this, {
 			inputs: { ...this.inputs, ...inputs },
-			usedNames: new Set([...this.usedNames, ...newNames]),
+			usedNames: this.checkNameConflicts(...Object.keys(inputs)),
 		})
 	}
 	workGroup(...size: WorkSize) {
@@ -312,7 +316,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 						const typeArray = buffable.toTypedArray(
 							callWorkSizeInfer,
 							inputs[name]!,
-							`Setting parameter ${name}`
+							`input \`${name}\``
 						)
 						const resource = dimensionalEntry(
 							device,

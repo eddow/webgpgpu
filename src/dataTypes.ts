@@ -5,8 +5,20 @@ import type { InputXD, SizeSpec, TypedArray, WorkSizeInfer } from './typedArrays
 export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
 	[K in keyof SizesSpec]: number
 }
+
+export type ValuedBuffable<
+	Buffer extends TypedArray = TypedArray,
+	OriginElement = any,
+	SizesSpec extends SizeSpec[] = SizeSpec[],
+	InputSizesSpec extends SizeSpec[] = [],
+	InputSpec extends number[] = any,
+> = {
+	buffable: Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+	value: InputXD<OriginElement, InputSpec, Buffer>
+}
+
 /**
- * Interface is needed for type inference
+ * Interface is used for type inference
  */
 export interface Buffable<
 	Buffer extends TypedArray = TypedArray,
@@ -33,12 +45,15 @@ export interface Buffable<
 		data: InputXD<OriginElement, InputSpec, Buffer>,
 		actionInfo: string
 	): TypedArray
+	value(
+		v: InputXD<OriginElement, InputSpec, Buffer>
+	): ValuedBuffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	readonly wgslSpecification: string
 	readonly elementSize: number
 	readonly transformSize: InputSizesSpec
 }
 
-export type InputType<T extends Buffable> = Parameters<T['toTypedArray']>[1]
+export type InputType<T extends Buffable> = Parameters<T['value']>[0]
 class GpGpuData<
 	Buffer extends TypedArray,
 	OriginElement,
@@ -85,6 +100,13 @@ class GpGpuData<
 			elementRecover
 		)
 	}
+	/**
+	 * Creates a `TypedArray` from `data`
+	 * @param workSizeInfer Size inference data
+	 * @param data Original data to convert
+	 * @param required Whether to modify the size inference data and mark modifications as "required" if given (The text is actuallyused in exception description)
+	 * @returns TypedArray
+	 */
 	toTypedArray(
 		workSizeInfer: WorkSizeInfer,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
@@ -114,6 +136,14 @@ class GpGpuData<
 			this.elementConvert,
 			this.elementRecover
 		)
+	}
+	value(
+		v: InputXD<OriginElement, InputSpec, Buffer>
+	): ValuedBuffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+		return {
+			buffable: this,
+			value: v,
+		}
 	}
 }
 

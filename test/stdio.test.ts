@@ -135,23 +135,26 @@ describe('size inference', () => {
 	test('infer', async () => {
 		const webGpGpu = await WebGpGpu.root
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x), b: f32.array(threads.y) })
-			.common({ a: [1, 2, 3], b: [4, 5, 6, 7, 8] })
+			.common({
+				a: f32.array(threads.x).value([1, 2, 3]),
+				b: f32.array(threads.x).value([4, 5, 6, 7, 8]),
+			})
 			.kernel('')
 		expect(kernel.toString()).toMatch('@workgroup_size(4,8,') // The last one depends on the hardware configuration
 	})
 	test('assert', async () => {
 		const webGpGpu = await WebGpGpu.root
-		const kernel = webGpGpu.input({ a: f32.array(threads.x), b: f32.array(threads.x) })
-		expect(() => kernel.common({ a: [1, 2, 3], b: [4, 5, 6, 7, 8] })).toThrowError(
-			ArraySizeValidationError
-		)
+		expect(() =>
+			webGpGpu.common({
+				a: f32.array(threads.x).value([1, 2, 3]),
+				b: f32.array(threads.x).value([4, 5, 6, 7, 8]),
+			})
+		).toThrowError(ArraySizeValidationError)
 	})
 	test('effect - common', async () => {
 		const webGpGpu = await WebGpGpu.root
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x) })
-			.common({ a: [1, 2, 3] })
+			.common({ a: f32.array(threads.x).value([1, 2, 3]) })
 			.kernel('outputBuffer[thread.x] = a[thread.x]+3.;')
 
 		const rv = await kernel({})
@@ -173,9 +176,8 @@ describe('diverse', () => {
 	test('defined', async () => {
 		const webGpGpu = await WebGpGpu.root
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x), b: f32.array(threads.x) })
-			// TODO: f32.array(threads.x).value([1,2,3])
-			.common({ b: [2, 4, 6] })
+			.input({ a: f32.array(threads.x) })
+			.common({ b: f32.array(threads.x).value([2, 4, 6]) })
 			.defined(/*wgsl*/ `
 fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 			`)

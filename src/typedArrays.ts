@@ -160,7 +160,7 @@ export function assertSize(
 			makeRequired(workSizeInfer, dIndex, required)
 			continue
 		}
-		if (!workSizeInfer.required && dIndex in workSizeInfer) {
+		if (!workSizeInfer.required?.[dIndex]) {
 			workSizeInfer[dIndex] = given[i]
 			makeRequired(workSizeInfer, dIndex, required)
 			continue

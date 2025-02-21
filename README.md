@@ -147,11 +147,11 @@ Defines a common input value to all calls (and makes a unique transfer to the GP
 
 ```ts
 const kernel = webGpGpu
-	.input({a: f32.array(threads.x), b: f32.array(threads.x)})
-	.common({a: [1, 2, 3]})
-	.output({output: f32.array(threads.x)})
+	.input({ b: f32.array(threads.x) })
+	.common({ a: f32.array(threads.x).value([1, 2, 3]) })
+	.output({ output: f32.array(threads.x) })
 	.kernel('outputBuffer[thread.x] = a[thread.x] + b[thread.x];')
-const {output} = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
+const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
 
 
@@ -200,7 +200,52 @@ These "shaped" types use `f16` for the precision
 
 Hence, in order to know if it's supported, `webGpGpu.f16` tells if it exists and all the f16 types (`f16`, `vec2h`, `mat2x2h`, etc.) will be available, and set back to their `f32` equivalent when `WebGpGpu.root` is ready, in case of non-availability.
 
-The system has not yet been completely tested and remains the question of writing f16 immediates &c.
+The system has not yet been completely tested and remains the question of writing f16 immediate values &c.
+
+### "Type" objects
+
+These types object offer (if needed) these functions. The functions changing the definition are chainable and have no side effect, they create a new type object from the original one and the given specifications.
+
+#### array
+
+Declares an `array of` something. Ex: `f32.array(3, 4)`
+
+#### transform
+
+Declares a transformation to read/write `TypedArray`.
+- `elementConvert` gives an array-like (perhaps directly a `TypedArray`) from a value
+- `elementRecover` creates a value from an array-like (a `TypedArray.subarray`)
+
+Note that arrays can be converted! The next code is doing the expected job : `MyClass` is transferable to an array of float (hence the transform function have a 1-D size parameter) and an array
+
+```ts
+const myValues: MyClass[] = [...]
+const myType = f32.array(threads.x).transform<MyClass>(
+	(m: MyClass, [size]: [number])=> [...],
+	(o: ArrayLike<number>, [size]: [number])=> new MyClass(o)
+)
+myType.array(threads.y).value(myValues)
+```
+
+#### value
+
+Just creates a "typed value" (ex: `f32.value(1)`) that can be used as argument of many WebGpGpu functions.
+
+The given value can always be a `FlatSomethingArray` (`TypedArray`) or some combination (array of D-1 inputs).
+
+> Not chainable! A "typed value" is not a type. It wraps it as buffable in `{ buffable, value }`
+
+#### toTypedArray
+
+Creates a `TypedArray` from the given value. It also manages the size inference.
+
+```ts
+toTypedArray(
+	workSizeInfer: WorkSizeInfer,
+	data: InputXD<OriginElement, InputSpec, Buffer>,
+	required?: string
+)
+```
 
 ## Size inference
 
@@ -273,3 +318,6 @@ setWebGpuOptions('enable-dawn-features=allow_unsafe_apis,dump_shaders,disable_sy
 - [VS Code plugin for inline-wgsl coloring](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
 - Linux: Do *not* use chromium, it will not support WebGPU - install chrome/firefox(untested)/...
 
+## TODOs
+
+- Texture management (for now, only 0/1-D)
