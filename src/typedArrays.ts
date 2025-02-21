@@ -1,7 +1,9 @@
 import { Float16Array } from '@petamoriken/float16'
 import type { Buffable, NumericSizesSpec } from './dataTypes'
 
-export class ArraySizeValidationError extends Error {}
+export class ArraySizeValidationError extends Error {
+	name = 'ArraySizeValidationError'
+}
 
 export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
 
@@ -116,32 +118,56 @@ export type WorkSizeInfer = {
 	x?: number
 	y?: number
 	z?: number
+	required?: {
+		x?: string
+		y?: string
+		z?: string
+	}
 }
 
-export function assertSize(given: number[], expected: SizeSpec[], workSizeInfer: WorkSizeInfer) {
+function makeRequired(
+	workSizeInfer: WorkSizeInfer,
+	dIndex: keyof typeof threads,
+	required?: string
+) {
+	if (required === undefined) return
+	workSizeInfer.required ??= {}
+	workSizeInfer.required[dIndex] = required
+}
+export function assertSize(
+	given: number[],
+	expected: SizeSpec[],
+	workSizeInfer: WorkSizeInfer,
+	required?: string
+) {
 	if (given.length !== expected.length)
 		throw new ArraySizeValidationError(
-			`Dimension mismatch in size comparison: ${given.length} !== ${expected.length}`
+			`Dimension mismatch in size comparison: ${given.length}-D size compared to ${expected.length}-D one while ${required}`
 		)
 	for (let i = 0; i < given.length; i++) {
 		if (typeof expected[i] === 'number') {
 			if (expected[i] === given[i]) continue
 			throw new ArraySizeValidationError(
-				`Size mismatch in on threads.${'xyz'[i]}: ${given[i]} !== ${expected[i] as number}`
+				`Size mismatch in on threads.${'xyz'[i]}: ${required}(${given[i]}) !== hard-coded ${expected[i] as number}`
 			)
 		}
 		if (!(expected[i] in threadAxis))
 			throw new ArraySizeValidationError(
-				`Unexpected size specification, expected number of thread axis: ${String(expected[i])}`
+				`Unexpected size specification, expected number of thread axis: ${String(expected[i])} while ${required}`
 			)
 		const dIndex = threadAxis[expected[i] as keyof typeof threadAxis]
-		if (workSizeInfer[dIndex] === undefined) {
-			workSizeInfer[dIndex] = given[i]
+		if (workSizeInfer[dIndex] === given[i]) {
+			makeRequired(workSizeInfer, dIndex, required)
 			continue
 		}
-		if (workSizeInfer[dIndex] !== given[i])
+		if (!workSizeInfer.required && dIndex in workSizeInfer) {
+			workSizeInfer[dIndex] = given[i]
+			makeRequired(workSizeInfer, dIndex, required)
+			continue
+		}
+		if (required !== undefined)
 			throw new ArraySizeValidationError(
-				`Size mismatch on threads.${'xyz'[i]}: ${given[i]} !== ${workSizeInfer[dIndex]}`
+				`Size mismatch on threads.${dIndex}: ${required}(${given[i]}) !== ${workSizeInfer.required![dIndex]}(${workSizeInfer[dIndex]})`
 			)
 	}
 }
@@ -152,7 +178,6 @@ export function assertElementSize(given: any, expected: number) {
 		)
 }
 
-export class SizeInferError extends Error {}
 /**
  * Expect all sizes to be inferred, returns them
  */
@@ -163,9 +188,34 @@ export function resolvedSize<SS extends SizeSpec[]>(
 	return size.map((s) => {
 		const rv = typeof s === 'number' ? s : workSizeInfer[threadAxis[s]]
 		if (rv === undefined)
-			throw new SizeInferError(`Size ${threadAxis[s as keyof typeof threadAxis]} not inferred`)
+			throw new ArraySizeValidationError(
+				`Size ${threadAxis[s as keyof typeof threadAxis]} is not inferred`
+			)
 		return rv
 	}) as NumericSizesSpec<SS>
+}
+export type RequiredAxis = '' | 'x' | 'y' | 'z' | 'xy' | 'xz' | 'yz' | 'xyz'
+export function applyDefaultInfer(
+	given: WorkSizeInfer,
+	defaults: WorkSizeInfer,
+	requiredAxis: RequiredAxis,
+	actionInfo: string
+) {
+	const rv = { ...given, required: given.required && { ...given.required } }
+	for (const dIndex in threads) {
+		const di = dIndex as keyof typeof threads
+		if (defaults[di] === undefined) continue
+		const required =
+			defaults.required?.[di] || (requiredAxis.includes(dIndex) ? actionInfo : undefined)
+		if (rv.required?.[di] === undefined) {
+			rv[di] = defaults[di]
+			makeRequired(rv, di, required)
+		} else if (required !== undefined)
+			throw new ArraySizeValidationError(
+				`Size mismatch on threads.${dIndex}: ${actionInfo}(${rv[di]}) !== ${actionInfo}(${required})`
+			)
+	}
+	return rv
 }
 
 /**

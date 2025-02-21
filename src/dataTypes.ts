@@ -30,7 +30,8 @@ export interface Buffable<
 	}
 	toTypedArray(
 		workSizeInfer: WorkSizeInfer,
-		data: InputXD<OriginElement, InputSpec, Buffer>
+		data: InputXD<OriginElement, InputSpec, Buffer>,
+		actionInfo: string
 	): TypedArray
 	readonly wgslSpecification: string
 	readonly elementSize: number
@@ -86,13 +87,15 @@ class GpGpuData<
 	}
 	toTypedArray(
 		workSizeInfer: WorkSizeInfer,
-		data: InputXD<OriginElement, InputSpec, Buffer>
+		data: InputXD<OriginElement, InputSpec, Buffer>,
+		required?: string
 	): Buffer {
 		return elementsToTypedArray<Buffer, OriginElement, InputSizesSpec>(
 			this,
 			workSizeInfer,
 			data,
-			this.size
+			this.size,
+			required
 		)
 	}
 	array<SubSizesSpec extends SizeSpec[]>(...size: SubSizesSpec) {

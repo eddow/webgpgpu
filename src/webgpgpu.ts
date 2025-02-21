@@ -1,10 +1,25 @@
-import { elementsToTypedArray } from 'buffers'
 import type { Buffable, InputType } from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { getGpu, log } from './system'
-import { type AnyInput, type TypedArray, type WorkSizeInfer, resolvedSize } from './typedArrays'
+import {
+	type AnyInput,
+	type RequiredAxis,
+	type TypedArray,
+	type WorkSizeInfer,
+	applyDefaultInfer,
+	resolvedSize,
+} from './typedArrays'
 import { type WorkSize, explicitWorkSize, workGroupCount, workgroupSize } from './workGroup'
 
+export class ParameterError extends Error {
+	name = 'ParameterError'
+}
+export class CompilationError extends Error {
+	name = 'CompilationError'
+	constructor(public cause: readonly GPUCompilationMessage[]) {
+		super('Compilation error')
+	}
+}
 const reservedBindGroupIndex = 0
 const commonBindGroupIndex = 1
 const inputBindGroupIndex = 2
@@ -30,7 +45,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 	 * Get the root WebGpGpu instance
 	 * Can resolve to undefined when the GPU has been disposed
 	 */
-	static get root(): Promise<WebGpGpu<{}> | undefined> {
+	static get root(): Promise<WebGpGpu<{}>> {
 		async function init() {
 			if (!getGpu) throw new Error('Wrongly linked library usage') // client/server index makes the link
 			const adapter = (await getGpu().requestAdapter()) as GPUAdapter
@@ -52,10 +67,15 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 				commonData: [],
 				inputs: {},
 				workGroupSize: null,
+				usedNames: new Set(['thread', 'threads']),
 			})
 		}
 		root ??= init()
-		return root
+		return root as Promise<WebGpGpu<{}>>
+	}
+	get f16() {
+		// TODO: Parse code and replace immediate values if needed?
+		return this.device.features.has('f16')
 	}
 	static dispose() {
 		root = Promise.resolve(undefined)
@@ -64,11 +84,12 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 	}
 	public readonly device: GPUDevice
 	public readonly adapter: GPUAdapter
-	protected readonly workSizeInfer: WorkSizeInfer
-	protected readonly definitions: string[]
-	protected readonly commonData: BoundDataEntry[]
-	protected readonly inputs: Record<string, Buffable>
-	protected readonly workGroupSize: [number, number, number] | null
+	private readonly workSizeInfer: WorkSizeInfer
+	private readonly definitions: readonly string[]
+	private readonly commonData: readonly BoundDataEntry[]
+	private readonly inputs: Record<string, Buffable>
+	private readonly workGroupSize: [number, number, number] | null
+	private readonly usedNames: Set<string>
 	private constructor(
 		parent: WebGpGpu<any> | undefined,
 		{
@@ -79,6 +100,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			commonData,
 			inputs,
 			workGroupSize,
+			usedNames,
 		}: Partial<{
 			device: GPUDevice
 			adapter: GPUAdapter
@@ -87,6 +109,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			commonData: BoundDataEntry[]
 			inputs: Record<string, Buffable>
 			workGroupSize: [number, number, number] | null
+			usedNames: Set<string>
 		}>
 	) {
 		this.device = device ?? parent!.device
@@ -96,6 +119,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 		this.commonData = commonData ?? parent!.commonData
 		this.inputs = inputs ?? parent!.inputs
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
+		this.usedNames = usedNames ?? parent!.usedNames
 	}
 	defined(...definitions: string[]) {
 		return new WebGpGpu<Inputs>(this, {
@@ -109,8 +133,9 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 		const newCommons = [...this.commonData]
 		for (const [name, data] of Object.entries(commons)) {
 			const buffable = newInputs[name]
+			if (!buffable) throw new ParameterError(`Unknown input: ${name}`)
 			delete newInputs[name]
-			const typedArray = buffable.toTypedArray(workSizeInfer, data)
+			const typedArray = buffable.toTypedArray(workSizeInfer, data, `Setting common ${name}`)
 			newCommons.push({
 				name,
 				type: buffable,
@@ -132,8 +157,13 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 	input<Specs extends Record<string, Buffable>>(
 		inputs: Specs
 	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>> {
+		const newNames = Object.keys(inputs)
+		const conflicts = newNames.filter((name) => this.usedNames.has(name))
+		if (conflicts.length)
+			throw new ParameterError(`Parameter name conflict: ${conflicts.join(', ')}`)
 		return new WebGpGpu(this, {
 			inputs: { ...this.inputs, ...inputs },
+			usedNames: new Set([...this.usedNames, ...newNames]),
 		})
 	}
 	workGroup(...size: WorkSize) {
@@ -141,7 +171,7 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 			workGroupSize: size.length ? explicitWorkSize(size) : null,
 		})
 	}
-	kernel(compute: string) {
+	kernel(compute: string, kernelWorkInf: WorkSizeInfer = {}, kernelRequiredInf: RequiredAxis = '') {
 		if (disposed) throw new Error('GPU has been disposed')
 		try {
 			const { device } = this
@@ -191,7 +221,12 @@ export class WebGpGpu<Inputs extends Record<string, AnyInput> = {}> {
 				label: 'input-bind-group-layout',
 				entries: inputBindGroupLayoutEntries,
 			})
-			const workSizeInfer = { ...this.workSizeInfer }
+			const workSizeInfer = applyDefaultInfer(
+				this.workSizeInfer,
+				kernelWorkInf,
+				kernelRequiredInf,
+				'Kernel definition'
+			)
 			const workGroupSize =
 				this.workGroupSize ||
 				workgroupSize([workSizeInfer.x, workSizeInfer.y, workSizeInfer.z], this.device)
@@ -212,7 +247,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	}
 }
 `
-			// 🔹 Compile the shader module
+			//Compile the shader module
 			const shaderModule = device.createShaderModule({ code })
 			const shaderModuleCompilationInfo = shaderModule.getCompilationInfo()
 
@@ -220,7 +255,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 				label: 'output-bind-group-layout',
 				entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }],
 			})
-			// 🔹 Create pipeline
+			//Create pipeline
 			const pipeline = device.createComputePipeline({
 				label: 'compute-pipeline',
 				layout: device.createPipelineLayout({
@@ -239,7 +274,12 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 				layout: pipeline.getBindGroupLayout(commonBindGroupIndex),
 				entries: commonBindGroupEntries,
 			})
-			const rv = async function executeFunction(inputs: Inputs, ...workSize: [] | WorkSize) {
+
+			const rv = async function executeFunction(
+				inputs: Inputs,
+				callWorkInf: WorkSizeInfer = {},
+				callRequiredInf: RequiredAxis = ''
+			) {
 				try {
 					if (disposed) throw new Error('GPU has been disposed')
 					const messages = (await shaderModuleCompilationInfo).messages
@@ -254,14 +294,26 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 							} else log.warn(formatted)
 						}
 
-						if (hasError) throw new Error('Compilation error', { cause: messages })
+						if (hasError) throw new CompilationError(messages)
 					}
-					const callWorkSizeInfer = { ...workSizeInfer }
+					const callWorkSizeInfer = applyDefaultInfer(
+						workSizeInfer,
+						callWorkInf,
+						callRequiredInf,
+						'Kernel call'
+					)
 
+					const usedInputs = new Set<string>()
 					const inputBindGroupEntries: GPUBindGroupEntry[] = []
 					for (const [name, binding, buffable] of inputsDescription) {
+						usedInputs.add(name)
 						// TODO: default values
-						const typeArray = buffable.toTypedArray(callWorkSizeInfer, inputs[name]!)
+						if (!inputs[name]) throw new ParameterError(`Missing input: ${name}`)
+						const typeArray = buffable.toTypedArray(
+							callWorkSizeInfer,
+							inputs[name]!,
+							`Setting parameter ${name}`
+						)
 						const resource = dimensionalEntry(
 							device,
 							name,
@@ -273,6 +325,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 							resource,
 						})
 					}
+					const unusedInputs = Object.keys(inputs).filter((name) => !usedInputs.has(name))
+					if (unusedInputs.length) log.warn(`Unused inputs: ${unusedInputs.join(', ')}`)
 					const inputBindGroup = device.createBindGroup({
 						label: 'input-bind-group',
 						layout: pipeline.getBindGroupLayout(inputBindGroupIndex),
@@ -282,7 +336,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 					// #region Reserved bind group
 
 					const explicit = [callWorkSizeInfer.x, callWorkSizeInfer.y, callWorkSizeInfer.z].map(
-						(v) => v ?? workSize.shift() ?? 1
+						(v) => v ?? 1
 					) as [number, number, number]
 
 					const workGroups = workGroupCount(explicit, workGroupSize) as [number, number, number]
@@ -367,7 +421,8 @@ function dimensionalEntryDescription(
 ): BindingEntryDescription {
 	switch (buffable.size.length) {
 		case 0: {
-			if (!readOnly) throw new Error('Uniforms can only be read-only')
+			if (!readOnly)
+				throw new ParameterError('Uniforms can only be read-only (cannot be used as input)')
 			return {
 				layoutEntry: {
 					binding,

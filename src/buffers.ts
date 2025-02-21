@@ -2,9 +2,6 @@ import type { Buffable, NumericSizesSpec } from 'dataTypes'
 import { log } from './system'
 import {
 	ArraySizeValidationError,
-	type Input0D,
-	type Input1D,
-	type Input2D,
 	type SizeSpec,
 	type TypedArray,
 	type WorkSizeInfer,
@@ -15,6 +12,7 @@ import {
 	resolvedSize,
 } from './typedArrays'
 
+// Poorly typed but for internal use only
 export function elementsToTypedArray<
 	Buffer extends TypedArray,
 	OriginElement,
@@ -23,9 +21,12 @@ export function elementsToTypedArray<
 	specification: Buffable<Buffer, OriginElement, SizeSpec[], InputSizesSpec>,
 	workSizeInfer: WorkSizeInfer,
 	data: any,
-	size: SizeSpec[]
+	size: SizeSpec[],
+	required?: string
 ): Buffer {
 	const { bufferType, elementSize, elementConvert, transformSize } = specification
+	if (data instanceof bufferType && 'elementSize' in data && data.elementSize !== elementSize)
+		assertElementSize(data.elementSize, elementSize)
 	// #region 0D
 	if (size.length === 0) {
 		if (data instanceof bufferType) {
@@ -43,14 +44,14 @@ export function elementsToTypedArray<
 		if (data instanceof bufferType) {
 			if ((data as Buffer).length % elementSize !== 0)
 				throw new ArraySizeValidationError(
-					`Size mismatch in dimension 0: ${data.length} is not a multiple of ${elementSize}`
+					`Size mismatch in dimension 1: ${data.length} is not a multiple of ${elementSize}`
 				)
-			assertSize([(data as Buffer).length / elementSize], [size[0]], workSizeInfer)
+			assertSize([(data as Buffer).length / elementSize], [size[0]], workSizeInfer, required)
 			return data as Buffer
 		}
 		if (!Array.isArray(data))
 			throw new ArraySizeValidationError('Input is not an array nor a typed array')
-		assertSize([data.length], [size[0]], workSizeInfer)
+		assertSize([data.length], [size[0]], workSizeInfer, required)
 		const rv = new bufferType(data.length * elementSize) as Buffer
 		let dst = 0
 		// Make the `if` early not to not make it in the loop
@@ -84,21 +85,23 @@ export function elementsToTypedArray<
 			throw new ArraySizeValidationError(
 				`Dimensions mismatch: Typed array of dimension ${data.size.length} is used in a ${size.length}D context`
 			)
-		assertSize(data.size, size, workSizeInfer)
+		assertSize(data.size, size, workSizeInfer, required)
 		return data as Buffer
 	}
 	if (!Array.isArray(data))
 		throw new ArraySizeValidationError('Input is not an array nor a typed array')
-	assertSize([data.length], size.slice(0, 1), workSizeInfer)
+	assertSize([data.length], size.slice(0, 1), workSizeInfer, required)
 	let rv: Buffer | undefined
 	let itemSize: number | undefined
 	let dst = 0
-	for (const element of data as (
-		| Input0D<OriginElement>
-		| Input1D<OriginElement>
-		| Input2D<OriginElement>
-	)[]) {
-		const subBuffer = elementsToTypedArray(specification, workSizeInfer, element, size.slice(1))
+	for (const element of data) {
+		const subBuffer = elementsToTypedArray(
+			specification,
+			workSizeInfer,
+			element,
+			size.slice(1),
+			required && `[Slice of] ${required}`
+		)
 		if (!rv) {
 			itemSize = subBuffer.length
 			// TODO: multidimensional inferring
