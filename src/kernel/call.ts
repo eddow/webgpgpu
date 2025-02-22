@@ -13,10 +13,10 @@ import {
 	type OutputEntryDescription,
 	ParameterError,
 	commonBindGroupIndex,
-	dimensionalInput,
-	dimensionalOutput,
 	inputBindGroupIndex,
+	inputGroupEntry,
 	outputBindGroupIndex,
+	outputGroupEntry,
 	reservedBindGroupIndex,
 } from './io'
 import type { KernelScope } from './scope'
@@ -80,7 +80,7 @@ export async function callKernel<
 		// TODO: default values
 		if (!inputs[name]) throw new ParameterError(`Missing input: ${name}`)
 		const typeArray = buffable.toTypedArray(callWorkSizeInfer, inputs[name]!, `input \`${name}\``)
-		const resource = dimensionalInput(
+		const resource = inputGroupEntry(
 			device,
 			name,
 			resolvedSize(buffable.size, callWorkSizeInfer),
@@ -134,7 +134,7 @@ export async function callKernel<
 	const outputBindGroupEntries: GPUBindGroupEntry[] = []
 	const outputBuffers: OutputEntryDescription[] = []
 	for (const { name, binding, buffable } of outputDescription) {
-		const OutputEntryDescription = dimensionalOutput(
+		const OutputEntryDescription = outputGroupEntry(
 			device,
 			name,
 			resolvedSize(buffable.size, callWorkSizeInfer),

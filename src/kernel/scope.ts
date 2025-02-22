@@ -4,8 +4,8 @@ import type { BoundDataEntry } from '../webgpgpu'
 import { workgroupSize } from '../workGroup'
 import {
 	commonBindGroupIndex,
-	dimensionalEntryDescription,
 	inputBindGroupIndex,
+	layoutGroupEntry,
 	outputBindGroupIndex,
 	reservedBindGroupIndex,
 } from './io'
@@ -42,7 +42,7 @@ export function kernelScope(
 	for (const { name, resource, type: buffable } of commonData) {
 		const binding = commonBindGroupLayoutEntries.length
 
-		const { layoutEntry, description } = dimensionalEntryDescription(
+		const { layoutEntry, description } = layoutGroupEntry(
 			name,
 			buffable,
 			commonBindGroupIndex,
@@ -70,7 +70,7 @@ export function kernelScope(
 
 	for (const [name, buffable] of Object.entries(inputs)) {
 		const binding = inputBindGroupLayoutEntries.length
-		const { layoutEntry, description } = dimensionalEntryDescription(
+		const { layoutEntry, description } = layoutGroupEntry(
 			name,
 			buffable,
 			inputBindGroupIndex,
@@ -96,7 +96,7 @@ export function kernelScope(
 
 	for (const [name, buffable] of Object.entries(outputs)) {
 		const binding = outputBindGroupLayoutEntries.length
-		const { layoutEntry, description } = dimensionalEntryDescription(
+		const { layoutEntry, description } = layoutGroupEntry(
 			name,
 			buffable,
 			outputBindGroupIndex,
@@ -137,7 +137,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
 		${compute}
 	}
-}`
+}
+`
 	//Compile the shader module
 	const shaderModule = device.createShaderModule({ code })
 	const shaderModuleCompilationInfo = shaderModule.getCompilationInfo()

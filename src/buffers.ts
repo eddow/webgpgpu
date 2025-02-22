@@ -147,7 +147,7 @@ export class BufferReader<
 		public readonly buffer: Buffer,
 		public readonly size: number[]
 	) {}
-	element(...index: InputSpec): OriginElement {
+	at(...index: InputSpec): OriginElement {
 		const {
 			size,
 			buffer,

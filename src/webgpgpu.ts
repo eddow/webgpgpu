@@ -8,7 +8,7 @@ import {
 } from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { callKernel } from './kernel/call'
-import { ParameterError, dimensionalInput } from './kernel/io'
+import { ParameterError, inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
 import {
@@ -187,7 +187,7 @@ export class WebGpGpu<
 			newCommons.push({
 				name,
 				type: buffable,
-				resource: dimensionalInput(
+				resource: inputGroupEntry(
 					device,
 					name,
 					resolvedSize(buffable.size, workSizeInfer),

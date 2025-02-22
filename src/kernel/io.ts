@@ -22,7 +22,7 @@ export interface OutputEntryDescription {
 	read(): Promise<TypedArray>
 }
 
-export function dimensionalEntryDescription(
+export function layoutGroupEntry(
 	name: string,
 	buffable: Buffable,
 	group: number,
@@ -60,7 +60,7 @@ export function dimensionalEntryDescription(
 	}
 }
 
-export function dimensionalInput(
+export function inputGroupEntry(
 	device: GPUDevice,
 	name: string,
 	size: number[],
@@ -93,7 +93,7 @@ export function dimensionalInput(
 	}
 }
 
-export function dimensionalOutput(
+export function outputGroupEntry(
 	device: GPUDevice,
 	name: string,
 	size: number[],

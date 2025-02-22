@@ -1,9 +1,8 @@
 import { create, globals } from 'webgpu'
-export { create, globals }
+export const createGPU = create
 import { WebGpGpu } from '../webgpgpu'
 
 /**
- * Has to be called *before* accessing WebGpGpu.root !
  * @param options Options passed to `webgpu`
  * @see https://github.com/dawn-gpu/node-webgpu?tab=readme-ov-file#usage
  */

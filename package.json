@@ -49,6 +49,7 @@
 		"@rollup/plugin-node-resolve": "^15.2.3",
 		"@rollup/plugin-typescript": "^12.1.2",
 		"@vitest/coverage-v8": "^3.0.6",
+		"@vitest/ui": "^3.0.6",
 		"@webgpu/types": "^0.1.54",
 		"rollup": "^4.18.0",
 		"rollup-plugin-dts": "^6.1.0",
@@ -58,6 +59,7 @@
 	},
 	"dependencies": {
 		"@petamoriken/float16": "^3.9.1",
+		"tsx": "^4.19.3",
 		"webgpu": "^0.2.9"
 	}
 }
