@@ -1,9 +1,5 @@
 import type { Buffable, TypedArrayConstructor } from '../dataTypes'
-import { type TypedArray, WebGpGpuError } from '../typedArrays'
-
-export class ParameterError extends WebGpGpuError {
-	name = 'ParameterError'
-}
+import { ParameterError, type TypedArray } from '../types'
 
 export const reservedBindGroupIndex = 0
 export const commonBindGroupIndex = 1

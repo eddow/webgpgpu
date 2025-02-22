@@ -1,33 +1,19 @@
 import { Float16Array } from '@petamoriken/float16'
+import {
+	ArraySizeValidationError,
+	type RequiredAxis,
+	type TypedArray,
+	type TypedArray0D,
+	type TypedArray1D,
+	type TypedArray2D,
+	type TypedArray3D,
+	type TypedArrayXD,
+	type WorkSize,
+	threads,
+} from './types'
 
 export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
 	[K in keyof SizesSpec]: number
-}
-
-export class WebGpGpuError extends Error {}
-
-export class ArraySizeValidationError extends WebGpGpuError {
-	name = 'ArraySizeValidationError'
-}
-
-export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
-
-export type TypedArrayXD<T extends TypedArray = TypedArray> = T & {
-	elementSize: number
-	size: number[]
-}
-export type TypedArray0D<T extends TypedArray = TypedArray> = T & { elementSize: number; size: [] }
-export type TypedArray1D<T extends TypedArray = TypedArray> = T & {
-	elementSize: number
-	size: [number]
-}
-export type TypedArray2D<T extends TypedArray = TypedArray> = T & {
-	elementSize: number
-	size: [number, number]
-}
-export type TypedArray3D<T extends TypedArray = TypedArray> = T & {
-	elementSize: number
-	size: [number, number, number]
 }
 
 export function dimensionedArray(typedArray: TypedArray, size: []): TypedArray0D
@@ -77,36 +63,6 @@ export function isTypedArray3D(value: any): value is TypedArray3D {
 }
 
 // TODO: Structs
-
-export type Input0D<Element, TArray extends TypedArray = TypedArray> = Element | TArray
-export type Input1D<Element, TArray extends TypedArray = TypedArray> =
-	| Input0D<Element, TArray>[]
-	| TArray
-export type Input2D<Element, TArray extends TypedArray = TypedArray> =
-	| Input1D<Element, TArray>[]
-	| TypedArray2D<TArray>
-export type Input3D<Element, TArray extends TypedArray = TypedArray> =
-	| Input2D<Element, TArray>[]
-	| TypedArray3D<TArray>
-export type InputXD<
-	Element,
-	SizesSpec extends number[],
-	TArray extends TypedArray,
-> = SizesSpec extends []
-	? Input0D<Element, TArray>
-	: SizesSpec extends [number]
-		? Input1D<Element, TArray>
-		: SizesSpec extends [number, number]
-			? Input2D<Element, TArray>
-			: SizesSpec extends [number, number, number]
-				? Input3D<Element, TArray>
-				: unknown
-export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
-export const threads = {
-	x: Symbol('threads.x'),
-	y: Symbol('threads.y'),
-	z: Symbol('threads.z'),
-} as const
 export const threadAxis = {
 	[threads.x]: 'x',
 	[threads.y]: 'y',
@@ -199,7 +155,6 @@ export function resolvedSize<SS extends SizeSpec[]>(
 		return rv
 	}) as NumericSizesSpec<SS>
 }
-export type RequiredAxis = '' | 'x' | 'y' | 'z' | 'xy' | 'xz' | 'yz' | 'xyz'
 export function applyDefaultInfer(
 	given: WorkSizeInfer,
 	defaults: WorkSizeInfer,
@@ -221,4 +176,85 @@ export function applyDefaultInfer(
 			)
 	}
 	return rv
+}
+
+function ceilDiv2(value: number): number {
+	return (value >> 1) + (value & 1)
+}
+/**
+ * Find the best workgroup size for the given working size
+ * "best" here means the most divided (biggest workgroup-size) while having the lowest overhead (ceiling when dividing by 2)
+ * @param size
+ * @param maxSize Maximum parallelization size for workgroups
+ * @returns workGroupSize The optimized workgroup size and the corresponding count of workgroups
+ */
+export function workgroupSize(size: (number | undefined)[], device: GPUDevice): WorkSize {
+	const {
+		limits: {
+			maxComputeInvocationsPerWorkgroup,
+			maxComputeWorkgroupSizeX,
+			maxComputeWorkgroupSizeY,
+			maxComputeWorkgroupSizeZ,
+		},
+	} = device
+	let remainingSize = maxComputeInvocationsPerWorkgroup
+	const remainingWorkGroupSize = [
+		maxComputeWorkgroupSizeX,
+		maxComputeWorkgroupSizeY,
+		maxComputeWorkgroupSizeZ,
+	]
+	const workGroupCount = size.map((v) => v ?? 1) as WorkSize
+	const workGroupSize = workGroupCount.map(() => 1) as WorkSize
+	while (remainingSize > 1) {
+		// Try to find an even dimension (no overhead)
+		let chosenIndex = workGroupCount.findIndex(
+			(v, i) => v % 2 === 0 && remainingWorkGroupSize[i] > 1
+		)
+		if (chosenIndex === -1) {
+			/*
+[5, 7] = 35 : try to parallelize while keeping the overall size as minimal as possible
+ceil(size/2)*2 =>
+[ceil(5/2), 7] *2 = [3, 7] *2 -> 21*2 = 42
+[5, ceil(7/2)] *2 = [5, 4] *2 -> 20*2 = 40 <- this is the best
+
+So, optimal = divide the max(size) if ceiling is involved
+*/
+			const maxSizeValue = Math.max(
+				...workGroupCount.map((v, i) => (remainingWorkGroupSize[i] === 1 ? 0 : v))
+			)
+			if (maxSizeValue <= 1) break
+			chosenIndex = workGroupCount.findIndex(
+				(v, i) => v === maxSizeValue && remainingWorkGroupSize[i] > 1
+			)
+		}
+		workGroupCount[chosenIndex] = ceilDiv2(workGroupCount[chosenIndex])
+		workGroupSize[chosenIndex] <<= 1
+		remainingWorkGroupSize[chosenIndex] >>= 1
+		remainingSize >>= 1
+	}
+	while (remainingSize > 1) {
+		// If we remain with available division BUT no more dimension to divide,
+		// then divide the not-yet inferred dimension (undefined)
+		const notInferredIndex = size.findIndex(
+			(v, i) => v === undefined && remainingWorkGroupSize[i] > 1
+		)
+		if (notInferredIndex === -1) break
+		// Here, no ceiling: we play with powers of 2
+		const affected = Math.min(
+			remainingSize,
+			remainingWorkGroupSize[notInferredIndex] / workGroupSize[notInferredIndex]
+		)
+		remainingSize /= affected
+		workGroupSize[notInferredIndex] *= affected
+		remainingWorkGroupSize[notInferredIndex] /= affected
+	}
+	return workGroupSize
+}
+
+export function workGroupCount(workSize: WorkSize, workGroupSize: WorkSize): WorkSize {
+	return workSize.map((v, i) => Math.ceil(v / (workGroupSize[i] ?? 1))) as WorkSize
+}
+
+export function explicitWorkSize(workSize: [] | WorkSize) {
+	return Array.from({ length: 3 }, (_, i) => workSize[i] ?? 1) as [number, number, number]
 }

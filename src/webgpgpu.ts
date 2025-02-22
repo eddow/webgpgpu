@@ -1,4 +1,4 @@
-import type { BufferReader } from 'buffers'
+import type { BufferReader } from './buffers'
 import {
 	type Buffable,
 	type InputType,
@@ -8,17 +8,17 @@ import {
 } from './dataTypes'
 import { activateF16 } from './dataTypesList'
 import { callKernel } from './kernel/call'
-import { ParameterError, inputGroupEntry } from './kernel/io'
+import { inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
+import { type WorkSizeInfer, explicitWorkSize, resolvedSize } from './typedArrays'
 import {
 	type AnyInput,
+	ParameterError,
 	type RequiredAxis,
 	WebGpGpuError,
-	type WorkSizeInfer,
-	resolvedSize,
-} from './typedArrays'
-import { type WorkSize, explicitWorkSize } from './workGroup'
+	type WorkSize,
+} from './types'
 
 export interface BoundDataEntry {
 	name: string
@@ -26,6 +26,9 @@ export interface BoundDataEntry {
 	resource: GPUBindingResource
 }
 
+/**
+ * Contains the information shared in a WebGpGpu tree (root and descendants) and referencing the device
+ */
 interface RootInfo {
 	dispose?(): void
 	device?: GPUDevice
@@ -101,7 +104,7 @@ export class WebGpGpu<
 			})
 	}
 	dispose() {
-		if (!this.rootInfo.device) {
+		if (this.rootInfo.device) {
 			this.rootInfo.dispose?.()
 			this.rootInfo.device = undefined
 			this.rootInfo.reservedBindGroupLayout = undefined

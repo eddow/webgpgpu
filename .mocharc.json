@@ -1,0 +1,12 @@
+{
+	"loader": "tsx",
+	"node-option": ["import=tsx"],
+	"extension": [
+		"ts"
+	],
+	"spec": "tests/**/*.test.ts",
+	"require": [
+		"tsx"
+	],
+	"recursive": true
+}

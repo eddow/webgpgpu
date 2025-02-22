@@ -1,17 +1,9 @@
 import type { BufferReader } from '../buffers'
 import { log } from '../log'
-import {
-	type AnyInput,
-	type RequiredAxis,
-	WebGpGpuError,
-	type WorkSizeInfer,
-	applyDefaultInfer,
-	resolvedSize,
-} from '../typedArrays'
-import { workGroupCount } from '../workGroup'
+import { type WorkSizeInfer, applyDefaultInfer, resolvedSize, workGroupCount } from '../typedArrays'
+import { type AnyInput, CompilationError, ParameterError, type RequiredAxis } from '../types'
 import {
 	type OutputEntryDescription,
-	ParameterError,
 	commonBindGroupIndex,
 	inputBindGroupIndex,
 	inputGroupEntry,
@@ -20,13 +12,6 @@ import {
 	reservedBindGroupIndex,
 } from './io'
 import type { KernelScope } from './scope'
-
-export class CompilationError extends WebGpGpuError {
-	name = 'CompilationError'
-	constructor(public cause: readonly GPUCompilationMessage[]) {
-		super('Compilation error')
-	}
-}
 
 export async function callKernel<
 	Inputs extends Record<string, AnyInput>,

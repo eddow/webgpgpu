@@ -1,16 +1,15 @@
 import type { Buffable } from 'dataTypes'
 import { log } from './log'
 import {
-	ArraySizeValidationError,
 	type NumericSizesSpec,
 	type SizeSpec,
-	type TypedArray,
 	type WorkSizeInfer,
 	assertElementSize,
 	assertSize,
 	isTypedArrayXD,
 	resolvedSize,
 } from './typedArrays'
+import { ArraySizeValidationError, type TypedArray } from './types'
 
 // Poorly typed but for internal use only
 export function elementsToTypedArray<

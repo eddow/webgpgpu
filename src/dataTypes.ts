@@ -1,13 +1,12 @@
 import { Float16Array } from '@petamoriken/float16'
 import { BufferReader, elementsToTypedArray } from './buffers'
 import {
-	type InputXD,
 	type NumericSizesSpec,
 	type SizeSpec,
-	type TypedArray,
 	type WorkSizeInfer,
 	resolvedSize,
 } from './typedArrays'
+import type { InputXD, TypedArray } from './types'
 
 export type ValuedBuffable<
 	Buffer extends TypedArray = TypedArray,
@@ -116,7 +115,7 @@ class GpGpuData<
 	 * Creates a `TypedArray` from `data`
 	 * @param workSizeInfer Size inference data
 	 * @param data Original data to convert
-	 * @param required Whether to modify the size inference data and mark modifications as "required" if given (The text is actuallyused in exception description)
+	 * @param required Whether to modify the size inference data and mark modifications as "required" if given (The text is actually used in exception description)
 	 * @returns TypedArray
 	 */
 	toTypedArray(

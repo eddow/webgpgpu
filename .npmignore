@@ -2,6 +2,6 @@
 /test
 /coverage
 .*
-vitest.*
 biome.*
 rollup.*
+karma.*

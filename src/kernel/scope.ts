@@ -1,7 +1,7 @@
 import type { Buffable } from '../dataTypes'
-import { type RequiredAxis, type WorkSizeInfer, applyDefaultInfer } from '../typedArrays'
+import { type WorkSizeInfer, applyDefaultInfer, workgroupSize } from '../typedArrays'
+import type { RequiredAxis } from '../types'
 import type { BoundDataEntry } from '../webgpgpu'
-import { workgroupSize } from '../workGroup'
 import {
 	commonBindGroupIndex,
 	inputBindGroupIndex,
