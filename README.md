@@ -2,6 +2,9 @@
 
 This package provides WebGPU based GPU computing.
 
+versions:
+ - 0.0.x: alpha
+
 ## Getting Started
 
 ### Installation
@@ -24,9 +27,7 @@ async function main() {
 			data: f32.array(threads.x)
 		})
 		.output({ produced: f32.array(threads.x) })
-		.kernel(/*wgsl*/`
-	produced[thread.x] = myUniform * data[thread.x];
-	`)
+		.kernel('produced[thread.x] = myUniform * data[thread.x];')
 
 	const { produced } = await kernel({
 		myUniform: 2,
@@ -67,14 +68,16 @@ With real pieces of :
 ## WebGPU code
 
 Example kernel produced :
-```wgsl
+```rust
 // #generated
 @group(0) @binding(0) var<uniform> threads : vec3u;
 @group(2) @binding(0) var<storage, read> a : array<f32>;
 @group(3) @binding(0) var<storage, read_write> outputBuffer : array<f32>;
 // #user-defined
 
-fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
+fn myFunc(a: f32, b: f32) -> f32 {
+	return a + b;
+}
 
 // #generated
 @compute @workgroup_size(256,1,1)
@@ -176,7 +179,7 @@ f32.array(3).array(4)
 f32.array(3, 4)
 ```
 
-Multi-dimensional arrays are represented in the shader as `texture_2d` or `texture_3d`. They support only elements of size 1, 2 or 4.
+Multi-dimensional arrays *will be* represented in the shader as `texture_2d` or `texture_3d` as supported, as textures only support elements of size 1, 2 or 4.
 Ex.: `f32`, `vec2u`, `mat2x2f`
 
 Arguments (simple, arrays of any dimension) can always be passed as corresponding `TypedArray`. So, `mat3x2f.array(5).value(new Float32Array(3*2*5))` is doing the job! (even if array sizes are still validated)
@@ -346,7 +349,7 @@ WebGpGpu.log: {
 }
 ```
 
-`warn` and `error` can be set separately as the whole library uses it. (mainly for compilation messages) or extreme cases as "uploaded size(0) array", ...
+`warn` and `error` can be set separately to redirect the whole library logs. (mainly for compilation messages) or extreme cases as "uploaded size(0) array", ...
 Note that a `log.error` will always have its associated exception throw.
 
 ## Exceptions
@@ -360,9 +363,18 @@ Note that a `log.error` will always have its associated exception throw.
 - [VS Code plugin for inline-wgsl coloring](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
 - Linux: Do *not* use chromium, it will not support WebGPU - install chrome/firefox(untested)/...
 
-## TODOs
+## TODOs & limitations
 
+The main limitation is WebGPU support.
+
+It is supported in some browsers but poorly support automated testing.
+
+For node, this library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who is really fresh and does not yet allow a smooth ride for all cases (automated testing is possible in some specific circumstances)
+
+- karma -> test in browser
 - Texture management (for now, only 0/1-D)
+  - Code modification for array indexing (for now, only 0/1-D)
+  - Code modification to support `f16` immediate values
 - structures
 - Perhaps some canvas output ?
 - Chaining (output become input of next kernel without transfer in CPU memory)

@@ -208,6 +208,7 @@ describe('diverse', () => {
 		expect(() => kernel.input({ b: f32.array(threads.y) })).to.throw()
 	})
 	it('manages big buffers', async () => {
+		// TODO: Keep on checking, the limit is near...
 		const length = 0x400000
 		const kernel = webGpGpu.output({ output: u32.array(threads.x) }).kernel(/*wgsl*/ `
 let modX = thread.x % 453;

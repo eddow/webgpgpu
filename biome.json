@@ -29,14 +29,14 @@
 			"suspicious": {
 				"noExplicitAny": "off",
 				"noDebugger": "error",
-				"noConsole": "info"
+				"noConsole": "off"
 			},
 			"performance": {
 				"noAccumulatingSpread": "off"
 			},
 			"complexity": {
 				"useArrowFunction": "off",
-				"noBannedTypes": "info"
+				"noBannedTypes": "off"
 			},
 			"security": {},
 			"correctness": {},

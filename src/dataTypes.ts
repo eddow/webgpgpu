@@ -29,7 +29,7 @@ export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof GpGpuData
 }
 /**
- * Interface is used for type inference
+ * Interface is needed for type inference
  */
 export interface Buffable<
 	Buffer extends TypedArray = TypedArray,

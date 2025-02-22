@@ -106,6 +106,7 @@ export class WebGpGpu<
 	dispose() {
 		if (this.rootInfo.device) {
 			this.rootInfo.dispose?.()
+			this.rootInfo.device.destroy()
 			this.rootInfo.device = undefined
 			this.rootInfo.reservedBindGroupLayout = undefined
 		}

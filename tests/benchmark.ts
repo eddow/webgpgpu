@@ -30,6 +30,7 @@ output[thread.x] = modX * modX;
 	for (let exp = 2; exp <= 5; exp++) {
 		console.log(exp, ':', await benchmark(gpu, exp), '|', await benchmark(cpu, exp))
 	}
+	await new Promise((resolve) => setTimeout(resolve, 2000))
 	webGpGpu.dispose()
 }
 

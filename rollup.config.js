@@ -34,7 +34,7 @@ export default  [
 		output: {
 			banner,
 			dir: 'lib',
-			entryFileNames: '[name].mjs',
+			entryFileNames: '[name].js',
 			sourcemap: true,
 			format: 'esm'
 		},
@@ -45,7 +45,8 @@ export default  [
 		output: {
 			banner,
 			dir: 'lib',
-			entryFileNames: '[name].js',
+			entryFileNames: '[name].cjs',
+			chunkFileNames: '[name].cjs',
 			sourcemap: true,
 			format: 'cjs',
 			exports: 'named'

@@ -6,6 +6,48 @@ import {
 	GpGpuXUint32,
 } from './dataTypes'
 
+// #region GpGpu0x
+
+type vec2 = [number, number]
+type vec3 = [number, number, number]
+type vec4 = [number, number, number, number]
+type vec6 = [number, number, number, number, number, number]
+type vec8 = [number, number, number, number, number, number, number, number]
+type vec9 = [number, number, number, number, number, number, number, number, number]
+type vec12 = [
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+]
+type vec16 = [
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+	number,
+]
+
+// #endregion GpGpu0x
 // #region GpGpu1x
 
 export const f32 = new GpGpuXFloat32<number>(
@@ -27,213 +69,79 @@ export const i32 = new GpGpuXInt32<number>(
 	(a) => a[0]
 )
 
-export const vec2f = new GpGpuXFloat32<[number, number]>(2, 'vec2<f32>')
-export const vec2u = new GpGpuXUint32<[number, number]>(2, 'vec2<u32>')
-export const vec2i = new GpGpuXInt32<[number, number]>(2, 'vec2<i32>')
+export const vec2f = new GpGpuXFloat32<vec2>(2, 'vec2f')
+export const vec2u = new GpGpuXUint32<vec2>(2, 'vec2u')
+export const vec2i = new GpGpuXInt32<vec2>(2, 'vec2i')
 
-export const vec3f = new GpGpuXFloat32<[number, number, number]>(3, 'vec3<f32>')
-export const vec3u = new GpGpuXUint32<[number, number, number]>(3, 'vec3<u32>')
-export const vec3i = new GpGpuXInt32<[number, number, number]>(3, 'vec3<i32>')
+export const vec3f = new GpGpuXFloat32<vec3>(3, 'vec3f')
+export const vec3u = new GpGpuXUint32<vec3>(3, 'vec3u')
+export const vec3i = new GpGpuXInt32<vec3>(3, 'vec3i')
 
-export const vec4f = new GpGpuXFloat32<[number, number, number, number]>(4, 'vec4<f32>')
-export const vec4u = new GpGpuXUint32<[number, number, number, number]>(4, 'vec4<u32>')
-export const vec4i = new GpGpuXInt32<[number, number, number, number]>(4, 'vec4<i32>')
+export const vec4f = new GpGpuXFloat32<vec4>(4, 'vec4f')
+export const vec4u = new GpGpuXUint32<vec4>(4, 'vec4u')
+export const vec4i = new GpGpuXInt32<vec4>(4, 'vec4i')
 
 // #endregion GpGpu1x
 // #region GpGpu2x
 
-export const mat2x2f = new GpGpuXFloat32<[number, number, number, number]>(4, 'mat2x2<f32>')
-export const mat2x2u = new GpGpuXUint32<[number, number, number, number]>(4, 'mat2x2<u32>')
-export const mat2x2i = new GpGpuXInt32<[number, number, number, number]>(4, 'mat2x2<i32>')
+export const mat2x2f = new GpGpuXFloat32<vec4>(4, 'mat2x2f')
+export const mat2x2u = new GpGpuXUint32<vec4>(4, 'mat2x2u')
+export const mat2x2i = new GpGpuXInt32<vec4>(4, 'mat2x2i')
 
-export const mat2x3f = new GpGpuXFloat32<[number, number, number, number, number, number]>(
-	6,
-	'mat2x3<f32>'
-)
-export const mat2x3u = new GpGpuXUint32<[number, number, number, number, number, number]>(
-	6,
-	'mat2x3<u32>'
-)
-export const mat2x3i = new GpGpuXInt32<[number, number, number, number, number, number]>(
-	6,
-	'mat2x3<i32>'
-)
+export const mat2x3f = new GpGpuXFloat32<vec6>(6, 'mat2x3f')
+export const mat2x3u = new GpGpuXUint32<vec6>(6, 'mat2x3u')
+export const mat2x3i = new GpGpuXInt32<vec6>(6, 'mat2x3i')
 
-export const mat2x4f = new GpGpuXFloat32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat2x4<f32>')
-export const mat2x4u = new GpGpuXUint32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat2x4<u32>')
-export const mat2x4i = new GpGpuXInt32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat2x4<i32>')
+export const mat2x4f = new GpGpuXFloat32<vec8>(8, 'mat2x4f')
+export const mat2x4u = new GpGpuXUint32<vec8>(8, 'mat2x4u')
+export const mat2x4i = new GpGpuXInt32<vec8>(8, 'mat2x4i')
 
 // #endregion GpGpu2x
 // #region GpGpu3x
 
-export const mat3x2f = new GpGpuXFloat32<[number, number, number, number, number, number]>(
-	6,
-	'mat3x2<f32>'
-)
-export const mat3x2u = new GpGpuXUint32<[number, number, number, number, number, number]>(
-	6,
-	'mat3x2<u32>'
-)
-export const mat3x2i = new GpGpuXInt32<[number, number, number, number, number, number]>(
-	6,
-	'mat3x2<i32>'
-)
+export const mat3x2f = new GpGpuXFloat32<vec6>(6, 'mat3x2f')
+export const mat3x2u = new GpGpuXUint32<vec6>(6, 'mat3x2u')
+export const mat3x2i = new GpGpuXInt32<vec6>(6, 'mat3x2i')
 
-export const mat3x3f = new GpGpuXFloat32<
-	[number, number, number, number, number, number, number, number, number]
->(9, 'mat3x3<f32>')
-export const mat3x3u = new GpGpuXUint32<
-	[number, number, number, number, number, number, number, number, number]
->(9, 'mat3x3<u32>')
-export const mat3x3i = new GpGpuXInt32<
-	[number, number, number, number, number, number, number, number, number]
->(9, 'mat3x3<i32>')
+export const mat3x3f = new GpGpuXFloat32<vec9>(9, 'mat3x3f')
+export const mat3x3u = new GpGpuXUint32<vec9>(9, 'mat3x3u')
+export const mat3x3i = new GpGpuXInt32<vec9>(9, 'mat3x3i')
 
-export const mat3x4f = new GpGpuXFloat32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat3x4<f32>')
-export const mat3x4u = new GpGpuXUint32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat3x4<u32>')
-export const mat3x4i = new GpGpuXInt32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat3x4<i32>')
+export const mat3x4f = new GpGpuXFloat32<vec12>(12, 'mat3x4f')
+export const mat3x4u = new GpGpuXUint32<vec12>(12, 'mat3x4u')
+export const mat3x4i = new GpGpuXInt32<vec12>(12, 'mat3x4i')
 
 // #endregion GpGpu3x
 // #region GpGpu4x
 
-export const mat4x2f = new GpGpuXFloat32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat4x2<f32>')
-export const mat4x2u = new GpGpuXUint32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat4x2<u32>')
-export const mat4x2i = new GpGpuXInt32<
-	[number, number, number, number, number, number, number, number]
->(8, 'mat4x2<i32>')
+export const mat4x2f = new GpGpuXFloat32<vec8>(8, 'mat4x2f')
+export const mat4x2u = new GpGpuXUint32<vec8>(8, 'mat4x2u')
+export const mat4x2i = new GpGpuXInt32<vec8>(8, 'mat4x2i')
 
-export const mat4x3f = new GpGpuXFloat32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat4x3<f32>')
-export const mat4x3u = new GpGpuXUint32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat4x3<u32>')
-export const mat4x3i = new GpGpuXInt32<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
->(12, 'mat4x3<i32>')
+export const mat4x3f = new GpGpuXFloat32<vec12>(12, 'mat4x3f')
+export const mat4x3u = new GpGpuXUint32<vec12>(12, 'mat4x3u')
+export const mat4x3i = new GpGpuXInt32<vec12>(12, 'mat4x3i')
 
-export const mat4x4f = new GpGpuXFloat32<
-	[
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-	]
->(16, 'mat4x4<f32>')
-export const mat4x4u = new GpGpuXUint32<
-	[
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-	]
->(16, 'mat4x4<u32>')
-export const mat4x4i = new GpGpuXInt32<
-	[
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-	]
->(16, 'mat4x4<i32>')
+export const mat4x4f = new GpGpuXFloat32<vec16>(16, 'mat4x4f')
+export const mat4x4u = new GpGpuXUint32<vec16>(16, 'mat4x4u')
+export const mat4x4i = new GpGpuXInt32<vec16>(16, 'mat4x4i')
 
 // #endregion GpGpu4x4
 // #region f16
 
 export let f16: GpGpuSingleton<number> = f32
-export let vec2h: GpGpuSingleton<[number, number]> = vec2f
-export let vec3h: GpGpuSingleton<[number, number, number]> = vec3f
-export let vec4h: GpGpuSingleton<[number, number, number, number]> = vec4f
-export let mat2x2h: GpGpuSingleton<[number, number, number, number]> = mat2x2f
-export let mat2x3h: GpGpuSingleton<[number, number, number, number, number, number]> = mat2x3f
-export let mat2x4h: GpGpuSingleton<
-	[number, number, number, number, number, number, number, number]
-> = mat2x4f
-export let mat3x2h: GpGpuSingleton<[number, number, number, number, number, number]> = mat3x2f
-export let mat3x3h: GpGpuSingleton<
-	[number, number, number, number, number, number, number, number, number]
-> = mat3x3f
-export let mat3x4h: GpGpuSingleton<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
-> = mat3x4f
-export let mat4x2h: GpGpuSingleton<
-	[number, number, number, number, number, number, number, number]
-> = mat4x2f
-export let mat4x3h: GpGpuSingleton<
-	[number, number, number, number, number, number, number, number, number, number, number, number]
-> = mat4x3f
-export let mat4x4h: GpGpuSingleton<
-	[
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-		number,
-	]
-> = mat4x4f
+export let vec2h: GpGpuSingleton<vec2> = vec2f
+export let vec3h: GpGpuSingleton<vec3> = vec3f
+export let vec4h: GpGpuSingleton<vec4> = vec4f
+export let mat2x2h: GpGpuSingleton<vec4> = mat2x2f
+export let mat2x3h: GpGpuSingleton<vec6> = mat2x3f
+export let mat2x4h: GpGpuSingleton<vec8> = mat2x4f
+export let mat3x2h: GpGpuSingleton<vec6> = mat3x2f
+export let mat3x3h: GpGpuSingleton<vec9> = mat3x3f
+export let mat3x4h: GpGpuSingleton<vec12> = mat3x4f
+export let mat4x2h: GpGpuSingleton<vec8> = mat4x2f
+export let mat4x3h: GpGpuSingleton<vec12> = mat4x3f
+export let mat4x4h: GpGpuSingleton<vec16> = mat4x4f
 export let Vector2: GpGpuSingleton<{ x: number; y: number }> = vec2f.transform(
 	(v) => [v.x, v.y],
 	(v) => ({ x: v[0], y: v[1] })
@@ -266,49 +174,18 @@ export function activateF16(available: boolean) {
 		(n) => [n],
 		(a) => a[0]
 	)
-	vec2h = new GpGpuXFloat16<[number, number]>(2, 'vec2<f16>')
-	vec3h = new GpGpuXFloat16<[number, number, number]>(3, 'vec3<f16>')
-	vec4h = new GpGpuXFloat16<[number, number, number, number]>(4, 'vec4<f16>')
-	mat2x2h = new GpGpuXFloat16<[number, number, number, number]>(4, 'mat2x2<f16>')
-	mat2x3h = new GpGpuXFloat16<[number, number, number, number, number, number]>(6, 'mat2x3<f16>')
-	mat2x4h = new GpGpuXFloat16<[number, number, number, number, number, number, number, number]>(
-		8,
-		'mat2x4<f16>'
-	)
-	mat3x2h = new GpGpuXFloat16<[number, number, number, number, number, number]>(6, 'mat3x2<f16>')
-	mat3x3h = new GpGpuXFloat16<
-		[number, number, number, number, number, number, number, number, number]
-	>(9, 'mat3x3<f16>')
-	mat3x4h = new GpGpuXFloat16<
-		[number, number, number, number, number, number, number, number, number, number, number, number]
-	>(12, 'mat3x4<f16>')
-	mat4x2h = new GpGpuXFloat16<[number, number, number, number, number, number, number, number]>(
-		8,
-		'mat4x2<f16>'
-	)
-	mat4x3h = new GpGpuXFloat16<
-		[number, number, number, number, number, number, number, number, number, number, number, number]
-	>(12, 'mat4x3<f16>')
-	mat4x4h = new GpGpuXFloat16<
-		[
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-			number,
-		]
-	>(16, 'mat4x4<f16>')
+	vec2h = new GpGpuXFloat16<vec2>(2, 'vec2h')
+	vec3h = new GpGpuXFloat16<vec3>(3, 'vec3h')
+	vec4h = new GpGpuXFloat16<vec4>(4, 'vec4h')
+	mat2x2h = new GpGpuXFloat16<vec4>(4, 'mat2x2h')
+	mat2x3h = new GpGpuXFloat16<vec6>(6, 'mat2x3h')
+	mat2x4h = new GpGpuXFloat16<vec8>(8, 'mat2x4h')
+	mat3x2h = new GpGpuXFloat16<vec6>(6, 'mat3x2h')
+	mat3x3h = new GpGpuXFloat16<vec9>(9, 'mat3x3h')
+	mat3x4h = new GpGpuXFloat16<vec12>(12, 'mat3x4h')
+	mat4x2h = new GpGpuXFloat16<vec8>(8, 'mat4x2h')
+	mat4x3h = new GpGpuXFloat16<vec12>(12, 'mat4x3h')
+	mat4x4h = new GpGpuXFloat16<vec16>(16, 'mat4x4h')
 	Vector2 = vec2h.transform(
 		(v) => [v.x, v.y],
 		(v) => ({ x: v[0], y: v[1] })
