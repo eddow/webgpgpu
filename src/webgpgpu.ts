@@ -1,20 +1,32 @@
 import { activateF16 } from './atomicTypesList'
-import type { BufferReader } from './buffers'
-import { WgslCodeGenerator } from './code'
 import {
 	type Buffable,
 	type InputType,
 	type OutputType,
 	type ValuedBuffable,
 	isBuffable,
-} from './dataTypes'
-import { type Inferred, basicInference, infer, resolvedSize } from './inference'
+} from './buffable'
+import type { BufferReader } from './buffers'
+import { WgslCodeGenerator } from './code'
+import {
+	type CreatedInferences,
+	type Inferred,
+	basicInference,
+	infer,
+	resolvedSize,
+} from './inference'
 import { callKernel } from './kernel/call'
 import { inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
 import { explicitWorkSize } from './typedArrays'
-import { type AnyInput, ParameterError, WebGpGpuError, type WorkSize } from './types'
+import {
+	type AnyInput,
+	ParameterError,
+	type TypedArray,
+	WebGpGpuError,
+	type WorkSize,
+} from './types'
 
 export interface BoundDataEntry {
 	name: string
@@ -28,7 +40,6 @@ export interface BoundDataEntry {
 interface RootInfo {
 	dispose?(): void
 	device?: GPUDevice
-	reservedBindGroupLayout?: GPUBindGroupLayout
 }
 
 export class WebGpGpu<
@@ -81,13 +92,6 @@ export class WebGpGpu<
 				},
 				{
 					device,
-					// Share one object among all descendants
-					reservedBindGroupLayout: device.createBindGroupLayout({
-						label: 'reserved-bind-group-layout',
-						entries: [
-							{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
-						],
-					}),
 					dispose: dispose && (() => dispose(device)),
 				}
 			)
@@ -110,7 +114,6 @@ export class WebGpGpu<
 			this.rootInfo.dispose?.()
 			this.rootInfo.device.destroy()
 			this.rootInfo.device = undefined
-			this.rootInfo.reservedBindGroupLayout = undefined
 		}
 	}
 	get disposed() {
@@ -123,10 +126,6 @@ export class WebGpGpu<
 	get device() {
 		if (!this.rootInfo.device) throw new Error('WebGpGpu already disposed')
 		return this.rootInfo.device
-	}
-	private get reservedBindGroupLayout() {
-		if (!this.rootInfo.reservedBindGroupLayout) throw new Error('WebGpGpu already disposed')
-		return this.rootInfo.reservedBindGroupLayout
 	}
 	//@Sealed
 	/**
@@ -232,7 +231,7 @@ export class WebGpGpu<
 	 * @param commons
 	 * @returns Chainable
 	 */
-	common<Specs extends Record<string, ValuedBuffable>>(
+	common<Specs extends Record<string, ValuedBuffable<TypedArray, any, Inferences>>>(
 		commons: Specs
 	): WebGpGpu<Inputs, Outputs, Inferences> {
 		const usedNames = this.checkNameConflicts(...Object.keys(commons))
@@ -288,7 +287,7 @@ export class WebGpGpu<
 	 * @param inputs
 	 * @returns Chainable
 	 */
-	output<Specs extends Record<string, Buffable>>(
+	output<Specs extends Record<string, Buffable<TypedArray, any, Inferences>>>(
 		outputs: Specs
 	): WebGpGpu<Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>, Inferences> {
 		return new WebGpGpu(this, {
@@ -312,22 +311,28 @@ export class WebGpGpu<
 	 * @param workSize
 	 * @returns
 	 */
-	infer<Infer extends Record<string, Inferred | readonly Inferred[]>>(values: Infer) {
+	infer<Infer extends Record<string, Inferred | readonly Inferred[]>>(
+		values: Infer,
+		reason = '.infer() explicit call'
+	) {
 		const inferred = { ...this.inferred }
 		const addedNames: string[] = []
 		for (const [name, value] of Object.entries(values)) {
-			if (name.includes('.')) throw new ParameterError(`Invalid infer name \`${name}\``)
-			const d = Array.isArray(value) ? value.length : 1
-			if (!(name in inferred)) {
-				inferred[name] = d
-
-				addedNames.push(name)
-			} else if (inferred[name] !== d)
-				throw new ParameterError(`Inference dimension conflict for \`${name}\``)
+			if (!name.includes('.')) {
+				const d = Array.isArray(value) ? value.length : 1
+				if (!(name in inferred)) {
+					inferred[name] = d
+					addedNames.push(name)
+				} else if (inferred[name] !== d)
+					throw new ParameterError(`Inference dimension conflict for \`${name}\``)
+			} else if (Array.isArray(value))
+				throw new ParameterError(`Invalid inference name \`${name}\``)
+			else if (!(name in inferred))
+				throw new ParameterError(`Unknown inference: \`${name.split('.')[0]}\``)
 		}
 		const usedNames = this.checkNameConflicts(...addedNames)
-		const inferences = infer(this.inferences, values, '.infer() explicit call')
-		return new WebGpGpu<Inputs, Outputs, typeof inferences>(this, {
+		const inferences = infer(this.inferences, values, reason)
+		return new WebGpGpu<Inputs, Outputs, Inferences & CreatedInferences<Infer>>(this, {
 			inferences,
 			inferred,
 			usedNames,
@@ -361,7 +366,6 @@ export class WebGpGpu<
 			inferred,
 			workGroupSize,
 			definitions,
-			reservedBindGroupLayout,
 		} = this
 		const scope = guarded(() =>
 			kernelScope(compute, kernelDefaults, {
@@ -373,7 +377,6 @@ export class WebGpGpu<
 				inferred,
 				workGroupSize,
 				definitions,
-				reservedBindGroupLayout,
 			})
 		)
 		const getDevice = () => this.device

@@ -1,5 +1,11 @@
-import type { Buffable } from './dataTypes'
-import { type Inferred, type SizeSpec, assertSize, resolvedSize } from './inference'
+import type { Buffable } from 'buffable'
+import {
+	type AnyInference,
+	type Inferred,
+	type SizeSpec,
+	assertSize,
+	resolvedSize,
+} from './inference'
 import { log } from './log'
 import { type NumericSizesSpec, isTypedArrayXD } from './typedArrays'
 import { InferenceValidationError, ParameterError, type TypedArray } from './types'
@@ -13,10 +19,10 @@ function assertElementSize(given: any, expected: number) {
 export function elementsToTypedArray<
 	Buffer extends TypedArray,
 	OriginElement,
-	Inferences extends Record<string, Inferred>,
-	InputSizesSpec extends SizeSpec[],
+	Inferences extends AnyInference,
+	InputSizesSpec extends SizeSpec<Inferences>[],
 >(
-	specification: Buffable<Buffer, OriginElement, SizeSpec[], InputSizesSpec>,
+	specification: Buffable<Buffer, OriginElement, Inferences, SizeSpec[], InputSizesSpec>,
 	inferences: Inferences,
 	data: any,
 	size: SizeSpec[],
@@ -138,12 +144,20 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 export class BufferReader<
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
-	SizesSpec extends SizeSpec[] = SizeSpec[],
-	InputSizesSpec extends SizeSpec[] = [],
+	Inferences extends Record<string, Inferred> = any,
+	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	InputSizesSpec extends SizeSpec<Inferences>[] = [],
 	InputSpec extends number[] = number[],
 > {
 	constructor(
-		public readonly buffable: Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>,
+		public readonly buffable: Buffable<
+			Buffer,
+			OriginElement,
+			Inferences,
+			SizesSpec,
+			InputSizesSpec,
+			InputSpec
+		>,
 		public readonly buffer: Buffer,
 		public readonly size: number[]
 	) {}
@@ -202,7 +216,7 @@ export class BufferReader<
 	// TODO: type
 	slice(
 		...index: [number, ...number[]]
-	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+	): BufferReader<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec> {
 		const { size, buffer, buffable: specification } = this
 		const { elementSize } = specification
 		if (!this.size.length)
@@ -214,11 +228,14 @@ export class BufferReader<
 		const subSize = size.slice(index.length)
 		const subLength = subSize.reduce((a, b) => a * b, 1)
 		const pos = bufferPosition(index, size, elementSize) * subLength
-		return new BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>(
-			specification,
-			buffer.subarray(pos, pos + subLength) as Buffer,
-			subSize
-		)
+		return new BufferReader<
+			Buffer,
+			OriginElement,
+			Inferences,
+			SizesSpec,
+			InputSizesSpec,
+			InputSpec
+		>(specification, buffer.subarray(pos, pos + subLength) as Buffer, subSize)
 	}
 	*slices() {
 		const { size } = this

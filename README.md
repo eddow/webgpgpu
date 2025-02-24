@@ -24,9 +24,9 @@ async function main() {
 	const kernel = webGpGpu
 		.input({
 			myUniform: f32,
-			data: f32.array(threads.x)
+			data: f32.array('threads.x')
 		})
-		.output({ produced: f32.array(threads.x) })
+		.output({ produced: f32.array('threads.x') })
 		.kernel('produced[thread.x] = myUniform * data[thread.x];')
 
 	const { produced } = await kernel({
@@ -133,7 +133,7 @@ Declares inputs for the kernel. Takes an object `{name: type}`.
 ```ts
 webGpGpu.input({
 	myUniform: f32,
-	data: f32.array(threads.x),
+	data: f32.array('threads.x'),
 	randoms: i32.array(133)
 })
 ```
@@ -144,7 +144,7 @@ Declares outputs for the kernel. Takes an object `{name: type}`.
 
 ```ts
 webGpGpu.output({
-	produced: f32.array(threads.x)
+	produced: f32.array('threads.x')
 })
 ```
 
@@ -154,9 +154,9 @@ Defines a common input value to all calls (and makes a unique transfer to the GP
 
 ```ts
 const kernel = webGpGpu
-	.input({ b: f32.array(threads.x) })
-	.common({ a: f32.array(threads.x).value([1, 2, 3]) })
-	.output({ output: f32.array(threads.x) })
+	.input({ b: f32.array('threads.x') })
+	.common({ a: f32.array('threads.x').value([1, 2, 3]) })
+	.output({ output: f32.array('threads.x') })
 	.kernel('outputBuffer[thread.x] = a[thread.x] + b[thread.x];')
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
@@ -168,8 +168,8 @@ Specifies the work size to use. This is used to *fix* and assert the values of `
 ```ts
 const kernel = webGpGpu
 	...
-	.workSize({ x: 256 })
-	.kernel('...', { y: 512 })
+	.workSize({ 'threads.x': 256 })
+	.kernel('...', { 'threads.y': 512 })
 const { output } = await kernel(..., { z: 128 })
 ```
 
@@ -240,11 +240,11 @@ Note that arrays can be converted! The next code is doing the expected job : `My
 
 ```ts
 const myValues: MyClass[] = [...]
-const myType = f32.array(threads.x).transform<MyClass>(
+const myType = f32.array('threads.x').transform<MyClass>(
 	(m: MyClass, [size]: [number])=> [...],
 	(o: ArrayLike<number>, [size]: [number])=> new MyClass(o)
 )
-myType.array(threads.y).value(myValues)
+myType.array('threads.y').value(myValues)
 ```
 
 #### value
@@ -269,32 +269,44 @@ toTypedArray(
 
 ## Size inference
 
-`threads.x`, `threads.y` and `threads.z` are internal values (symbols) that can be used as "jokers" - or not. Each `WebGpGpu` has a state of inference (it knows some sizes and others not) and will infer them as soon as possible.
+One inference exists in all computation: `threads`, but others can be declared and used.
 
-1. The first inference will be when specifying commons (define-time)
-2. The second inference will be when specifying inputs (run-time)
-3. The workSize can be given by the `.workSize(...)` chainable function (define-tine)
-4. Defaults can be given as supplementary arguments of `kernel` (define-time, but these arguments will be used *after* input inference as they are considered as "optional")
-5. Lastly, supplementary arguments can be given *to* the produced kernel
-6. Finally, it is just supposed `1`
+Inferences come in all shades of `u32` (`u32`, `vec2u`, `vec3u` & `vec4u`) - one is provides (`threads`: `vec3u`) though others can be created. When sizes are specified, an inference can be used - the WebGpGpu engine remembers an inferring status (what is known what is not), deduce from given arrays and assert sizes.
 
-In 4. & 5., the last arguments if specified are:
-- `{x?: number, y?: number, z?: number}` the values to default to - Note that no assertion is done as these are "consultative", "in case it was not inferred yet"
+In the shader code, inferences can be used directly (they are declared in their `u32` shade) and the values will be provided as uniforms.
+
+Inferences are meant to replace `arrayLength` and other mechanism. If really a random-size table has to be given and its size retrieved, this can be used:
+```ts
+	webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
+```
+and `myTableSize` will be a provided `vec2u`.
+
+### Inference declarations and value forcing
+
+`.infer({ [inferenceName]: inferedValues})` where the values is one inferred value or a 2-3-4-length array of such. Inferred values can be directly given as numbers if their value is known, or let `undefined` in order to have it inferred later.
+
+`.infer` can be called with an already-declared
+
+### Inference defaulting
+
+If inferences cannot be retrieved from an array size, they can be defaulted to a number (or will default to `1`) when defining or calling the kernel.
+
+Note: This defaulting system doesn't assert anything and will perhaps not even be taken into account if the value was already inferred. To force a value, use `.infer`.
 
 Generate the 10 first squares:
 ```ts
 const kernel = webGpGpu
-	.output({output: f32.array(threads.x)})
-	.kernel('outputBuffer[thread.x] = thread.x*thread.x;', { x: 10 })
+	.output({output: f32.array('threads.x')})
+	.kernel('outputBuffer[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
 const { output } = await kernel({})
 ```
 
 Generate the N first squares:
 ```ts
 const kernel = webGpGpu
-	.output({output: f32.array(threads.x)})
+	.output({output: f32.array('threads.x')})
 	.kernel('outputBuffer[thread.x] = thread.x*thread.x;')
-const { output } = await kernel({}, { x: 10 })
+const { output } = await kernel({}, { 'threads.x': 10 })
 ```
 
 ## Structures

@@ -1,5 +1,4 @@
 import { Float16Array } from '@petamoriken/float16'
-import type { SizeSpec } from 'inference'
 import {
 	InferenceValidationError,
 	type TypedArray,
@@ -12,7 +11,7 @@ import {
 	type WorkSize,
 } from './types'
 
-export type NumericSizesSpec<SizesSpec extends SizeSpec[]> = {
+export type NumericSizesSpec<SizesSpec extends any[]> = {
 	[K in keyof SizesSpec]: number
 }
 

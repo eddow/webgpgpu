@@ -1,10 +1,4 @@
-import {
-	InferenceValidationError,
-	InputXD,
-	ParameterError,
-	type TypedArray,
-	mapEntries,
-} from './types'
+import { InferenceValidationError, ParameterError, mapEntries } from './types'
 
 export type Inferred = number | undefined
 // Redo the [required] for debug
@@ -24,19 +18,16 @@ type UnionToIntersection<U> = (U extends any ? (arg: U) => void : never) extends
 ) => void
 	? I
 	: never
+export type CreatedInferences<Input> = UnionToIntersection<
+	{
+		[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
+	}[keyof Input]
+>
+export type AnyInference = Record<string, Inferred>
 export function infer<
 	Inferences extends Record<string, Inferred>,
 	Input extends Record<string, Inferred | readonly Inferred[]>, // Allow any tuple length
->(
-	inferences: Inferences,
-	input: Input,
-	reason?: string
-): Inferences &
-	UnionToIntersection<
-		{
-			[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
-		}[keyof Input]
-	> {
+>(inferences: Inferences, input: Input, reason?: string): Inferences & CreatedInferences<Input> {
 	const setting: { [key: string]: Inferred } = {}
 
 	for (const [inference, value] of Object.entries(input))
@@ -44,11 +35,7 @@ export function infer<
 			for (let i = 0; i < value.length; i++) setting[`${inference}.${'xyzw'[i]}`] = value[i]
 		else setting[inference] = value as Inferred
 	return specifyInference(inferences, setting as Partial<Inferences>, reason) as Inferences &
-		UnionToIntersection<
-			{
-				[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
-			}[keyof Input]
-		>
+		CreatedInferences<Input>
 }
 
 /**
@@ -114,6 +101,8 @@ export function assertSize<Inferences extends { [key: string]: Inferred }>(
 			)
 		}
 		specified[expected[i] as keyof Inferences] = given[i] as number
+		if (!(expected[i] in inferences))
+			throw new ParameterError(`${String(expected[i])} is not an inference`)
 	}
 
 	return specifyInference(inferences, specified as Partial<Inferences>, reason, reasons)
@@ -124,7 +113,7 @@ type MapNumbers<TArray extends any[]> = {
 }
 
 export function resolvedSize<
-	Inferences extends { [key: string]: Inferred },
+	Inferences extends Record<string, Inferred>,
 	SizesSpec extends SizeSpec<Inferences>[],
 >(size: SizesSpec, inferences: Inferences): MapNumbers<SizesSpec> {
 	return size.map((s) => {
@@ -146,7 +135,7 @@ const furtherInference = infer(basicInference, { tests: infer2D, t1: infer1D })
 type T = typeof furtherInference
 const worksOk = furtherInference['threads.y']
 //@ts-expect-error
-const ShouldNotWorkButDoes = furtherInference['qwe.u']
+const ShouldNotWork = furtherInference['qwe.u']
 
 const spec = specifyInference(basicInference, { 'threads.z': 3 })
 const spec2 = specifyInference(basicInference, { 'threads.z': 4 })

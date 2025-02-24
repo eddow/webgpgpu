@@ -1,7 +1,7 @@
-import type { Buffable } from '../dataTypes'
+import type { Buffable } from '../buffable'
 import { ParameterError, type TypedArray, type TypedArrayConstructor } from '../types'
 
-export const reservedBindGroupIndex = 0
+export const inferredBindGroupIndex = 0
 export const commonBindGroupIndex = 1
 export const inputBindGroupIndex = 2
 export const outputBindGroupIndex = 3

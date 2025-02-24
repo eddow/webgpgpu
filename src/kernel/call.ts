@@ -1,16 +1,22 @@
 import type { BufferReader } from '../buffers'
-import { type Inferred, defaultedInference, resolvedSize, specifyInference } from '../inference'
+import {
+	type AnyInference,
+	type Inferred,
+	defaultedInference,
+	resolvedSize,
+	specifyInference,
+} from '../inference'
 import { log } from '../log'
 import { workGroupCount } from '../typedArrays'
 import { type AnyInput, CompilationError, ParameterError } from '../types'
 import {
 	type OutputEntryDescription,
 	commonBindGroupIndex,
+	inferredBindGroupIndex,
 	inputBindGroupIndex,
 	inputGroupEntry,
 	outputBindGroupIndex,
 	outputGroupEntry,
-	reservedBindGroupIndex,
 } from './io'
 import type { KernelScope } from './scope'
 
@@ -29,11 +35,12 @@ export async function callKernel<
 		inputBindGroupLayout,
 		outputBindGroupLayout,
 		kernelWorkGroupSize,
-		reservedBindGroupLayout,
+		inferredBindGroupLayout,
+		inferredEntries,
 		outputDescription,
 		pipeline,
 		commonBindGroup,
-	}: KernelScope
+	}: KernelScope<Inferences>
 ) {
 	const messages = (await shaderModuleCompilationInfo).messages
 	if (messages.length > 0) {
@@ -51,7 +58,7 @@ export async function callKernel<
 	}
 	// Inference can be done here as non-compulsory inference are not compelling
 	const callInfer = defaultedInference(
-		specifyInference(kernelInferences, defaultInfers) as Inferences
+		specifyInference(kernelInferences, defaultInfers as Partial<Inferences>) as Inferences
 	)
 
 	// #region Input
@@ -88,7 +95,7 @@ export async function callKernel<
 	})
 
 	// #endregion
-	// #region Reserved bind group
+	// #region Inferences bind group
 
 	const explicit = [
 		callInfer['threads.x'] ?? 1,
@@ -97,21 +104,42 @@ export async function callKernel<
 	] as [number, number, number]
 
 	const workGroups = workGroupCount(explicit, kernelWorkGroupSize) as [number, number, number]
-
-	const workSizeBuffer = device.createBuffer({
-		size: 16,
-		usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-	})
-	device.queue.writeBuffer(workSizeBuffer, 0, new Uint32Array(explicit))
-	const reservedBindGroup = device.createBindGroup({
-		label: 'reserved-bind-group',
-		layout: reservedBindGroupLayout!,
-		entries: [
-			{
-				binding: 0,
-				resource: { buffer: workSizeBuffer },
-			},
-		],
+	const inferredBindGroupEntries: GPUBindGroupEntry[] = []
+	for (const { name, dimension } of inferredEntries) {
+		const buffer = device.createBuffer({
+			size: 16,
+			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+		})
+		let value: number[]
+		switch (dimension) {
+			case 1:
+				value = [callInfer[name]]
+				break
+			case 2:
+				value = [callInfer[`${name}.x`], callInfer[`${name}.y`]]
+				break
+			case 3:
+				value = [callInfer[`${name}.x`], callInfer[`${name}.y`], callInfer[`${name}.z`]]
+				break
+			case 4:
+				value = [
+					callInfer[`${name}.x`],
+					callInfer[`${name}.y`],
+					callInfer[`${name}.z`],
+					callInfer[`${name}.w`],
+				]
+				break
+		}
+		device.queue.writeBuffer(buffer, 0, new Uint32Array(value!))
+		inferredBindGroupEntries.push({
+			binding: inferredBindGroupEntries.length,
+			resource: { buffer },
+		})
+	}
+	const inferredBindGroup = device.createBindGroup({
+		label: 'inferred-bind-group',
+		layout: inferredBindGroupLayout,
+		entries: inferredBindGroupEntries,
 	})
 
 	// #endregion
@@ -124,7 +152,7 @@ export async function callKernel<
 		const OutputEntryDescription = outputGroupEntry(
 			device,
 			name,
-			resolvedSize(buffable.size, callInfer),
+			resolvedSize(buffable.size, callInfer as any),
 			buffable.elementSize,
 			buffable.bufferType
 		)
@@ -149,7 +177,7 @@ export async function callKernel<
 	})
 	const passEncoder = commandEncoder.beginComputePass()
 	passEncoder.setPipeline(pipeline)
-	passEncoder.setBindGroup(reservedBindGroupIndex, reservedBindGroup)
+	passEncoder.setBindGroup(inferredBindGroupIndex, inferredBindGroup)
 	passEncoder.setBindGroup(commonBindGroupIndex, commonBindGroup)
 	passEncoder.setBindGroup(inputBindGroupIndex, inputBindGroup)
 	passEncoder.setBindGroup(outputBindGroupIndex, outputBindGroup)

@@ -1,7 +1,10 @@
 import { expect } from 'chai'
 import { after, before, describe, it } from 'mocha'
+import type { ValuedBuffable } from 'src/buffable'
+import { AnyInference, type Inferred } from 'src/inference'
 import createWebGpGpu, {
 	InferenceValidationError,
+	ParameterError,
 	Vector2,
 	type WebGpGpu,
 	f32,
@@ -163,6 +166,34 @@ describe('infers size', () => {
 			})
 			.kernel('')
 		expect(kernel.toString()).to.match(/@workgroup_size\(4,8,/)
+	})
+	it('custom', async () => {
+		const kernel = webGpGpu
+			.infer({ custom: [4, 8] })
+			.common({
+				a: f32.array('threads.x').value([1, 2, 3]),
+				b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
+			})
+			.kernel('')
+		expect(kernel.toString()).to.match(/@workgroup_size\(4,/)
+	})
+	it('assert', async () => {
+		const t = f32.array('qwe').value([4, 5, 6, 7, 8]) as ValuedBuffable<
+			Float32Array<ArrayBufferLike>,
+			number,
+			{ qwe: Inferred },
+			['qwe'],
+			[],
+			[number]
+		>
+
+		expect(() =>
+			webGpGpu.common({
+				//// @ts-expect-error 'other' is not an inference key
+				a: f32.array('other').value([4, 5, 6, 7, 8]),
+				t,
+			})
+		).to.throw(ParameterError)
 	})
 	it('assert', async () => {
 		expect(() =>

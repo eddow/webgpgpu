@@ -12,6 +12,7 @@
 		"strictNullChecks": true,
 		"strictBindCallApply": false,
 		"baseUrl": "..",
+		"noErrorTruncation": true,
 		"paths": {
 			"webgpgpu": ["../src/server"]
 		},

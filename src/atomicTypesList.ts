@@ -4,7 +4,7 @@ import {
 	GpGpuXFloat32,
 	GpGpuXInt32,
 	GpGpuXUint32,
-} from './dataTypes'
+} from './buffable'
 
 // #region GpGpu0x
 
