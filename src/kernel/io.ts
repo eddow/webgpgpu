@@ -5,6 +5,7 @@ export const inferredBindGroupIndex = 0
 export const commonBindGroupIndex = 1
 export const inputBindGroupIndex = 2
 export const outputBindGroupIndex = 3
+export const generatedBindGroupIndex = 4
 
 export interface BindingEntryDescription {
 	layoutEntry: GPUBindGroupLayoutEntry
@@ -49,7 +50,7 @@ export function layoutGroupEntry(
 				description: `@group(${group}) @binding(${binding}) var<storage, ${readOnly ? 'read' : 'read_write'}> ${name} : array<${buffable.wgslSpecification}>;`,
 			}
 		}
-		/* TODO: Textures
+		/* TODO: 2~3~4D
 		case 2:
 		case 3:*/
 		default:
@@ -82,7 +83,7 @@ export function inputGroupEntry(
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }
 		}
-		/* TODO: Textures
+		/* TODO: 2~3~4D
 		case 2:
 		case 3:*/
 		default:
@@ -123,7 +124,7 @@ export function outputGroupEntry(
 			}
 			return { resource: { buffer: outputBuffer }, encoder, read, name }
 		}
-		/* TODO: Textures
+		/* TODO: 2~3~4D
 		case 2:
 		case 3:*/
 		default:

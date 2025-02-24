@@ -128,20 +128,11 @@ export const mat4x4i = new GpGpuXInt32<vec16>(16, 'mat4x4i')
 
 // #endregion GpGpu4x4
 // #region f16
+// Only exist as vec#h shape
 
-export let f16: GpGpuSingleton<number> = f32
 export let vec2h: GpGpuSingleton<vec2> = vec2f
 export let vec3h: GpGpuSingleton<vec3> = vec3f
 export let vec4h: GpGpuSingleton<vec4> = vec4f
-export let mat2x2h: GpGpuSingleton<vec4> = mat2x2f
-export let mat2x3h: GpGpuSingleton<vec6> = mat2x3f
-export let mat2x4h: GpGpuSingleton<vec8> = mat2x4f
-export let mat3x2h: GpGpuSingleton<vec6> = mat3x2f
-export let mat3x3h: GpGpuSingleton<vec9> = mat3x3f
-export let mat3x4h: GpGpuSingleton<vec12> = mat3x4f
-export let mat4x2h: GpGpuSingleton<vec8> = mat4x2f
-export let mat4x3h: GpGpuSingleton<vec12> = mat4x3f
-export let mat4x4h: GpGpuSingleton<vec16> = mat4x4f
 export let Vector2: GpGpuSingleton<{ x: number; y: number }> = vec2f.transform(
 	(v) => [v.x, v.y],
 	(v) => ({ x: v[0], y: v[1] })
@@ -168,24 +159,9 @@ export function activateF16(available: boolean) {
 	if (f16Activated) return
 	f16Activated = true
 	if (!available) return
-	f16 = new GpGpuXFloat16<number>(
-		1,
-		'f16',
-		(n) => [n],
-		(a) => a[0]
-	)
 	vec2h = new GpGpuXFloat16<vec2>(2, 'vec2h')
 	vec3h = new GpGpuXFloat16<vec3>(3, 'vec3h')
 	vec4h = new GpGpuXFloat16<vec4>(4, 'vec4h')
-	mat2x2h = new GpGpuXFloat16<vec4>(4, 'mat2x2h')
-	mat2x3h = new GpGpuXFloat16<vec6>(6, 'mat2x3h')
-	mat2x4h = new GpGpuXFloat16<vec8>(8, 'mat2x4h')
-	mat3x2h = new GpGpuXFloat16<vec6>(6, 'mat3x2h')
-	mat3x3h = new GpGpuXFloat16<vec9>(9, 'mat3x3h')
-	mat3x4h = new GpGpuXFloat16<vec12>(12, 'mat3x4h')
-	mat4x2h = new GpGpuXFloat16<vec8>(8, 'mat4x2h')
-	mat4x3h = new GpGpuXFloat16<vec12>(12, 'mat4x3h')
-	mat4x4h = new GpGpuXFloat16<vec16>(16, 'mat4x4h')
 	Vector2 = vec2h.transform(
 		(v) => [v.x, v.y],
 		(v) => ({ x: v[0], y: v[1] })

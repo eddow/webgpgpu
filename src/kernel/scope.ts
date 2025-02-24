@@ -1,4 +1,5 @@
-import type { TypedArray } from 'types'
+import type { BufferReader } from 'buffers'
+import type { AnyInput, TypedArray } from 'types'
 import type { Buffable } from '../buffable'
 import { type AnyInference, type Inferred, specifyInference } from '../inference'
 import { workgroupSize } from '../typedArrays'
@@ -10,9 +11,6 @@ import {
 	layoutGroupEntry,
 	outputBindGroupIndex,
 } from './io'
-export type KernelScope<Inferences extends Record<string, Inferred>> = ReturnType<
-	typeof kernelScope<Inferences>
->
 export function kernelScope<Inferences extends Record<string, Inferred>>(
 	compute: string,
 	kernelDefaults: Partial<Record<keyof Inferences, number>>,
@@ -29,7 +27,7 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 		device: GPUDevice
 		commonData: readonly BoundDataEntry[]
 		inputs: Record<string, Buffable<Inferences>>
-		outputs: Record<string, Buffable>
+		outputs: Record<string, Buffable<Inferences>>
 		inferences: Inferences
 		inferred: Record<string, number>
 		workGroupSize: [number, number, number] | null
@@ -115,6 +113,7 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 	})
 
 	// #endregion Output
+	// #region Inferred
 
 	const inferredBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
 	const inferredBindGroupDescription: string[] = []
@@ -137,6 +136,9 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 		label: 'inferred-bind-group-layout',
 		entries: inferredBindGroupLayoutEntries,
 	})
+
+	// #endregion Inferred
+
 	const kernelInferences = specifyInference(
 		{ ...inferences },
 		kernelDefaults as Partial<Inferences>

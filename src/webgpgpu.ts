@@ -9,6 +9,7 @@ import {
 import type { BufferReader } from './buffers'
 import { WgslCodeGenerator } from './code'
 import {
+	type AnyInference,
 	type CreatedInferences,
 	type Inferred,
 	basicInference,
@@ -20,13 +21,7 @@ import { inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
 import { explicitWorkSize } from './typedArrays'
-import {
-	type AnyInput,
-	ParameterError,
-	type TypedArray,
-	WebGpGpuError,
-	type WorkSize,
-} from './types'
+import { type AnyInput, ParameterError, WebGpGpuError, type WorkSize } from './types'
 
 export interface BoundDataEntry {
 	name: string
@@ -40,6 +35,15 @@ export interface BoundDataEntry {
 interface RootInfo {
 	dispose?(): void
 	device?: GPUDevice
+}
+
+export interface Kernel<
+	Inputs extends Record<string, AnyInput>,
+	Outputs extends Record<string, BufferReader>,
+	Inferences extends AnyInference,
+> {
+	(inputs: Inputs, defaultInfers?: Partial<Record<keyof Inferences, number>>): Promise<Outputs>
+	inferred: Inferences
 }
 
 export class WebGpGpu<
@@ -135,8 +139,8 @@ export class WebGpGpu<
 	private readonly inferred: Record<string, number> //var name => dimension
 	private readonly inferenceReasons: Record<string, string>
 	private readonly commonData: readonly BoundDataEntry[]
-	private readonly inputs: Record<string, Buffable>
-	private readonly outputs: Record<string, Buffable>
+	private readonly inputs: Record<string, Buffable<Inferences>>
+	private readonly outputs: Record<string, Buffable<Inferences>>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
@@ -164,8 +168,8 @@ export class WebGpGpu<
 			inferred: Record<string, number>
 			inferenceReasons: Record<string, string>
 			commonData: BoundDataEntry[]
-			inputs: Record<string, Buffable>
-			outputs: Record<string, Buffable>
+			inputs: Record<string, Buffable<Inferences>>
+			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
 		}>,
@@ -176,8 +180,8 @@ export class WebGpGpu<
 		this.inferred = inferred ?? parent!.inferred
 		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
 		this.commonData = commonData ?? parent!.commonData
-		this.inputs = inputs ?? parent!.inputs
-		this.outputs = outputs ?? parent!.outputs
+		this.inputs = inputs ?? (parent!.inputs as Record<string, Buffable<Inferences>>)
+		this.outputs = outputs ?? (parent!.outputs as Record<string, Buffable<Inferences>>)
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
 		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
@@ -352,7 +356,10 @@ export class WebGpGpu<
 	 * @param kernelWorkInf Default values to give to work-size axis if none were specified
 	 * @returns
 	 */
-	kernel(compute: string, kernelDefaults: Partial<Record<keyof Inferences, number>> = {}) {
+	kernel(
+		compute: string,
+		kernelDefaults: Partial<Record<keyof Inferences, number>> = {}
+	): Kernel<Inputs, Outputs, Inferences> {
 		function guarded<T>(fct: () => T) {
 			try {
 				return fct()
@@ -373,7 +380,7 @@ export class WebGpGpu<
 			definitions,
 		} = this
 		const scope = guarded(() =>
-			kernelScope(compute, kernelDefaults, {
+			kernelScope<Inferences>(compute, kernelDefaults, {
 				device,
 				commonData,
 				inputs,
@@ -384,12 +391,15 @@ export class WebGpGpu<
 				definitions,
 			})
 		)
+		//
 		const getDevice = () => this.device
 		return Object.assign(
 			// Kernel function signature
-			async (inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
-				guarded(() => callKernel(getDevice(), inputs, defaultInfers, scope)),
-			{ toString: () => scope.code }
+			(inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
+				guarded(() =>
+					callKernel<Inputs, Outputs, Inferences>(getDevice(), inputs, defaultInfers, scope)
+				),
+			{ toString: () => scope.code, inferred: scope.kernelInferences }
 		)
 	}
 }

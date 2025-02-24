@@ -33,11 +33,14 @@ export function dimensionedArray(
 		| [number]
 		| [number, number]
 		| [number, number, number]
-		| [number, number, number, number] = []
-	// TODO: elementSize in order to assert?
+		| [number, number, number, number] = [],
+	expectedElementSize?: number
 ): TypedArrayXD {
 	const elementSize = typedArray.length / size.reduce((a, b) => a * b, 1)
-	if (![1, 2, 3, 4, 6, 8, 9, 12, 16].includes(elementSize))
+	if (
+		![1, 2, 3, 4, 6, 8, 9, 12, 16].includes(elementSize) ||
+		(expectedElementSize && elementSize !== expectedElementSize)
+	)
 		throw new InferenceValidationError(
 			`Array size mismatch: With a length of ${typedArray.length} a size-${size.join('x')} array/texture would have an element size of ${elementSize}`
 		)

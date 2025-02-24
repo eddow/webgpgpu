@@ -18,7 +18,7 @@ import {
 	outputBindGroupIndex,
 	outputGroupEntry,
 } from './io'
-import type { KernelScope } from './scope'
+import type { kernelScope } from './scope'
 
 export async function callKernel<
 	Inputs extends Record<string, AnyInput>,
@@ -40,7 +40,7 @@ export async function callKernel<
 		outputDescription,
 		pipeline,
 		commonBindGroup,
-	}: KernelScope<Inferences>
+	}: ReturnType<typeof kernelScope<Inferences>>
 ) {
 	const messages = (await shaderModuleCompilationInfo).messages
 	if (messages.length > 0) {

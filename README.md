@@ -16,7 +16,7 @@ npm install --save webgpgpu
 ### Usage
 
 ```ts
-import createWebGpGpu, { f32, threads } from 'webgpgpu'
+import createWebGpGpu, { f32 } from 'webgpgpu'
 
 async function main() {
 	const webGpGpu = await createWebGpGpu()
