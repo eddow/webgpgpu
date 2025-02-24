@@ -1,12 +1,8 @@
 import { Float16Array } from '@petamoriken/float16'
+import type { NumericSizesSpec } from 'typedArrays'
 import { BufferReader, elementsToTypedArray } from './buffers'
-import {
-	type NumericSizesSpec,
-	type SizeSpec,
-	type WorkSizeInfer,
-	resolvedSize,
-} from './typedArrays'
-import type { InputXD, TypedArray } from './types'
+import { type Inferred, type SizeSpec, assertSize, resolvedSize } from './inference'
+import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
 
 export type ValuedBuffable<
 	Buffer extends TypedArray = TypedArray,
@@ -17,12 +13,6 @@ export type ValuedBuffable<
 > = {
 	buffable: Buffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	value: InputXD<OriginElement, InputSpec, Buffer>
-}
-
-export type TypedArrayConstructor<TArray extends TypedArray> = {
-	new (content: number[] | number): TArray
-	new (ab: ArrayBuffer): TArray
-	BYTES_PER_ELEMENT: number
 }
 
 export function isBuffable(buffable: any): buffable is Buffable {
@@ -48,11 +38,12 @@ export interface Buffable<
 	) => OriginElement
 	readonly size: SizesSpec
 	readonly bufferType: TypedArrayConstructor<Buffer>
-	toTypedArray(
-		workSizeInfer: WorkSizeInfer,
+	toTypedArray<Inferences extends Record<string, Inferred>>(
+		inferences: Inferences,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
-		actionInfo: string
-	): TypedArray
+		reason: string,
+		reasons: Record<string, string>
+	): Buffer
 	value(
 		v: InputXD<OriginElement, InputSpec, Buffer>
 	): ValuedBuffable<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
@@ -61,7 +52,7 @@ export interface Buffable<
 	readonly transformSize: InputSizesSpec
 	readTypedArray(
 		buffer: Buffer,
-		workSizeInferred: WorkSizeInfer
+		inferences: Record<string, Inferred>
 	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 }
 
@@ -118,27 +109,31 @@ class GpGpuData<
 	 * @param required Whether to modify the size inference data and mark modifications as "required" if given (The text is actually used in exception description)
 	 * @returns TypedArray
 	 */
-	toTypedArray(
-		workSizeInfer: WorkSizeInfer,
+	toTypedArray<Inferences extends Record<string, Inferred>>(
+		inferences: Inferences,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
-		required?: string
+		reason: string,
+		reasons: Record<string, string>
 	): Buffer {
-		return elementsToTypedArray<Buffer, OriginElement, InputSizesSpec>(
+		// TODO: forward inference concern
+		return elementsToTypedArray<Buffer, OriginElement, Inferences, InputSizesSpec>(
 			this,
-			workSizeInfer,
+			inferences,
 			data,
 			this.size,
-			required
+			reason,
+			reasons
 		)
 	}
 	readTypedArray(
 		buffer: Buffer,
-		workSizeInferred: WorkSizeInfer
+		inferences: Record<string, Inferred>
 	): BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+		// TODO: forward inference concern
 		return new BufferReader<Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>(
 			this,
 			buffer,
-			resolvedSize(this.size, workSizeInferred)
+			resolvedSize(this.size, inferences)
 		)
 	}
 	array<SubSizesSpec extends SizeSpec[]>(...size: SubSizesSpec) {

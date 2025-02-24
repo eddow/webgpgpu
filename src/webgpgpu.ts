@@ -1,4 +1,6 @@
+import { activateF16 } from './atomicTypesList'
 import type { BufferReader } from './buffers'
+import { WgslCodeGenerator } from './code'
 import {
 	type Buffable,
 	type InputType,
@@ -6,19 +8,13 @@ import {
 	type ValuedBuffable,
 	isBuffable,
 } from './dataTypes'
-import { activateF16 } from './dataTypesList'
+import { type Inferred, basicInference, infer, resolvedSize } from './inference'
 import { callKernel } from './kernel/call'
 import { inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
-import { type WorkSizeInfer, explicitWorkSize, resolvedSize } from './typedArrays'
-import {
-	type AnyInput,
-	ParameterError,
-	type RequiredAxis,
-	WebGpGpuError,
-	type WorkSize,
-} from './types'
+import { explicitWorkSize } from './typedArrays'
+import { type AnyInput, ParameterError, WebGpGpuError, type WorkSize } from './types'
 
 export interface BoundDataEntry {
 	name: string
@@ -38,7 +34,10 @@ interface RootInfo {
 export class WebGpGpu<
 	Inputs extends Record<string, AnyInput> = {},
 	Outputs extends Record<string, BufferReader> = {},
-> {
+	Inferences extends Record<string, Inferred> = typeof basicInference,
+> extends WgslCodeGenerator {
+	// #region Creation
+
 	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): WebGpGpu
 	static createRoot(
 		root: GPUAdapter,
@@ -69,7 +68,10 @@ export class WebGpGpu<
 			return new WebGpGpu(
 				undefined,
 				{
-					workSizeInfer: {},
+					importUsage: [],
+					inferences: basicInference,
+					inferred: { threads: 3 },
+					inferenceReasons: {},
 					definitions: [],
 					commonData: [],
 					inputs: {},
@@ -126,89 +128,154 @@ export class WebGpGpu<
 		if (!this.rootInfo.reservedBindGroupLayout) throw new Error('WebGpGpu already disposed')
 		return this.rootInfo.reservedBindGroupLayout
 	}
-	private readonly workSizeInfer: WorkSizeInfer
-	private readonly definitions: readonly string[]
+	//@Sealed
+	/**
+	 * Gives the inferred work size (x, y, z)
+	 */
+	public readonly inferences: Inferences
+	private readonly inferred: Record<string, number> //var name => dimension
+	private readonly inferenceReasons: Record<string, string>
 	private readonly commonData: readonly BoundDataEntry[]
 	private readonly inputs: Record<string, Buffable>
 	private readonly outputs: Record<string, Buffable>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
+	/**
+	 * Allows hooking the library's log messages
+	 */
 	public static readonly log: Log = log
 	private constructor(
-		parent: WebGpGpu<any, any> | undefined,
+		parent: WebGpGpu<any, any, any> | undefined,
 		{
-			workSizeInfer,
 			definitions,
+			importUsage,
+			inferences,
+			inferred,
+			inferenceReasons,
 			commonData,
 			inputs,
 			outputs,
 			workGroupSize,
 			usedNames,
 		}: Partial<{
-			workSizeInfer: WorkSizeInfer
 			definitions: string[]
+			importUsage: Iterable<PropertyKey>
+			inferences: Inferences
+			inferred: Record<string, number>
+			inferenceReasons: Record<string, string>
 			commonData: BoundDataEntry[]
 			inputs: Record<string, Buffable>
 			outputs: Record<string, Buffable>
 			workGroupSize: [number, number, number] | null
-			usedNames: Set<string>
+			usedNames: Iterable<string>
 		}>,
 		rootInfo?: RootInfo
 	) {
-		this.workSizeInfer = workSizeInfer ?? parent!.workSizeInfer
-		this.definitions = definitions ?? parent!.definitions
+		super(definitions ?? parent!.definitions, importUsage ?? parent!.importUsage)
+		this.inferences = inferences ?? parent!.inferences
+		this.inferred = inferred ?? parent!.inferred
+		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
 		this.commonData = commonData ?? parent!.commonData
 		this.inputs = inputs ?? parent!.inputs
 		this.outputs = outputs ?? parent!.outputs
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
-		this.usedNames = usedNames ?? parent!.usedNames
+		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
 	}
-	checkNameConflicts(...names: string[]) {
+	private checkNameConflicts(...names: string[]) {
 		const conflicts = names.filter((name) => this.usedNames.has(name))
 		if (conflicts.length)
 			throw new ParameterError(`Parameter name conflict: ${conflicts.join(', ')}`)
 		return new Set([...this.usedNames, ...names])
 	}
 
-	defined(...definitions: string[]) {
-		return new WebGpGpu<Inputs, Outputs>(this, {
+	// #endregion Creation
+	// #region Chainable
+
+	/**
+	 * Adds a definition (pre-function code) to the kernel
+	 * @param definitions WGSL code to add in the end-kernel
+	 * @returns Chainable
+	 */
+	define(...definitions: string[]) {
+		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
 			definitions: [...this.definitions, ...definitions],
 		})
 	}
+
+	/**
+	 * Adds an import usage to the kernel if not yet added
+	 * @param imports Names of imports to add, must be `keyof WebGpGpu.imports`
+	 * @returns Chainable
+	 */
+	use(...imports: PropertyKey[]) {
+		const missing = imports.filter((name) => !(name in WebGpGpu.imports))
+		if (missing.length) throw new ParameterError(`Unknown import: ${missing.join(', ')}`)
+		const newImports = imports.filter((name) => !(name in this.importUsage))
+		if (!newImports.length) return this
+		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
+			importUsage: [...this.importUsage, ...newImports],
+		})
+	}
+
+	/**
+	 * Definitions of standard imports - these can directly be edited by setting/deleting keys
+	 */
+	public static readonly imports: Record<PropertyKey, string> = Object.create(null)
+	protected getImport(name: PropertyKey): string {
+		return WebGpGpu.imports[name]
+	}
+
+	/**
+	 * Adds common values to the kernel (given to the kernel but not expected as inputs)
+	 * @param commons
+	 * @returns Chainable
+	 */
 	common<Specs extends Record<string, ValuedBuffable>>(
 		commons: Specs
-	): WebGpGpu<Omit<Inputs, keyof Specs>, Outputs> {
+	): WebGpGpu<Inputs, Outputs, Inferences> {
 		const usedNames = this.checkNameConflicts(...Object.keys(commons))
 		const { device } = this
-		const workSizeInfer = { ...this.workSizeInfer }
+		const inferences = { ...this.inferences }
+		const inferenceReasons = { ...this.inferenceReasons }
 		const newCommons = [...this.commonData]
 		for (const [name, { buffable, value }] of Object.entries(commons)) {
 			if (!isBuffable(buffable) || !value)
 				throw new ParameterError(`Bad parameter for common \`${name}\``)
-			const typedArray = buffable.toTypedArray(workSizeInfer, value, `common \`${name}\``)
+			const typedArray = buffable.toTypedArray(
+				inferences,
+				value,
+				`common \`${name}\``,
+				inferenceReasons
+			)
 			newCommons.push({
 				name,
 				type: buffable,
 				resource: inputGroupEntry(
 					device,
 					name,
-					resolvedSize(buffable.size, workSizeInfer),
+					resolvedSize(buffable.size, inferences),
 					typedArray
 				),
 			})
 		}
 
 		return new WebGpGpu(this, {
-			workSizeInfer,
+			inferences,
+			inferenceReasons,
 			commonData: newCommons,
 			usedNames,
 		})
 	}
+	/**
+	 * Defines kernel' inputs (with their default value if it's valued)
+	 * @param inputs
+	 * @returns Chainable
+	 */
 	input<Specs extends Record<string, Buffable>>(
 		inputs: Specs
-	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>, Outputs> {
+	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>, Outputs, Inferences> {
 		for (const [name, buffable] of Object.entries(inputs))
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 		return new WebGpGpu(this, {
@@ -216,20 +283,66 @@ export class WebGpGpu<
 			usedNames: this.checkNameConflicts(...Object.keys(inputs)),
 		})
 	}
+	/**
+	 * Defines kernel' outputs
+	 * @param inputs
+	 * @returns Chainable
+	 */
 	output<Specs extends Record<string, Buffable>>(
 		outputs: Specs
-	): WebGpGpu<Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>> {
+	): WebGpGpu<Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>, Inferences> {
 		return new WebGpGpu(this, {
 			outputs: { ...this.outputs, ...outputs },
 			usedNames: this.checkNameConflicts(...Object.keys(outputs)),
 		})
 	}
+	/**
+	 * Specifies the work group size
+	 * @param size
+	 * @returns
+	 */
 	workGroup(...size: WorkSize) {
-		return new WebGpGpu<Inputs, Outputs>(this, {
+		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
 			workGroupSize: size.length ? explicitWorkSize(size) : null,
 		})
 	}
-	kernel(compute: string, kernelWorkInf: WorkSizeInfer = {}, kernelRequiredInf: RequiredAxis = '') {
+
+	/**
+	 * Add a new inference variable / add a new inference value to an existing variable
+	 * @param workSize
+	 * @returns
+	 */
+	infer<Infer extends Record<string, Inferred | readonly Inferred[]>>(values: Infer) {
+		const inferred = { ...this.inferred }
+		const addedNames: string[] = []
+		for (const [name, value] of Object.entries(values)) {
+			if (name.includes('.')) throw new ParameterError(`Invalid infer name \`${name}\``)
+			const d = Array.isArray(value) ? value.length : 1
+			if (!(name in inferred)) {
+				inferred[name] = d
+
+				addedNames.push(name)
+			} else if (inferred[name] !== d)
+				throw new ParameterError(`Inference dimension conflict for \`${name}\``)
+		}
+		const usedNames = this.checkNameConflicts(...addedNames)
+		const inferences = infer(this.inferences, values, '.infer() explicit call')
+		return new WebGpGpu<Inputs, Outputs, typeof inferences>(this, {
+			inferences,
+			inferred,
+			usedNames,
+		})
+	}
+
+	// #endregion Chainable
+
+	/**
+	 *
+	 * @param compute Create a kernel
+	 * @param kernelWorkInf Default values to give to work-size axis if none were specified
+	 * @returns
+	 */
+	kernel(compute: string, kernelDefaults: Partial<Record<keyof Inferences, number>> = {}) {
 		function guarded<T>(fct: () => T) {
 			try {
 				return fct()
@@ -244,18 +357,20 @@ export class WebGpGpu<
 			commonData,
 			inputs,
 			outputs,
-			workSizeInfer,
+			inferences,
+			inferred,
 			workGroupSize,
 			definitions,
 			reservedBindGroupLayout,
 		} = this
 		const scope = guarded(() =>
-			kernelScope(compute, kernelWorkInf, kernelRequiredInf, {
+			kernelScope(compute, kernelDefaults, {
 				device,
 				commonData,
 				inputs,
 				outputs,
-				workSizeInfer,
+				inferences,
+				inferred,
 				workGroupSize,
 				definitions,
 				reservedBindGroupLayout,
@@ -264,8 +379,8 @@ export class WebGpGpu<
 		const getDevice = () => this.device
 		return Object.assign(
 			// Kernel function signature
-			async (inputs: Inputs, callWorkInf: WorkSizeInfer = {}, callRequiredInf: RequiredAxis = '') =>
-				guarded(() => callKernel(getDevice(), inputs, callWorkInf, callRequiredInf, scope)),
+			async (inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
+				guarded(() => callKernel(getDevice(), inputs, defaultInfers, scope)),
 			{ toString: () => scope.code }
 		)
 	}

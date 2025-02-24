@@ -1,6 +1,6 @@
 import type { Buffable } from '../dataTypes'
-import { type WorkSizeInfer, applyDefaultInfer, workgroupSize } from '../typedArrays'
-import type { RequiredAxis } from '../types'
+import { type Inferred, specifyInference } from '../inference'
+import { workgroupSize } from '../typedArrays'
 import type { BoundDataEntry } from '../webgpgpu'
 import {
 	commonBindGroupIndex,
@@ -10,16 +10,16 @@ import {
 	reservedBindGroupIndex,
 } from './io'
 export type KernelScope = ReturnType<typeof kernelScope>
-export function kernelScope(
+export function kernelScope<Inferences extends Record<string, Inferred>>(
 	compute: string,
-	kernelWorkInf: WorkSizeInfer,
-	kernelRequiredInf: RequiredAxis,
+	kernelDefaults: Partial<Record<keyof Inferences, number>>,
 	{
 		device,
 		commonData,
 		inputs,
 		outputs,
-		workSizeInfer,
+		inferences,
+		inferred,
 		workGroupSize,
 		definitions,
 		reservedBindGroupLayout,
@@ -28,7 +28,8 @@ export function kernelScope(
 		commonData: readonly BoundDataEntry[]
 		inputs: Record<string, Buffable>
 		outputs: Record<string, Buffable>
-		workSizeInfer: WorkSizeInfer
+		inferences: Inferences
+		inferred: Record<string, number>
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
 		reservedBindGroupLayout: GPUBindGroupLayout
@@ -114,15 +115,16 @@ export function kernelScope(
 
 	// #endregion Output
 
-	const kernelWorkSizeInfer = applyDefaultInfer(
-		workSizeInfer,
-		kernelWorkInf,
-		kernelRequiredInf,
-		'Kernel definition'
+	const kernelInferences = specifyInference(
+		{ ...inferences },
+		kernelDefaults as Partial<Inferences>
 	)
 	const kernelWorkGroupSize =
 		workGroupSize ||
-		workgroupSize([kernelWorkSizeInfer.x, kernelWorkSizeInfer.y, kernelWorkSizeInfer.z], device)
+		workgroupSize(
+			[kernelInferences['threads.x'], kernelInferences['threads.y'], kernelInferences['threads.z']],
+			device
+		)
 
 	const code = /*wgsl*/ `
 @group(${reservedBindGroupIndex}) @binding(0) var<uniform> threads : vec3u;
@@ -165,7 +167,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	return {
 		code,
 		inputsDescription,
-		kernelWorkSizeInfer,
+		kernelInferences,
 		shaderModuleCompilationInfo,
 		inputBindGroupLayout,
 		outputBindGroupLayout,

@@ -1,27 +1,27 @@
-import type { Buffable } from 'dataTypes'
+import type { Buffable } from './dataTypes'
+import { type Inferred, type SizeSpec, assertSize, resolvedSize } from './inference'
 import { log } from './log'
-import {
-	type NumericSizesSpec,
-	type SizeSpec,
-	type WorkSizeInfer,
-	assertElementSize,
-	assertSize,
-	isTypedArrayXD,
-	resolvedSize,
-} from './typedArrays'
-import { ArraySizeValidationError, type TypedArray } from './types'
+import { type NumericSizesSpec, isTypedArrayXD } from './typedArrays'
+import { InferenceValidationError, ParameterError, type TypedArray } from './types'
+
+function assertElementSize(given: any, expected: number) {
+	if (given !== expected)
+		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
+}
 
 // Poorly typed but for internal use only
 export function elementsToTypedArray<
 	Buffer extends TypedArray,
 	OriginElement,
+	Inferences extends Record<string, Inferred>,
 	InputSizesSpec extends SizeSpec[],
 >(
 	specification: Buffable<Buffer, OriginElement, SizeSpec[], InputSizesSpec>,
-	workSizeInfer: WorkSizeInfer,
+	inferences: Inferences,
 	data: any,
 	size: SizeSpec[],
-	required?: string
+	reason: string,
+	reasons: Record<string, string>
 ): Buffer {
 	const { bufferType, elementSize, elementConvert, transformSize } = specification
 	if (data instanceof bufferType && 'elementSize' in data && data.elementSize !== elementSize)
@@ -33,7 +33,7 @@ export function elementsToTypedArray<
 			return data as Buffer
 		}
 		const elm = elementConvert
-			? elementConvert(data as OriginElement, resolvedSize(transformSize, workSizeInfer))
+			? elementConvert(data as OriginElement, resolvedSize(transformSize, inferences))
 			: data
 		return elm instanceof bufferType ? (elm as Buffer) : new bufferType(elm)
 	}
@@ -42,15 +42,15 @@ export function elementsToTypedArray<
 	if (size.length === 1) {
 		if (data instanceof bufferType) {
 			if ((data as Buffer).length % elementSize !== 0)
-				throw new ArraySizeValidationError(
+				throw new InferenceValidationError(
 					`Size mismatch in dimension 1: ${data.length} is not a multiple of ${elementSize}`
 				)
-			assertSize([(data as Buffer).length / elementSize], [size[0]], workSizeInfer, required)
+			assertSize([(data as Buffer).length / elementSize], size, inferences, reason, reasons)
 			return data as Buffer
 		}
 		if (!Array.isArray(data))
-			throw new ArraySizeValidationError('Input is not an array nor a typed array')
-		assertSize([data.length], [size[0]], workSizeInfer, required)
+			throw new InferenceValidationError('Input is not an array nor a typed array')
+		assertSize([data.length], size, inferences, reason, reasons)
 		const rv = new bufferType(data.length * elementSize) as Buffer
 		let dst = 0
 		// Make the `if` early not to not make it in the loop
@@ -77,36 +77,37 @@ export function elementsToTypedArray<
 	if (data instanceof bufferType) {
 		// TODO: multidimensional inferring
 		if (!isTypedArrayXD(data))
-			throw new ArraySizeValidationError(
+			throw new InferenceValidationError(
 				`When giving a ${size.length}-D typed array as input, the input must have given dimension. Use \`dimensionedArray\``
 			)
 		if (data.size.length !== size.length)
-			throw new ArraySizeValidationError(
+			throw new InferenceValidationError(
 				`Dimensions mismatch: Typed array of dimension ${data.size.length} is used in a ${size.length}D context`
 			)
-		assertSize(data.size, size, workSizeInfer, required)
+		assertSize(data.size, size, inferences, reason, reasons)
 		return data as Buffer
 	}
 	if (!Array.isArray(data))
-		throw new ArraySizeValidationError('Input is not an array nor a typed array')
-	assertSize([data.length], size.slice(0, 1), workSizeInfer, required)
+		throw new InferenceValidationError('Input is not an array nor a typed array')
+	assertSize([data.length], [size[size.length - 1]], inferences, reason, reasons)
 	let rv: Buffer | undefined
 	let itemSize: number | undefined
 	let dst = 0
 	for (const element of data) {
 		const subBuffer = elementsToTypedArray(
 			specification,
-			workSizeInfer,
+			inferences,
 			element,
 			size.slice(1),
-			required && `[Slice of] ${required}`
+			reason && `[Slice of] ${reason}`,
+			reasons
 		)
 		if (!rv) {
 			itemSize = subBuffer.length
 			// TODO: multidimensional inferring
-			rv = new bufferType(resolvedSize(size, workSizeInfer).reduce((a, b) => a * b, 1))
+			rv = new bufferType(resolvedSize(size, inferences).reduce((a, b) => a * b, 1))
 		} else if (subBuffer.length !== itemSize)
-			throw new ArraySizeValidationError(
+			throw new InferenceValidationError(
 				`Size mismatch in dimension ${size.length}: Buffer length ${subBuffer.length} was expected to be ${itemSize}`
 			)
 		rv.set(subBuffer, dst)
@@ -153,7 +154,7 @@ export class BufferReader<
 			buffable: { elementSize, elementRecover, transformSize },
 		} = this
 		if (index.length !== size.length)
-			throw new ArraySizeValidationError(
+			throw new InferenceValidationError(
 				`Index length mismatch: taking ${index.length}-D index element out of ${size.length}-D buffer`
 			)
 		const pos = bufferPosition(index, size, elementSize)
@@ -205,9 +206,9 @@ export class BufferReader<
 		const { size, buffer, buffable: specification } = this
 		const { elementSize } = specification
 		if (!this.size.length)
-			throw new ArraySizeValidationError(`Cannot slice a ${this.size.length}-D buffer`)
+			throw new InferenceValidationError(`Cannot slice a ${this.size.length}-D buffer`)
 		if (index.length > this.size.length)
-			throw new ArraySizeValidationError(
+			throw new InferenceValidationError(
 				`Index length mismatch: taking ${index.length}-D index slice out of ${size.length}-D buffer`
 			)
 		const subSize = size.slice(index.length)
@@ -221,7 +222,7 @@ export class BufferReader<
 	}
 	*slices() {
 		const { size } = this
-		if (!size.length) throw new ArraySizeValidationError(`Cannot slice a ${size.length}-D buffer`)
+		if (!size.length) throw new InferenceValidationError(`Cannot slice a ${size.length}-D buffer`)
 		for (let i = 0; i < size[0]; i++) yield this.slice(i)
 	}
 }

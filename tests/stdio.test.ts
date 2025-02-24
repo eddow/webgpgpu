@@ -1,11 +1,10 @@
 import { expect } from 'chai'
 import { after, before, describe, it } from 'mocha'
 import createWebGpGpu, {
-	ArraySizeValidationError,
+	InferenceValidationError,
 	Vector2,
 	type WebGpGpu,
 	f32,
-	threads,
 	u32,
 	vec2f,
 } from '../src/server'
@@ -43,11 +42,11 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	})
 	it('one input', async () => {
 		const kernel = webGpGpu.workGroup(3).input({ a: f32 }).kernel('')
-		const empty = await kernel({ a: Float32Array.from([43]) }, { x: 3 })
+		const empty = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 3 })
 		expect(empty).to.be.an('object').that.is.empty
 	})
 	it('one output', async () => {
-		const kernel = webGpGpu.output({ output: f32.array(threads.x) }).kernel('output[0] = 42;')
+		const kernel = webGpGpu.output({ output: f32.array('threads.x') }).kernel('output[0] = 42;')
 		const { output } = await kernel({})
 		expect(output).to.exist
 		expect(output.toArray()).to.deep.equal([42])
@@ -58,9 +57,9 @@ describe('inputs', () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32 })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: Float32Array.from([43]) }, { x: 3 })
+		const { output } = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 3 })
 		expect(output).to.exist
 		expect(output.toArray()).to.deep.equal([43, 43, 43])
 	})
@@ -68,43 +67,46 @@ describe('inputs', () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32 })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: 44 }, { x: 3 })
+		const { output } = await kernel({ a: 44 }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([44, 44, 44])
 	})
 	it('an float array - TypedArray', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]*3;')
-		const { output } = await kernel({ a: Float32Array.from([11, 12, 13]) }, { x: 3 })
+		const { output } = await kernel({ a: Float32Array.from([11, 12, 13]) }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([33, 36, 39])
 	})
 	it('an float array - value', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]*3;')
-		const { output } = await kernel({ a: [11, 12, 13] }, { x: 3 })
+		const { output } = await kernel({ a: [11, 12, 13] }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([33, 36, 39])
 	})
 	it('an vec2 array - TypedArray', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = (a[thread.x]*3).x + (a[thread.x]*3).y;')
-		const { output } = await kernel({ a: Float32Array.from([1, 11, 2, 12, 3, 13]) }, { x: 3 })
+		const { output } = await kernel(
+			{ a: Float32Array.from([1, 11, 2, 12, 3, 13]) },
+			{ 'threads.x': 3 }
+		)
 		expect(output.toArray()).to.deep.equal([36, 42, 48])
 	})
 	it('an vec2 array - value', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = (a[thread.x]*3).x + (a[thread.x]*3).y;')
 		const { output } = await kernel(
 			{
@@ -114,7 +116,7 @@ describe('inputs', () => {
 					[3, 13],
 				],
 			},
-			{ x: 3 }
+			{ 'threads.x': 3 }
 		)
 		expect(output.toArray()).to.deep.equal([36, 42, 48])
 	})
@@ -122,7 +124,7 @@ describe('inputs', () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: Vector2.array(3) })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = (a[thread.x]*3).x + (a[thread.x]*3).y;')
 		const { output } = await kernel(
 			{
@@ -132,7 +134,7 @@ describe('inputs', () => {
 					{ x: 3, y: 13 },
 				],
 			},
-			{ x: 3 }
+			{ 'threads.x': 3 }
 		)
 		expect(output.toArray()).to.deep.equal([36, 42, 48])
 	})
@@ -140,14 +142,14 @@ describe('inputs', () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3), b: f32 })
-			.output({ output: f32.array(threads.x) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x] * b;')
 		const { output } = await kernel(
 			{
 				a: Float32Array.from([1, 2, 3]),
 				b: 5,
 			},
-			{ x: 3 }
+			{ 'threads.x': 3 }
 		)
 		expect(output.toArray()).to.deep.equal([5, 10, 15])
 	})
@@ -156,8 +158,8 @@ describe('infers size', () => {
 	it('infer', async () => {
 		const kernel = webGpGpu
 			.common({
-				a: f32.array(threads.x).value([1, 2, 3]),
-				b: f32.array(threads.y).value([4, 5, 6, 7, 8]),
+				a: f32.array('threads.x').value([1, 2, 3]),
+				b: f32.array('threads.y').value([4, 5, 6, 7, 8]),
 			})
 			.kernel('')
 		expect(kernel.toString()).to.match(/@workgroup_size\(4,8,/)
@@ -165,15 +167,15 @@ describe('infers size', () => {
 	it('assert', async () => {
 		expect(() =>
 			webGpGpu.common({
-				a: f32.array(threads.x).value([1, 2, 3]),
-				b: f32.array(threads.x).value([4, 5, 6, 7, 8]),
+				a: f32.array('threads.x').value([1, 2, 3]),
+				b: f32.array('threads.x').value([4, 5, 6, 7, 8]),
 			})
-		).to.throw(ArraySizeValidationError)
+		).to.throw(InferenceValidationError)
 	})
 	it('effect - common', async () => {
 		const kernel = webGpGpu
-			.common({ a: f32.array(threads.x).value([1, 2, 3]) })
-			.output({ output: f32.array(threads.x) })
+			.common({ a: f32.array('threads.x').value([1, 2, 3]) })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+3.;')
 
 		const { output } = await kernel({})
@@ -181,8 +183,8 @@ describe('infers size', () => {
 	})
 	it('effect - input', async () => {
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x) })
-			.output({ output: f32.array(threads.x) })
+			.input({ a: f32.array('threads.x') })
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+2.;')
 		const { output } = await kernel({ a: [1, 2, 3] })
 		expect(output.toArray()).to.deep.equal([3, 4, 5])
@@ -192,29 +194,29 @@ describe('infers size', () => {
 describe('diverse', () => {
 	it('defines', async () => {
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x) })
-			.common({ b: f32.array(threads.x).value([2, 4, 6]) })
-			.defined('fn myFunc(a: f32, b: f32) -> f32 { return a + b; }')
-			.output({ output: f32.array(threads.x) })
+			.input({ a: f32.array('threads.x') })
+			.common({ b: f32.array('threads.x').value([2, 4, 6]) })
+			.define('fn myFunc(a: f32, b: f32) -> f32 { return a + b; }')
+			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = myFunc(a[thread.x], b[thread.x]);')
 		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]) })
 		expect(output.toArray()).to.deep.equal([3, 6, 9])
 	})
 	it('name conflict', async () => {
 		const kernel = webGpGpu
-			.input({ a: f32.array(threads.x) })
-			.common({ b: f32.array(threads.x).value([2, 4, 6]) })
-		expect(() => kernel.input({ a: f32.array(threads.y) })).to.throw()
-		expect(() => kernel.input({ b: f32.array(threads.y) })).to.throw()
+			.input({ a: f32.array('threads.x') })
+			.common({ b: f32.array('threads.x').value([2, 4, 6]) })
+		expect(() => kernel.input({ a: f32.array('threads.y') })).to.throw()
+		expect(() => kernel.input({ b: f32.array('threads.y') })).to.throw()
 	})
 	it('manages big buffers', async () => {
 		// TODO: Keep on checking, the limit is near...
 		const length = 0x400000
-		const kernel = webGpGpu.output({ output: u32.array(threads.x) }).kernel(/*wgsl*/ `
+		const kernel = webGpGpu.output({ output: u32.array('threads.x') }).kernel(/*wgsl*/ `
 let modX = thread.x % 453;
 output[thread.x] = modX * modX;
 `)
-		const { output } = await kernel({}, { x: length })
+		const { output } = await kernel({}, { 'threads.x': length })
 		expect(output).to.exist
 		const array = output.toArray()
 		expect(array.length).to.equal(length)

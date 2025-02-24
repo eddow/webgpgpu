@@ -1,5 +1,5 @@
-import type { Buffable, TypedArrayConstructor } from '../dataTypes'
-import { ParameterError, type TypedArray } from '../types'
+import type { Buffable } from '../dataTypes'
+import { ParameterError, type TypedArray, type TypedArrayConstructor } from '../types'
 
 export const reservedBindGroupIndex = 0
 export const commonBindGroupIndex = 1
@@ -25,6 +25,7 @@ export function layoutGroupEntry(
 	binding: number,
 	readOnly: boolean
 ): BindingEntryDescription {
+	// TODO: If size is already inferred, write it here
 	switch (buffable.size.length) {
 		case 0: {
 			if (!readOnly)

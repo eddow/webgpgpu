@@ -1,7 +1,8 @@
 import type { BufferReader } from '../buffers'
+import { type Inferred, defaultedInference, resolvedSize, specifyInference } from '../inference'
 import { log } from '../log'
-import { type WorkSizeInfer, applyDefaultInfer, resolvedSize, workGroupCount } from '../typedArrays'
-import { type AnyInput, CompilationError, ParameterError, type RequiredAxis } from '../types'
+import { workGroupCount } from '../typedArrays'
+import { type AnyInput, CompilationError, ParameterError } from '../types'
 import {
 	type OutputEntryDescription,
 	commonBindGroupIndex,
@@ -16,14 +17,14 @@ import type { KernelScope } from './scope'
 export async function callKernel<
 	Inputs extends Record<string, AnyInput>,
 	Outputs extends Record<string, BufferReader>,
+	Inferences extends Record<string, Inferred>,
 >(
 	device: GPUDevice,
 	inputs: Inputs,
-	callWorkInf: WorkSizeInfer,
-	callRequiredInf: RequiredAxis,
+	defaultInfers: Partial<Record<keyof Inferences, number>>,
 	{
 		inputsDescription,
-		kernelWorkSizeInfer,
+		kernelInferences,
 		shaderModuleCompilationInfo,
 		inputBindGroupLayout,
 		outputBindGroupLayout,
@@ -49,11 +50,8 @@ export async function callKernel<
 		if (hasError) throw new CompilationError(messages)
 	}
 	// Inference can be done here as non-compulsory inference are not compelling
-	const callWorkSizeInfer = applyDefaultInfer(
-		kernelWorkSizeInfer,
-		callWorkInf,
-		callRequiredInf,
-		'Kernel call'
+	const callInfer = defaultedInference(
+		specifyInference(kernelInferences, defaultInfers) as Inferences
 	)
 
 	// #region Input
@@ -64,11 +62,16 @@ export async function callKernel<
 		usedInputs.add(name)
 		// TODO: default values
 		if (!inputs[name]) throw new ParameterError(`Missing input: ${name}`)
-		const typeArray = buffable.toTypedArray(callWorkSizeInfer, inputs[name]!, `input \`${name}\``)
+		const typeArray = buffable.toTypedArray<Inferences>(
+			callInfer,
+			inputs[name]!,
+			`input \`${name}\``,
+			{}
+		)
 		const resource = inputGroupEntry(
 			device,
 			name,
-			resolvedSize(buffable.size, callWorkSizeInfer),
+			resolvedSize(buffable.size, callInfer),
 			typeArray
 		)
 		inputBindGroupEntries.push({
@@ -87,12 +90,11 @@ export async function callKernel<
 	// #endregion
 	// #region Reserved bind group
 
-	for (const c of 'xyz') callWorkSizeInfer[c as 'x' | 'y' | 'z'] ??= 1
-	const explicit = [callWorkSizeInfer.x, callWorkSizeInfer.y, callWorkSizeInfer.z] as [
-		number,
-		number,
-		number,
-	]
+	const explicit = [
+		callInfer['threads.x'] ?? 1,
+		callInfer['threads.y'] ?? 1,
+		callInfer['threads.z'] ?? 1,
+	] as [number, number, number]
 
 	const workGroups = workGroupCount(explicit, kernelWorkGroupSize) as [number, number, number]
 
@@ -122,7 +124,7 @@ export async function callKernel<
 		const OutputEntryDescription = outputGroupEntry(
 			device,
 			name,
-			resolvedSize(buffable.size, callWorkSizeInfer),
+			resolvedSize(buffable.size, callInfer),
 			buffable.elementSize,
 			buffable.bufferType
 		)
@@ -165,7 +167,7 @@ export async function callKernel<
 	const result: Record<string, BufferReader> = {}
 	for (let i = 0; i < outputDescription.length; i++) {
 		const { name, buffable } = outputDescription[i]
-		result[name] = buffable.readTypedArray(reads[i], callWorkSizeInfer)
+		result[name] = buffable.readTypedArray(reads[i], callInfer)
 	}
 
 	return result as Outputs

@@ -10,7 +10,7 @@ versions:
 ### Installation
 
 ```bash
-npm install webgpgpu
+npm install --save webgpgpu
 ```
 
 ### Usage
@@ -63,7 +63,9 @@ With real pieces of :
   - workgroup-size calculation
   - `TypedArray` optimization js-side (only `set()` and `subarray()`)
   - etc.
-- Compatibility: browser & node.js (*Many browsers still require some manipulation as WebGPU is not yet completely standardized)
+- Compatibility:
+  - browser: Many browsers still require some manipulation as WebGPU is not yet completely standardized
+  - node.js through the library [node-webgpu](https://github.com/dawn-gpu/node-webgpu)
 
 ## WebGPU code
 
@@ -114,12 +116,12 @@ outputBuffer[thread.x] = a[thread.x] * b;
 
 > Note: The kernel function retrieves the *whole* generated code on `toString()`
 
-### defined
+### define
 
 Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`.
 
 ```ts
-webGpGpu.defined(/*wgsl*/ `
+webGpGpu.define(/*wgsl*/ `
 fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 `)
 ```
@@ -158,6 +160,20 @@ const kernel = webGpGpu
 	.kernel('outputBuffer[thread.x] = a[thread.x] + b[thread.x];')
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
+
+### workSize
+
+Specifies the work size to use. This is used to *fix* and assert the values of `threads.xyz` (numbers of threads); it will then throws if the different sizes are provided along the process. To provide *default value* (who are used only when nothing else is provided), work-sizes can be provided both to the kernel building procedure and to the kernel itself.
+
+```ts
+const kernel = webGpGpu
+	...
+	.workSize({ x: 256 })
+	.kernel('...', { y: 512 })
+const { output } = await kernel(..., { z: 128 })
+```
+
+Here, `threads.x` will be `256` for sure while `threads.y` and `threads.z` will be defaulted to the given values (instead of `1`) if no other source of inference was provided (mainly input size)
 
 ### workGroup
 
@@ -257,13 +273,13 @@ toTypedArray(
 
 1. The first inference will be when specifying commons (define-time)
 2. The second inference will be when specifying inputs (run-time)
-3. The remaining can be given as supplementary arguments of `kernel` (define-time, but these arguments will be used *after* input inference)
-4. Lastly, supplementary arguments can be given *to* the produced kernel
-5. Finally, it is just supposed `1`
+3. The workSize can be given by the `.workSize(...)` chainable function (define-tine)
+4. Defaults can be given as supplementary arguments of `kernel` (define-time, but these arguments will be used *after* input inference as they are considered as "optional")
+5. Lastly, supplementary arguments can be given *to* the produced kernel
+6. Finally, it is just supposed `1`
 
-In 3. & 4., the last arguments if specified are:
-- `{x?: number, y?: number, z?: number}` the values to default to/require
-- A string combination of 'x', 'y' and 'z' ('z', 'xy') specifying which ones of them are required (otherwise they are ignored if not needed). Defaults to `''`
+In 4. & 5., the last arguments if specified are:
+- `{x?: number, y?: number, z?: number}` the values to default to - Note that no assertion is done as these are "consultative", "in case it was not inferred yet"
 
 Generate the 10 first squares:
 ```ts

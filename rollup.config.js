@@ -7,7 +7,7 @@ import { rm } from 'node:fs/promises'
 // clean out the destination folder
 await rm('lib', { recursive: true, force: true })
 const banner = `/*
-	GpGpu Compute Shader
+	webgpgpu.ts - https://github.com/eddow/webgpgpu
 */`
 const input = {client: 'src/client/index.ts', server: 'src/server/index.ts'}
 const plugins = [
@@ -17,6 +17,8 @@ const plugins = [
 		tsconfig: './src/tsconfig.json'
 	})
 ]
+const external = (id) => id.includes('node_modules')
+
 export default  [
 	{
 		input,
@@ -27,7 +29,8 @@ export default  [
 		plugins: [
 			...plugins,
 			pluginDts()
-		]
+		],
+		external
 	},
 	{
 		input,
@@ -38,7 +41,8 @@ export default  [
 			sourcemap: true,
 			format: 'esm'
 		},
-		plugins
+		plugins,
+		external
 	},
 	{
 		input,
@@ -51,6 +55,7 @@ export default  [
 			format: 'cjs',
 			exports: 'named'
 		},
-		plugins
+		plugins,
+		external
 	}
 ]

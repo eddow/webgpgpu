@@ -1,10 +1,12 @@
 {
 	"cSpell.words": [
+		"gpgpu",
 		"petamoriken",
 		"subarray",
 		"uncapturederror",
 		"webgpgpu",
 		"webgpu",
-		"wgsl"
+		"wgsl",
+		"xyzw"
 	]
 }

@@ -2,8 +2,8 @@ import type { Float16Array } from '@petamoriken/float16'
 
 export class WebGpGpuError extends Error {}
 
-export class ArraySizeValidationError extends WebGpGpuError {
-	name = 'ArraySizeValidationError'
+export class InferenceValidationError extends WebGpGpuError {
+	name = 'InferenceValidationError'
 }
 
 export class ParameterError extends WebGpGpuError {
@@ -17,6 +17,11 @@ export class CompilationError extends WebGpGpuError {
 	}
 }
 
+export type TypedArrayConstructor<TArray> = {
+	new (content: number[] | number): TArray
+	new (ab: ArrayBuffer): TArray
+	BYTES_PER_ELEMENT: number
+}
 export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
 
 export type TypedArrayXD<T extends TypedArray = TypedArray> = T & {
@@ -36,6 +41,10 @@ export type TypedArray3D<T extends TypedArray = TypedArray> = T & {
 	elementSize: number
 	size: [number, number, number]
 }
+export type TypedArray4D<T extends TypedArray = TypedArray> = T & {
+	elementSize: number
+	size: [number, number, number, number]
+}
 
 export type Input0D<Element, TArray extends TypedArray = TypedArray> = Element | TArray
 export type Input1D<Element, TArray extends TypedArray = TypedArray> =
@@ -43,10 +52,13 @@ export type Input1D<Element, TArray extends TypedArray = TypedArray> =
 	| TArray
 export type Input2D<Element, TArray extends TypedArray = TypedArray> =
 	| Input1D<Element, TArray>[]
-	| TypedArray2D<TArray>
+	| TArray
 export type Input3D<Element, TArray extends TypedArray = TypedArray> =
 	| Input2D<Element, TArray>[]
-	| TypedArray3D<TArray>
+	| TArray
+export type Input4D<Element, TArray extends TypedArray = TypedArray> =
+	| Input3D<Element, TArray>[]
+	| TArray
 export type InputXD<
 	Element,
 	SizesSpec extends number[],
@@ -59,14 +71,18 @@ export type InputXD<
 			? Input2D<Element, TArray>
 			: SizesSpec extends [number, number, number]
 				? Input3D<Element, TArray>
-				: unknown
+				: SizesSpec extends [number, number, number, number]
+					? Input4D<Element, TArray>
+					: unknown
 export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
 
-export const threads = {
-	x: Symbol('threads.x'),
-	y: Symbol('threads.y'),
-	z: Symbol('threads.z'),
-} as const
-
-export type RequiredAxis = '' | 'x' | 'y' | 'z' | 'xy' | 'xz' | 'yz' | 'xyz'
 export type WorkSize = [number] | [number, number] | [number, number, number]
+
+export function mapEntries<From, To, T extends { [key: string]: From }>(
+	obj: T,
+	fn: (value: From, key: PropertyKey) => To
+): { [key: string]: To } {
+	return Object.fromEntries(
+		Object.entries(obj).map(([key, value]: [PropertyKey, unknown]) => [key, fn(value as From, key)])
+	)
+}

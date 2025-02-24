@@ -1,9 +1,9 @@
 {
 	"compilerOptions": {
-		"module": "ESNext",
-		"moduleResolution": "bundler",
+		"module": "es2022",
+		"moduleResolution": "node",
 		"target": "ESNext",
-		"lib": ["esnext"],
+		"lib": ["esnext", "DOM"],
 		"declaration": false,
 		"strict": true,
 		"esModuleInterop": true,
@@ -11,10 +11,11 @@
 		"forceConsistentCasingInFileNames": true,
 		"strictNullChecks": true,
 		"strictBindCallApply": false,
-		"baseUrl": ".",
+		"baseUrl": "..",
 		"paths": {
-			"webgpgpu": ["src/index.ts", "src/server/index.ts", "src/client/index.ts"]
-		}
+			"webgpgpu": ["../src/server"]
+		},
+		"types": ["@webgpu/types"]
 	},
-	"include": ["./**/*.ts"]
+	"include": ["./**/*.test.ts"]
 }
