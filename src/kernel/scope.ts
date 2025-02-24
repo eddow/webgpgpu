@@ -149,7 +149,7 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 		)
 
 	const code = /*wgsl*/ `
-@group(${inferredBindGroupIndex}) @binding(0) var<uniform> threads : vec3u;
+${inferredBindGroupDescription.join('\n')}
 ${commonBindGroupDescription.join('\n')}
 ${inputBindGroupDescription.join('\n')}
 ${outputBindGroupDescription.join('\n')}

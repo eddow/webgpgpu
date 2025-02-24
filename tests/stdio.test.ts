@@ -169,15 +169,27 @@ describe('infers size', () => {
 	})
 	it('custom', async () => {
 		const kernel = webGpGpu
-			.infer({ custom: [4, 8] })
+			.infer({ custom: [undefined, undefined] })
 			.common({
-				a: f32.array('threads.x').value([1, 2, 3]),
+				a: u32.array('threads.x').value([1, 2, 3]),
 				b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
 			})
-			.kernel('')
-		expect(kernel.toString()).to.match(/@workgroup_size\(4,/)
+			.output({ output: u32.array('threads.x') })
+			.kernel('output[thread.x] = a[thread.x] + custom.y;')
+		const { output } = await kernel({})
+		expect(output.toArray()).to.deep.equal([6, 7, 8])
 	})
-	it('assert', async () => {
+	it('assert infer fails', async () => {
+		expect(() =>
+			webGpGpu
+				.infer({ custom: [undefined, 8] })
+				.common({
+					b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
+				})
+				.kernel('')
+		).to.throw(InferenceValidationError)
+	})
+	it('assert infer exist', async () => {
 		const t = f32.array('qwe').value([4, 5, 6, 7, 8])
 
 		expect(() =>
@@ -212,7 +224,6 @@ describe('infers size', () => {
 		const { output } = await kernel({ a: [1, 2, 3] })
 		expect(output.toArray()).to.deep.equal([3, 4, 5])
 	})
-	// TODO: check TypedArray sizes & infer ?
 })
 describe('diverse', () => {
 	it('defines', async () => {
@@ -233,7 +244,7 @@ describe('diverse', () => {
 		expect(() => kernel.input({ b: f32.array('threads.y') })).to.throw()
 	})
 	it('manages big buffers', async () => {
-		// TODO: Keep on checking, the limit is near...
+		// TODO: Do something with the error ... Throw ?
 		const length = 0x400000
 		const kernel = webGpGpu.output({ output: u32.array('threads.x') }).kernel(/*wgsl*/ `
 let modX = thread.x % 453;

@@ -336,7 +336,7 @@ export class WebGpGpu<
 				throw new ParameterError(`Unknown inference: \`${name.split('.')[0]}\``)
 		}
 		const usedNames = this.checkNameConflicts(...addedNames)
-		const inferences = infer(this.inferences, values, reason)
+		const inferences = infer(this.inferences, values, reason, this.inferenceReasons)
 		return new WebGpGpu<Inputs, Outputs, Inferences & CreatedInferences<Infer>>(this, {
 			inferences,
 			inferred,

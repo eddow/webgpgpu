@@ -33,15 +33,24 @@ export function infer<
 		| readonly [Inferred, Inferred, Inferred]
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>, // Allow any tuple length
->(inferences: Inferences, input: Input, reason?: string): Inferences & CreatedInferences<Input> {
+>(
+	inferences: Inferences,
+	input: Input,
+	reason?: string,
+	reasons?: Record<string, string>
+): Inferences & CreatedInferences<Input> {
 	const setting: { [key: string]: Inferred } = {}
 
 	for (const [inference, value] of Object.entries(input))
 		if (Array.isArray(value))
 			for (let i = 0; i < value.length; i++) setting[`${inference}.${'xyzw'[i]}`] = value[i]
 		else setting[inference] = value as Inferred
-	return specifyInference(inferences, setting as Partial<Inferences>, reason) as Inferences &
-		CreatedInferences<Input>
+	return specifyInference(
+		inferences,
+		setting as Partial<Inferences>,
+		reason,
+		reasons
+	) as Inferences & CreatedInferences<Input>
 }
 
 /**
@@ -66,7 +75,7 @@ export function specifyInference<Inferences extends Record<string, Inferred>>(
 						`- ${reason}: ${values[key]}`
 				)
 		} else {
-			if (reason !== undefined && reasons) reasons[key] = reason
+			if (reason !== undefined && reasons && values[key] !== undefined) reasons[key] = reason
 			// @ts-expect-error inferences[...] *can* be undefined
 			inferences[key] = values[key]
 		}
@@ -137,11 +146,11 @@ export const basicInference = infer({}, { threads: infer3D })
 
 // Test part
 const testInference = { ...basicInference }
-const furtherInference = infer(basicInference, { tests: infer2D, t1: infer1D })
+const furtherInference = infer(testInference, { tests: infer2D, t1: infer1D })
 type T = typeof furtherInference
 const worksOk = furtherInference['threads.y']
 //@ts-expect-error
 const ShouldNotWork = furtherInference['qwe.u']
 
-const spec = specifyInference(basicInference, { 'threads.z': 3 })
-const spec2 = specifyInference(basicInference, { 'threads.z': 4 })
+const spec = specifyInference(testInference, { 'threads.z': 3 })
+const spec2 = specifyInference(testInference, { 'threads.z': 4 })
