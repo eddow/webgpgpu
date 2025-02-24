@@ -231,7 +231,7 @@ export class WebGpGpu<
 	 * @param commons
 	 * @returns Chainable
 	 */
-	common<Specs extends Record<string, ValuedBuffable<TypedArray, any, Inferences>>>(
+	common<Specs extends Record<string, ValuedBuffable<Inferences>>>(
 		commons: Specs
 	): WebGpGpu<Inputs, Outputs, Inferences> {
 		const usedNames = this.checkNameConflicts(...Object.keys(commons))
@@ -287,7 +287,7 @@ export class WebGpGpu<
 	 * @param inputs
 	 * @returns Chainable
 	 */
-	output<Specs extends Record<string, Buffable<TypedArray, any, Inferences>>>(
+	output<Specs extends Record<string, Buffable<Inferences>>>(
 		outputs: Specs
 	): WebGpGpu<Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>, Inferences> {
 		return new WebGpGpu(this, {
@@ -311,10 +311,15 @@ export class WebGpGpu<
 	 * @param workSize
 	 * @returns
 	 */
-	infer<Infer extends Record<string, Inferred | readonly Inferred[]>>(
-		values: Infer,
-		reason = '.infer() explicit call'
-	) {
+	infer<
+		Infer extends Record<
+			string,
+			| Inferred
+			| readonly [Inferred, Inferred]
+			| readonly [Inferred, Inferred, Inferred]
+			| readonly [Inferred, Inferred, Inferred, Inferred]
+		>,
+	>(values: Infer, reason = '.infer() explicit call') {
 		const inferred = { ...this.inferred }
 		const addedNames: string[] = []
 		for (const [name, value] of Object.entries(values)) {

@@ -3,19 +3,21 @@ import { BufferReader, elementsToTypedArray } from './buffers'
 import { type AnyInference, type Inferred, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
-
+type ValidateSizeSpec<
+	Inferences extends Record<string, Inferred>,
+	SizesSpec,
+> = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
 export type ValuedBuffable<
+	Inferences extends Record<string, Inferred> = Record<string, Inferred>,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
-	Inferences extends Record<string, Inferred> = Record<string, Inferred>,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	InputSizesSpec extends SizeSpec<Inferences>[] = [],
 	InputSpec extends number[] = number[],
 > = {
-	buffable: Buffable<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec>
+	buffable: Buffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	value: InputXD<OriginElement, InputSpec, Buffer>
-}
-
+} & ValidateSizeSpec<Inferences, SizesSpec>
 export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof GpGpuData
 }
@@ -23,9 +25,9 @@ export function isBuffable(buffable: any): buffable is Buffable {
  * Interface is needed for type inference
  */
 export interface Buffable<
+	Inferences extends Record<string, Inferred> = any,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
-	Inferences extends Record<string, Inferred> = any,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	InputSizesSpec extends SizeSpec<Inferences>[] = [],
 	InputSpec extends number[] = number[],
@@ -48,27 +50,27 @@ export interface Buffable<
 	): Buffer
 	value(
 		v: InputXD<OriginElement, InputSpec, Buffer>
-	): ValuedBuffable<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec>
+	): ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	readonly wgslSpecification: string
 	readonly elementSize: number
 	readonly transformSize: InputSizesSpec
 	readTypedArray(
 		buffer: Buffer,
 		inferences: Record<string, Inferred>
-	): BufferReader<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec>
+	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 }
 
 export type InputType<T extends Buffable> = Parameters<T['value']>[0]
 export type OutputType<T extends Buffable> = ReturnType<T['readTypedArray']>
 
 class GpGpuData<
+	Inferences extends Record<string, Inferred>,
 	Buffer extends TypedArray,
 	OriginElement,
-	Inferences extends Record<string, Inferred>,
 	SizesSpec extends SizeSpec<Inferences>[],
 	InputSizesSpec extends SizeSpec<Inferences>[],
 	InputSpec extends number[],
-> implements Buffable<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec>
+> implements Buffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 {
 	constructor(
 		public readonly bufferType: TypedArrayConstructor<Buffer>,
@@ -95,7 +97,7 @@ class GpGpuData<
 			size: NumericSizesSpec<SizesSpec>
 		) => NewOriginElement
 	) {
-		return new GpGpuData<Buffer, NewOriginElement, Inferences, SizesSpec, SizesSpec, []>(
+		return new GpGpuData<Inferences, Buffer, NewOriginElement, SizesSpec, SizesSpec, []>(
 			this.bufferType,
 			this.elementSize,
 			this.wgslSpecification,
@@ -119,7 +121,7 @@ class GpGpuData<
 		reasons: Record<string, string>
 	): Buffer {
 		// @ts-expect-error circular ref: SizeSpec<Inferences> is defined twice
-		return elementsToTypedArray<Buffer, OriginElement, Inferences, InputSizesSpec>(
+		return elementsToTypedArray<Inferences, Buffer, OriginElement, InputSizesSpec>(
 			this,
 			inferences,
 			data,
@@ -131,11 +133,11 @@ class GpGpuData<
 	readTypedArray(
 		buffer: Buffer,
 		inferences: Inferences
-	): BufferReader<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec> {
+	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
 		return new BufferReader<
+			Inferences,
 			Buffer,
 			OriginElement,
-			Inferences,
 			SizesSpec,
 			InputSizesSpec,
 			InputSpec
@@ -143,9 +145,9 @@ class GpGpuData<
 	}
 	array<SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
 		return new GpGpuData<
+			Inferences,
 			Buffer,
 			OriginElement,
-			Inferences,
 			[...SizesSpec, ...SubSizesSpec],
 			InputSizesSpec,
 			[...InputSpec, ...NumericSizesSpec<SubSizesSpec>]
@@ -161,18 +163,18 @@ class GpGpuData<
 	}
 	value(
 		v: InputXD<OriginElement, InputSpec, Buffer>
-	): ValuedBuffable<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec> {
+	): ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
 		return {
 			buffable: this,
 			value: v,
-		}
+		} as ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	}
 }
 
 export class GpGpuXFloat32<OriginElement> extends GpGpuData<
+	AnyInference,
 	Float32Array,
 	OriginElement,
-	AnyInference,
 	[],
 	[],
 	[]
@@ -188,9 +190,9 @@ export class GpGpuXFloat32<OriginElement> extends GpGpuData<
 }
 
 export class GpGpuXFloat16<OriginElement> extends GpGpuData<
+	AnyInference,
 	Float16Array,
 	OriginElement,
-	AnyInference,
 	[],
 	[],
 	[]
@@ -206,9 +208,9 @@ export class GpGpuXFloat16<OriginElement> extends GpGpuData<
 }
 
 export class GpGpuXUint32<OriginElement> extends GpGpuData<
+	AnyInference,
 	Uint32Array,
 	OriginElement,
-	AnyInference,
 	[],
 	[],
 	[]
@@ -224,9 +226,9 @@ export class GpGpuXUint32<OriginElement> extends GpGpuData<
 }
 
 export class GpGpuXInt32<OriginElement> extends GpGpuData<
+	AnyInference,
 	Int32Array,
 	OriginElement,
-	AnyInference,
 	[],
 	[],
 	[]
@@ -240,4 +242,4 @@ export class GpGpuXInt32<OriginElement> extends GpGpuData<
 		super(Int32Array, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
 	}
 }
-export type GpGpuSingleton<Element> = GpGpuData<TypedArray, Element, AnyInference, [], [], []>
+export type GpGpuSingleton<Element> = GpGpuData<AnyInference, TypedArray, Element, [], [], []>

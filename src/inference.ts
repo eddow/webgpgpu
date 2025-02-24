@@ -26,7 +26,13 @@ export type CreatedInferences<Input> = UnionToIntersection<
 export type AnyInference = Record<string, Inferred>
 export function infer<
 	Inferences extends Record<string, Inferred>,
-	Input extends Record<string, Inferred | readonly Inferred[]>, // Allow any tuple length
+	Input extends Record<
+		string,
+		| Inferred
+		| readonly [Inferred, Inferred]
+		| readonly [Inferred, Inferred, Inferred]
+		| readonly [Inferred, Inferred, Inferred, Inferred]
+	>, // Allow any tuple length
 >(inferences: Inferences, input: Input, reason?: string): Inferences & CreatedInferences<Input> {
 	const setting: { [key: string]: Inferred } = {}
 

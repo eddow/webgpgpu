@@ -28,7 +28,7 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 	}: {
 		device: GPUDevice
 		commonData: readonly BoundDataEntry[]
-		inputs: Record<string, Buffable<TypedArray, any, Inferences>>
+		inputs: Record<string, Buffable<Inferences>>
 		outputs: Record<string, Buffable>
 		inferences: Inferences
 		inferred: Record<string, number>
@@ -68,7 +68,7 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 	// #region Input
 	const inputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
 	const inputBindGroupDescription: string[] = []
-	const inputsDescription: [string, number, Buffable<TypedArray, any, Inferences>][] = []
+	const inputsDescription: [string, number, Buffable<Inferences>][] = []
 
 	for (const [name, buffable] of Object.entries(inputs)) {
 		const binding = inputBindGroupLayoutEntries.length

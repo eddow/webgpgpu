@@ -178,20 +178,12 @@ describe('infers size', () => {
 		expect(kernel.toString()).to.match(/@workgroup_size\(4,/)
 	})
 	it('assert', async () => {
-		const t = f32.array('qwe').value([4, 5, 6, 7, 8]) as ValuedBuffable<
-			Float32Array<ArrayBufferLike>,
-			number,
-			{ qwe: Inferred },
-			['qwe'],
-			[],
-			[number]
-		>
+		const t = f32.array('qwe').value([4, 5, 6, 7, 8])
 
 		expect(() =>
 			webGpGpu.common({
-				//// @ts-expect-error 'other' is not an inference key
+				// @ts-expect-error 'other' is not an inference key
 				a: f32.array('other').value([4, 5, 6, 7, 8]),
-				t,
 			})
 		).to.throw(ParameterError)
 	})

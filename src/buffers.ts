@@ -22,7 +22,7 @@ export function elementsToTypedArray<
 	Inferences extends AnyInference,
 	InputSizesSpec extends SizeSpec<Inferences>[],
 >(
-	specification: Buffable<Buffer, OriginElement, Inferences, SizeSpec[], InputSizesSpec>,
+	specification: Buffable<Inferences, Buffer, OriginElement, SizeSpec[], InputSizesSpec>,
 	inferences: Inferences,
 	data: any,
 	size: SizeSpec[],
@@ -142,18 +142,18 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 }
 
 export class BufferReader<
+	Inferences extends Record<string, Inferred> = any,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
-	Inferences extends Record<string, Inferred> = any,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	InputSizesSpec extends SizeSpec<Inferences>[] = [],
 	InputSpec extends number[] = number[],
 > {
 	constructor(
 		public readonly buffable: Buffable<
+			Inferences,
 			Buffer,
 			OriginElement,
-			Inferences,
 			SizesSpec,
 			InputSizesSpec,
 			InputSpec
@@ -216,7 +216,7 @@ export class BufferReader<
 	// TODO: type
 	slice(
 		...index: [number, ...number[]]
-	): BufferReader<Buffer, OriginElement, Inferences, SizesSpec, InputSizesSpec, InputSpec> {
+	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
 		const { size, buffer, buffable: specification } = this
 		const { elementSize } = specification
 		if (!this.size.length)
@@ -229,9 +229,9 @@ export class BufferReader<
 		const subLength = subSize.reduce((a, b) => a * b, 1)
 		const pos = bufferPosition(index, size, elementSize) * subLength
 		return new BufferReader<
+			Inferences,
 			Buffer,
 			OriginElement,
-			Inferences,
 			SizesSpec,
 			InputSizesSpec,
 			InputSpec
