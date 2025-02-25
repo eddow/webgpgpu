@@ -1,7 +1,7 @@
 import { type CreatedInferences, type Inferred, extractInference, infer } from '../inference'
-import { BindingGroup } from './group'
+import { Bindings } from './bindings'
 
-export class InferenceGroup<
+export class InferenceBindings<
 	Input extends Record<
 		string,
 		| Inferred
@@ -9,7 +9,7 @@ export class InferenceGroup<
 		| readonly [Inferred, Inferred, Inferred]
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
-> extends BindingGroup<{}, {}, CreatedInferences<Input>> {
+> extends Bindings<{}, {}, CreatedInferences<Input>> {
 	public readonly wgslNames: string[]
 	public readonly addedInferences: CreatedInferences<Input>
 
@@ -63,5 +63,5 @@ export default function inference<
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
 >(input: Input) {
-	return new InferenceGroup(input)
+	return new InferenceBindings(input)
 }

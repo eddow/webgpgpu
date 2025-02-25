@@ -1,4 +1,4 @@
-import type { BindingGroup } from '../binding'
+import type { Bindings } from '../binding'
 import type { BufferReader } from '../buffers'
 import {
 	type AnyInference,
@@ -29,7 +29,7 @@ export async function callKernel<
 	device: GPUDevice,
 	inputs: Inputs,
 	defaultInfers: Partial<Record<keyof Inferences, number>>,
-	groups: BindingGroup<Inputs, Outputs, Inferences>[],
+	groups: Bindings<Inputs, Outputs, Inferences>[],
 	{
 		inputsDescription,
 		kernelInferences,

@@ -1,11 +1,13 @@
 import { activateF16 } from './atomicTypesList'
 import { inference } from './binding'
-import type { BindingGroup, BoundTypes } from './binding/group'
+import type { Bindings, BoundTypes } from './binding/bindings'
+import { InferenceBindings } from './binding/inference'
 import { type Buffable, type ValuedBuffable, isBuffable } from './buffable'
 import type { BufferReader } from './buffers'
 import { WgslCodeGenerator } from './code'
 import {
 	type AnyInference,
+	type Inferred,
 	basicInference,
 	infer3D,
 	resolvedSize,
@@ -169,7 +171,7 @@ export class WebGpGpu<
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
-	private readonly groups: BindingGroup<Inputs, Outputs, Inferences>[]
+	private readonly groups: Bindings<Inputs, Outputs, Inferences>[]
 	/**
 	 * Allows hooking the library's log messages
 	 */
@@ -199,7 +201,7 @@ export class WebGpGpu<
 			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
-			groups: BindingGroup<Inputs, Outputs, Inferences>[]
+			groups: Bindings<Inputs, Outputs, Inferences>[]
 		}>,
 		rootInfo?: RootInfo
 	) {
@@ -339,7 +341,7 @@ export class WebGpGpu<
 		})
 	}
 
-	bind<BG extends BindingGroup<any, any, any>>(
+	bind<BG extends Bindings<any, any, any>>(
 		group: BG
 	): WebGpGpu<
 		Inputs & BoundTypes<BG>['inputs'],
@@ -364,6 +366,18 @@ export class WebGpGpu<
 		})
 		group.setScope(this.device, this.groups.length + customBindGroupIndex)
 		return rv
+	}
+
+	infer<
+		Input extends Record<
+			string,
+			| Inferred
+			| readonly [Inferred, Inferred]
+			| readonly [Inferred, Inferred, Inferred]
+			| readonly [Inferred, Inferred, Inferred, Inferred]
+		>,
+	>(input: Input) {
+		return this.bind(new InferenceBindings(input))
 	}
 
 	specifyInference(values: Partial<Inferences>, reason = '.specifyInference() explicit call') {

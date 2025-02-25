@@ -20,16 +20,16 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 		this.entries.push(info)
 	}
 }
-export type BoundTypes<BG> = BG extends BindingGroup<infer Inputs, infer Outputs, infer Inferences>
+export type BoundTypes<BG> = BG extends Bindings<infer Inputs, infer Outputs, infer Inferences>
 	? {
 			inputs: Inputs
 			outputs: Outputs
 			inferences: Inferences
 		}
 	: never
-export type BoundInferences<BG extends BindingGroup> = BG['addedInferences']
+export type BoundInferences<BG extends Bindings> = BG['addedInferences']
 
-export abstract class BindingGroup<
+export abstract class Bindings<
 	Inputs extends Record<string, any> = Record<string, any>,
 	Outputs extends Record<string, any> = Record<string, any>,
 	Inferences extends AnyInference = AnyInference,

@@ -1,4 +1,4 @@
-import type { BindingGroup } from '../binding'
+import type { Bindings } from '../binding'
 import type { Buffable } from '../buffable'
 import { type AnyInference, specifyInferences } from '../inference'
 import { workgroupSize } from '../typedArrays'
@@ -30,7 +30,7 @@ export function kernelScope<Inferences extends AnyInference>(
 		inferences: Inferences
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
-		groups: BindingGroup<never, never, Inferences>[]
+		groups: Bindings<never, never, Inferences>[]
 	}
 ) {
 	// #region Common
