@@ -1,28 +1,25 @@
 import { activateF16 } from './atomicTypesList'
-import {
-	type Buffable,
-	type InputType,
-	type OutputType,
-	type ValuedBuffable,
-	isBuffable,
-} from './buffable'
+import { inference } from './binding'
+import type { BindingGroup, BoundTypes } from './binding/group'
+import { type Buffable, type ValuedBuffable, isBuffable } from './buffable'
 import type { BufferReader } from './buffers'
 import { WgslCodeGenerator } from './code'
 import {
 	type AnyInference,
-	type CreatedInferences,
-	type Inferred,
 	basicInference,
-	infer,
+	infer3D,
 	resolvedSize,
+	specifyInferences,
 } from './inference'
 import { callKernel } from './kernel/call'
-import { inputGroupEntry } from './kernel/io'
+import { customBindGroupIndex, inputGroupEntry } from './kernel/io'
 import { kernelScope } from './kernel/scope'
 import { type Log, log } from './log'
 import { explicitWorkSize } from './typedArrays'
-import { type AnyInput, ParameterError, WebGpGpuError, type WorkSize } from './types'
+import { type AnyInput, ParameterError, WebGpGpuError } from './types'
 
+export type InputType<T extends Buffable> = Parameters<T['value']>[0]
+export type OutputType<T extends Buffable> = ReturnType<T['readTypedArray']>
 export interface BoundDataEntry {
 	name: string
 	type: Buffable
@@ -36,7 +33,7 @@ interface RootInfo {
 	dispose?(): void
 	device?: GPUDevice
 }
-
+// TODO: allocate binding group + custom bindings
 export interface Kernel<
 	Inputs extends Record<string, AnyInput>,
 	Outputs extends Record<string, BufferReader>,
@@ -46,10 +43,36 @@ export interface Kernel<
 	inferred: Inferences
 }
 
+export type WebGpGpuTypes<WGG> = WGG extends WebGpGpu<infer Inputs, infer Outputs, infer Inferences>
+	? {
+			inputs: Inputs
+			outputs: Outputs
+			inferences: Inferences
+		}
+	: never
+
+export type MixedTypes<TDs extends { inputs: any; outputs: any; inferences: any }[]> = TDs extends [
+	infer First,
+	...infer Rest,
+]
+	? First extends { inputs: any; outputs: any; inferences: any }
+		? Rest extends { inputs: any; outputs: any; inferences: any }[]
+			? {
+					inputs: First['inputs'] & MixedTypes<Rest>['inputs']
+					outputs: First['outputs'] & MixedTypes<Rest>['outputs']
+					inferences: First['inferences'] & MixedTypes<Rest>['inferences']
+				}
+			: First
+		: never
+	: { inputs: {}; outputs: {}; inferences: {} }
+
+export type MixedWebGpGpu<TypesDef extends { inputs: any; outputs: any; inferences: any }> =
+	WebGpGpu<TypesDef['inputs'], TypesDef['outputs'], TypesDef['inferences']>
+
 export class WebGpGpu<
 	Inputs extends Record<string, AnyInput> = {},
 	Outputs extends Record<string, BufferReader> = {},
-	Inferences extends Record<string, Inferred> = typeof basicInference,
+	Inferences extends AnyInference = typeof basicInference,
 > extends WgslCodeGenerator {
 	// #region Creation
 
@@ -80,7 +103,7 @@ export class WebGpGpu<
 	): Promise<WebGpGpu> | WebGpGpu {
 		function create(device: GPUDevice) {
 			activateF16(device.features.has('f16'))
-			return new WebGpGpu(
+			const zero = new WebGpGpu(
 				undefined,
 				{
 					importUsage: [],
@@ -92,13 +115,15 @@ export class WebGpGpu<
 					inputs: {},
 					outputs: {},
 					workGroupSize: null,
-					usedNames: new Set(['thread', 'threads']),
+					usedNames: new Set(['thread']),
+					groups: [],
 				},
 				{
 					device,
 					dispose: dispose && (() => dispose(device)),
 				}
 			)
+			return zero.bind(inference({ threads: infer3D }))
 		}
 		if (root instanceof GPUDevice) return create(root)
 		const adapter =
@@ -136,14 +161,15 @@ export class WebGpGpu<
 	 * Gives the inferred work size (x, y, z)
 	 */
 	public readonly inferences: Inferences
-	private readonly inferred: Record<string, number> //var name => dimension
-	private readonly inferenceReasons: Record<string, string>
+	public readonly inferred: Record<string, 1 | 2 | 3 | 4> //var name => dimension
+	public readonly inferenceReasons: Record<string, string>
 	private readonly commonData: readonly BoundDataEntry[]
 	private readonly inputs: Record<string, Buffable<Inferences>>
 	private readonly outputs: Record<string, Buffable<Inferences>>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
+	private readonly groups: BindingGroup<Inputs, Outputs, Inferences>[]
 	/**
 	 * Allows hooking the library's log messages
 	 */
@@ -161,17 +187,19 @@ export class WebGpGpu<
 			outputs,
 			workGroupSize,
 			usedNames,
+			groups,
 		}: Partial<{
 			definitions: string[]
 			importUsage: Iterable<PropertyKey>
 			inferences: Inferences
-			inferred: Record<string, number>
+			inferred: Record<string, 1 | 2 | 3 | 4>
 			inferenceReasons: Record<string, string>
 			commonData: BoundDataEntry[]
 			inputs: Record<string, Buffable<Inferences>>
 			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
+			groups: BindingGroup<Inputs, Outputs, Inferences>[]
 		}>,
 		rootInfo?: RootInfo
 	) {
@@ -185,6 +213,7 @@ export class WebGpGpu<
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
 		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
+		this.groups = groups ?? parent!.groups
 	}
 	private checkNameConflicts(...names: string[]) {
 		const conflicts = names.filter((name) => this.usedNames.has(name))
@@ -212,7 +241,7 @@ export class WebGpGpu<
 	 * @param imports Names of imports to add, must be `keyof WebGpGpu.imports`
 	 * @returns Chainable
 	 */
-	use(...imports: PropertyKey[]) {
+	import(...imports: PropertyKey[]) {
 		const missing = imports.filter((name) => !(name in WebGpGpu.imports))
 		if (missing.length) throw new ParameterError(`Unknown import: ${missing.join(', ')}`)
 		const newImports = imports.filter((name) => !(name in this.importUsage))
@@ -304,47 +333,42 @@ export class WebGpGpu<
 	 * @param size
 	 * @returns
 	 */
-	workGroup(...size: WorkSize) {
+	workGroup(...size: [] | [number] | [number, number] | [number, number, number]) {
 		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
 			workGroupSize: size.length ? explicitWorkSize(size) : null,
 		})
 	}
 
-	/**
-	 * Add a new inference variable / add a new inference value to an existing variable
-	 * @param workSize
-	 * @returns
-	 */
-	infer<
-		Infer extends Record<
-			string,
-			| Inferred
-			| readonly [Inferred, Inferred]
-			| readonly [Inferred, Inferred, Inferred]
-			| readonly [Inferred, Inferred, Inferred, Inferred]
-		>,
-	>(values: Infer, reason = '.infer() explicit call') {
-		const inferred = { ...this.inferred }
-		const addedNames: string[] = []
-		for (const [name, value] of Object.entries(values)) {
-			if (!name.includes('.')) {
-				const d = Array.isArray(value) ? value.length : 1
-				if (!(name in inferred)) {
-					inferred[name] = d
-					addedNames.push(name)
-				} else if (inferred[name] !== d)
-					throw new ParameterError(`Inference dimension conflict for \`${name}\``)
-			} else if (Array.isArray(value))
-				throw new ParameterError(`Invalid inference name \`${name}\``)
-			else if (!(name in inferred))
-				throw new ParameterError(`Unknown inference: \`${name.split('.')[0]}\``)
-		}
-		const usedNames = this.checkNameConflicts(...addedNames)
-		const inferences = infer(this.inferences, values, reason, this.inferenceReasons)
-		return new WebGpGpu<Inputs, Outputs, Inferences & CreatedInferences<Infer>>(this, {
-			inferences,
-			inferred,
-			usedNames,
+	bind<BG extends BindingGroup<any, any, any>>(
+		group: BG
+	): WebGpGpu<
+		Inputs & BoundTypes<BG>['inputs'],
+		Outputs & BoundTypes<BG>['outputs'],
+		Inferences & BoundTypes<BG>['inferences']
+	> {
+		const inferenceReasons = { ...this.inferenceReasons }
+		const rv = new WebGpGpu<
+			Inputs & BoundTypes<BG>['inputs'],
+			Outputs & BoundTypes<BG>['outputs'],
+			Inferences & BoundTypes<BG>['inferences']
+		>(this, {
+			groups: [...(this.groups as any[]), group as any],
+			usedNames: this.checkNameConflicts(...group.wgslNames),
+			inferences: specifyInferences<Inferences & BoundTypes<BG>['inferences']>(
+				this.inferences,
+				group.addedInferences as Partial<Inferences & BoundTypes<BG>['inferences']>,
+				'binding',
+				inferenceReasons
+			),
+			inferenceReasons,
+		})
+		group.setScope(this.device, this.groups.length + customBindGroupIndex)
+		return rv
+	}
+
+	specifyInference(values: Partial<Inferences>, reason = '.specifyInference() explicit call') {
+		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
+			inferences: specifyInferences({ ...this.inferences }, values, reason, this.inferenceReasons),
 		})
 	}
 
@@ -353,7 +377,7 @@ export class WebGpGpu<
 	/**
 	 *
 	 * @param compute Create a kernel
-	 * @param kernelWorkInf Default values to give to work-size axis if none were specified
+	 * @param kernelDefaults Default values to the inferences
 	 * @returns
 	 */
 	kernel(
@@ -369,16 +393,8 @@ export class WebGpGpu<
 				throw e
 			}
 		}
-		const {
-			device,
-			commonData,
-			inputs,
-			outputs,
-			inferences,
-			inferred,
-			workGroupSize,
-			definitions,
-		} = this
+		const { device, commonData, inputs, outputs, inferences, workGroupSize, definitions, groups } =
+			this
 		const scope = guarded(() =>
 			kernelScope<Inferences>(compute, kernelDefaults, {
 				device,
@@ -386,9 +402,9 @@ export class WebGpGpu<
 				inputs,
 				outputs,
 				inferences,
-				inferred,
 				workGroupSize,
 				definitions,
+				groups,
 			})
 		)
 		//
@@ -397,7 +413,7 @@ export class WebGpGpu<
 			// Kernel function signature
 			(inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
 				guarded(() =>
-					callKernel<Inputs, Outputs, Inferences>(getDevice(), inputs, defaultInfers, scope)
+					callKernel<Inputs, Outputs, Inferences>(getDevice(), inputs, defaultInfers, groups, scope)
 				),
 			{ toString: () => scope.code, inferred: scope.kernelInferences }
 		)

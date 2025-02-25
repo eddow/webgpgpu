@@ -4,11 +4,11 @@ import { type AnyInference, type Inferred, type SizeSpec, resolvedSize } from '.
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
 type ValidateSizeSpec<
-	Inferences extends Record<string, Inferred>,
+	Inferences extends AnyInference,
 	SizesSpec,
 > = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
 export type ValuedBuffable<
-	Inferences extends Record<string, Inferred> = Record<string, Inferred>,
+	Inferences extends AnyInference = AnyInference,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
@@ -25,7 +25,7 @@ export function isBuffable(buffable: any): buffable is Buffable {
  * Interface is needed for type inference
  */
 export interface Buffable<
-	Inferences extends Record<string, Inferred> = any,
+	Inferences extends AnyInference = any,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
@@ -42,7 +42,7 @@ export interface Buffable<
 	) => OriginElement
 	readonly size: SizesSpec
 	readonly bufferType: TypedArrayConstructor<Buffer>
-	toTypedArray<Inferences extends Record<string, Inferred>>(
+	toTypedArray(
 		inferences: Inferences,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
 		reason: string,
@@ -56,15 +56,12 @@ export interface Buffable<
 	readonly transformSize: InputSizesSpec
 	readTypedArray(
 		buffer: Buffer,
-		inferences: Record<string, Inferred>
+		inferences: AnyInference
 	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 }
 
-export type InputType<T extends Buffable> = Parameters<T['value']>[0]
-export type OutputType<T extends Buffable> = ReturnType<T['readTypedArray']>
-
 class GpGpuData<
-	Inferences extends Record<string, Inferred>,
+	Inferences extends AnyInference,
 	Buffer extends TypedArray,
 	OriginElement,
 	SizesSpec extends SizeSpec<Inferences>[],
@@ -114,14 +111,13 @@ class GpGpuData<
 	 * @param required Whether to modify the size inference data and mark modifications as "required" if given (The text is actually used in exception description)
 	 * @returns TypedArray
 	 */
-	toTypedArray<Inferences extends AnyInference>(
+	toTypedArray(
 		inferences: Inferences,
 		data: InputXD<OriginElement, InputSpec, Buffer>,
 		reason: string,
 		reasons: Record<string, string>
 	): Buffer {
-		// @ts-expect-error circular ref: SizeSpec<Inferences> is defined twice
-		return elementsToTypedArray<Inferences, Buffer, OriginElement, InputSizesSpec>(
+		return elementsToTypedArray<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec>(
 			this,
 			inferences,
 			data,

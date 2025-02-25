@@ -10,9 +10,10 @@
 		"skipLibCheck": false,
 		"forceConsistentCasingInFileNames": true,
 		"strictNullChecks": true,
-		"strictBindCallApply": false,
+		"strictBindCallApply": true,
 		"baseUrl": "..",
 		"noErrorTruncation": true,
+		"noImplicitAny": true,
 		"paths": {
 			"webgpgpu": ["../src/server"]
 		},

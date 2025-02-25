@@ -1,11 +1,11 @@
 import type { Buffable } from '../buffable'
 import { ParameterError, type TypedArray, type TypedArrayConstructor } from '../types'
 
-export const inferredBindGroupIndex = 0
-export const commonBindGroupIndex = 1
-export const inputBindGroupIndex = 2
-export const outputBindGroupIndex = 3
-export const generatedBindGroupIndex = 4
+export const commonBindGroupIndex = 0
+export const inputBindGroupIndex = 1
+export const outputBindGroupIndex = 2
+
+export const customBindGroupIndex = 3
 
 export interface BindingEntryDescription {
 	layoutEntry: GPUBindGroupLayoutEntry

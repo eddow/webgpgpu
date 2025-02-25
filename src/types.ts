@@ -76,7 +76,7 @@ export type InputXD<
 					: unknown
 export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
 
-export type WorkSize = [number] | [number, number] | [number, number, number]
+export type WorkSize = [number, number, number]
 
 export function mapEntries<From, To, T extends { [key: string]: From }>(
 	obj: T,

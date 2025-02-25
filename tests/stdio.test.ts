@@ -1,8 +1,7 @@
 import { expect } from 'chai'
 import { after, before, describe, it } from 'mocha'
-import type { ValuedBuffable } from 'src/buffable'
-import { AnyInference, type Inferred } from 'src/inference'
 import createWebGpGpu, {
+	inference,
 	InferenceValidationError,
 	ParameterError,
 	Vector2,
@@ -10,6 +9,10 @@ import createWebGpGpu, {
 	f32,
 	u32,
 	vec2f,
+	type BoundTypes,
+	type WebGpGpuTypes,
+	type MixedTypes,
+	type MixedWebGpGpu,
 } from '../src/server'
 
 let webGpGpu: WebGpGpu
@@ -26,7 +29,9 @@ describe('overall', () => {
 		expect(kernel).to.exist
 		expect(kernel).to.be.a('function')
 		//'@group(0) @binding(0) var<uniform> threads : vec3u;'
-		expect(kernel.toString()).to.match(/@group\(0\) @binding\(0\) var<uniform> threads : vec3u;/)
+		expect(kernel.toString()).to.match(
+			/@group\(\d+\) @binding\(\d+\) var<uniform> threads : vec3u;/
+		)
 		expect(kernel.toString()).to.match(
 			/@compute @workgroup_size\(42,1,1\)\s*fn main\(@builtin\(global_invocation_id\) thread : vec3u\) {\s*if\(all\(thread < threads\)\) {\s*}\s*}/
 			/*new RegExp(`
@@ -169,7 +174,7 @@ describe('infers size', () => {
 	})
 	it('custom', async () => {
 		const kernel = webGpGpu
-			.infer({ custom: [undefined, undefined] })
+			.bind(inference({ custom: [undefined, undefined] }))
 			.common({
 				a: u32.array('threads.x').value([1, 2, 3]),
 				b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
@@ -182,7 +187,7 @@ describe('infers size', () => {
 	it('assert infer fails', async () => {
 		expect(() =>
 			webGpGpu
-				.infer({ custom: [undefined, 8] })
+				.bind(inference({ custom: [undefined, 8] }))
 				.common({
 					b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
 				})

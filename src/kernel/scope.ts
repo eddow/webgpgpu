@@ -1,17 +1,16 @@
-import type { BufferReader } from 'buffers'
-import type { AnyInput, TypedArray } from 'types'
+import type { BindingGroup } from '../binding'
 import type { Buffable } from '../buffable'
-import { type AnyInference, type Inferred, specifyInference } from '../inference'
+import { type AnyInference, specifyInferences } from '../inference'
 import { workgroupSize } from '../typedArrays'
 import type { BoundDataEntry } from '../webgpgpu'
 import {
 	commonBindGroupIndex,
-	inferredBindGroupIndex,
+	customBindGroupIndex,
 	inputBindGroupIndex,
 	layoutGroupEntry,
 	outputBindGroupIndex,
 } from './io'
-export function kernelScope<Inferences extends Record<string, Inferred>>(
+export function kernelScope<Inferences extends AnyInference>(
 	compute: string,
 	kernelDefaults: Partial<Record<keyof Inferences, number>>,
 	{
@@ -20,18 +19,18 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 		inputs,
 		outputs,
 		inferences,
-		inferred,
 		workGroupSize,
 		definitions,
+		groups,
 	}: {
 		device: GPUDevice
 		commonData: readonly BoundDataEntry[]
 		inputs: Record<string, Buffable<Inferences>>
 		outputs: Record<string, Buffable<Inferences>>
 		inferences: Inferences
-		inferred: Record<string, number>
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
+		groups: BindingGroup<never, never, Inferences>[]
 	}
 ) {
 	// #region Common
@@ -113,33 +112,8 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 	})
 
 	// #endregion Output
-	// #region Inferred
 
-	const inferredBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
-	const inferredBindGroupDescription: string[] = []
-	const inferredEntries: { name: string; dimension: number }[] = []
-	for (const [name, dimension] of Object.entries(inferred)) {
-		const binding = inferredBindGroupLayoutEntries.length
-		const type = [undefined, 'u32', 'vec2u', 'vec3u', 'vec4u'][dimension]
-		if (type === undefined) throw new Error(`Invalid inferred dimension ${dimension}`)
-		inferredEntries.push({ name, dimension })
-		inferredBindGroupDescription.push(
-			`@group(${inferredBindGroupIndex}) @binding(${binding}) var<uniform> ${name} : ${type};`
-		)
-		inferredBindGroupLayoutEntries.push({
-			binding,
-			visibility: GPUShaderStage.COMPUTE,
-			buffer: { type: 'uniform' },
-		})
-	}
-	const inferredBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-		label: 'inferred-bind-group-layout',
-		entries: inferredBindGroupLayoutEntries,
-	})
-
-	// #endregion Inferred
-
-	const kernelInferences = specifyInference(
+	const kernelInferences = specifyInferences(
 		{ ...inferences },
 		kernelDefaults as Partial<Inferences>
 	)
@@ -150,11 +124,21 @@ export function kernelScope<Inferences extends Record<string, Inferred>>(
 			device
 		)
 
+	const customBindGroupLayout = device.createBindGroupLayout({
+		label: 'custom-bind-group-layout',
+		entries: groups
+			.flatMap(({ statics: { layoutEntries } }) => layoutEntries)
+			.map((layoutEntry, binding) => ({ ...layoutEntry, binding })),
+	})
+	const customDeclarations = groups
+		.flatMap(({ statics: { declarations } }) => declarations)
+		.map((wgsl, binding) => `@group(${customBindGroupIndex}) @binding(${binding}) ${wgsl}`)
+
 	const code = /*wgsl*/ `
-${inferredBindGroupDescription.join('\n')}
 ${commonBindGroupDescription.join('\n')}
 ${inputBindGroupDescription.join('\n')}
 ${outputBindGroupDescription.join('\n')}
+${customDeclarations.join('\n')}
 
 ${definitions.join('\n')}
 
@@ -173,10 +157,10 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		label: 'compute-pipeline',
 		layout: device.createPipelineLayout({
 			bindGroupLayouts: [
-				inferredBindGroupLayout,
 				commonBindGroupLayout,
 				inputBindGroupLayout,
 				outputBindGroupLayout,
+				customBindGroupLayout,
 			],
 		}),
 		compute: { module: shaderModule, entryPoint: 'main' },
@@ -196,10 +180,9 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		inputBindGroupLayout,
 		outputBindGroupLayout,
 		kernelWorkGroupSize,
-		inferredBindGroupLayout,
-		inferredEntries,
 		outputDescription,
 		pipeline,
 		commonBindGroup,
+		customBindGroupLayout,
 	}
 }

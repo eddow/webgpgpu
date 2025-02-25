@@ -1,3 +1,8 @@
 export * from './atomicTypesList'
 export * from './webgpgpu'
 export * from './types'
+export * from './binding'
+export * from './inference'
+export { BufferReader } from './buffers'
+export type { Buffable } from './buffable'
+export * from './code'

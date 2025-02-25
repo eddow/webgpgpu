@@ -1,4 +1,4 @@
-import type { Buffable } from 'buffable'
+import type { Buffable } from './buffable'
 import {
 	type AnyInference,
 	type Inferred,
@@ -17,15 +17,16 @@ function assertElementSize(given: any, expected: number) {
 
 // Poorly typed but for internal use only
 export function elementsToTypedArray<
+	Inferences extends AnyInference,
 	Buffer extends TypedArray,
 	OriginElement,
-	Inferences extends AnyInference,
+	SizesSpec extends SizeSpec<Inferences>[],
 	InputSizesSpec extends SizeSpec<Inferences>[],
 >(
-	specification: Buffable<Inferences, Buffer, OriginElement, SizeSpec[], InputSizesSpec>,
+	specification: Buffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, any>,
 	inferences: Inferences,
 	data: any,
-	size: SizeSpec[],
+	size: SizesSpec,
 	reason: string,
 	reasons: Record<string, string>
 ): Buffer {
@@ -142,7 +143,7 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 }
 
 export class BufferReader<
-	Inferences extends Record<string, Inferred> = any,
+	Inferences extends AnyInference = any,
 	Buffer extends TypedArray = TypedArray,
 	OriginElement = any,
 	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],

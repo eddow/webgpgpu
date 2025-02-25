@@ -100,7 +100,7 @@ Pre-function code chunks can be added freely (the library never parses the wgsl 
 
 ## WebGpGpu class
 
-The `WebGpGpu` class exposes a `root` that promises an instance and allows to create sub-instances by specification (the values are never modified as such), so each specification code indeed creates a new instance who is "more specific" than the parent.
+A main function allows to create a root `WebGpGpu`: `const webGpGpu = await createWebGpGpu()` that allows to create sub-instances by specification (the values are never modified as such), so each specification code indeed creates a new instance who is "more specific" than the parent.
 
 ### kernel
 
@@ -121,7 +121,7 @@ outputBuffer[thread.x] = a[thread.x] * b;
 Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`.
 
 ```ts
-webGpGpu.define(/*wgsl*/ `
+webGpGpu.define(/*wgsl*/`
 fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 `)
 ```
@@ -161,20 +161,6 @@ const kernel = webGpGpu
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
 
-### workSize
-
-Specifies the work size to use. This is used to *fix* and assert the values of `threads.xyz` (numbers of threads); it will then throws if the different sizes are provided along the process. To provide *default value* (who are used only when nothing else is provided), work-sizes can be provided both to the kernel building procedure and to the kernel itself.
-
-```ts
-const kernel = webGpGpu
-	...
-	.workSize({ 'threads.x': 256 })
-	.kernel('...', { 'threads.y': 512 })
-const { output } = await kernel(..., { z: 128 })
-```
-
-Here, `threads.x` will be `256` for sure while `threads.y` and `threads.z` will be defaulted to the given values (instead of `1`) if no other source of inference was provided (mainly input size)
-
 ### workGroup
 
 If you know what a workgroup is and really want to specify its size, do it here.
@@ -182,6 +168,21 @@ If you know what a workgroup is and really want to specify its size, do it here.
 ```ts
 webGpGpu.workGroup(8, 8)
 ```
+
+### infer
+
+Allows to create/fix an inference (cf. [Size inference](#size-inference) section).
+
+```ts
+webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
+```
+
+With this code, the variable `myTableSize` will be a `vec2u` available in the wgsl code that will be fixed (here, when a `myTable` of a certain size will be given as argument)
+
+### TODO: document
+
+- static imports
+- import(PropertyKey)
 
 ## Types
 
@@ -194,9 +195,6 @@ f32.array(3).array(4)
 //or
 f32.array(3, 4)
 ```
-
-Multi-dimensional arrays *will be* represented in the shader as `texture_2d` or `texture_3d` as supported, as textures only support elements of size 1, 2 or 4.
-Ex.: `f32`, `vec2u`, `mat2x2f`
 
 Arguments (simple, arrays of any dimension) can always be passed as corresponding `TypedArray`. So, `mat3x2f.array(5).value(new Float32Array(3*2*5))` is doing the job! (even if array sizes are still validated)
 
@@ -218,7 +216,7 @@ These "shaped" types use `f16` for the precision
 
 16-bit float is a thing in gpus and should be taken into account as it's a bit the "native" or "optimized" work size (important when working with mobile devices for ex). The big draw back is that *all devices don't support it*.
 
-Hence, in order to know if it's supported, `webGpGpu.f16` tells if it exists and all the f16 types (`f16`, `vec2h`, `mat2x2h`, etc.) will be set to their `f32` equivalent until when the first `WebGpGpu` is ready and confirms their availability.
+Hence, in order to know if it's supported, `webGpGpu.f16` tells if it exists and all the f16 types (`vec2h`, `vec3h` and `vec4h`) will be set to their `f32` equivalent until when the first `WebGpGpu` is ready and confirms their availability.
 
 The system has not yet been completely tested and remains the question of writing f16 immediate values &c.
 
@@ -308,10 +306,6 @@ const kernel = webGpGpu
 	.kernel('outputBuffer[thread.x] = thread.x*thread.x;')
 const { output } = await kernel({}, { 'threads.x': 10 })
 ```
-
-## Structures
-
-TODO
 
 ## System calls
 

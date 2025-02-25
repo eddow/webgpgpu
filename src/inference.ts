@@ -18,14 +18,14 @@ type UnionToIntersection<U> = (U extends any ? (arg: U) => void : never) extends
 ) => void
 	? I
 	: never
-export type CreatedInferences<Input> = UnionToIntersection<
+export type CreatedInferences<Input> = {} & UnionToIntersection<
 	{
 		[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
 	}[keyof Input]
 >
-export type AnyInference = Record<string, Inferred>
+export type AnyInference = { [K: string]: Inferred }
 export function infer<
-	Inferences extends Record<string, Inferred>,
+	Inferences extends AnyInference,
 	Input extends Record<
 		string,
 		| Inferred
@@ -39,13 +39,13 @@ export function infer<
 	reason?: string,
 	reasons?: Record<string, string>
 ): Inferences & CreatedInferences<Input> {
-	const setting: { [key: string]: Inferred } = {}
+	const setting: AnyInference = {}
 
 	for (const [inference, value] of Object.entries(input))
 		if (Array.isArray(value))
 			for (let i = 0; i < value.length; i++) setting[`${inference}.${'xyzw'[i]}`] = value[i]
 		else setting[inference] = value as Inferred
-	return specifyInference(
+	return specifyInferences(
 		inferences,
 		setting as Partial<Inferences>,
 		reason,
@@ -60,7 +60,7 @@ export function infer<
  * @param reason
  * @returns
  */
-export function specifyInference<Inferences extends Record<string, Inferred>>(
+export function specifyInferences<Inferences extends AnyInference>(
 	inferences: Inferences,
 	values: Partial<Inferences>,
 	reason?: string,
@@ -82,7 +82,7 @@ export function specifyInference<Inferences extends Record<string, Inferred>>(
 	return inferences
 }
 
-export function defaultedInference<Inferences extends Record<string, Inferred>>(
+export function defaultedInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	dft = 1
 ): Inferences & Record<keyof Inferences, number> {
@@ -92,11 +92,9 @@ export function defaultedInference<Inferences extends Record<string, Inferred>>(
 	) as Inferences & Record<keyof Inferences, number>
 }
 
-export type SizeSpec<Inferences extends { [key: string]: Inferred } = { [key: string]: Inferred }> =
-	| number
-	| keyof Inferences
+export type SizeSpec<Inferences extends AnyInference = AnyInference> = number | keyof Inferences
 
-export function assertSize<Inferences extends { [key: string]: Inferred }>(
+export function assertSize<Inferences extends AnyInference>(
 	given: number[],
 	expected: SizeSpec<Inferences>[],
 	inferences: Inferences,
@@ -120,7 +118,7 @@ export function assertSize<Inferences extends { [key: string]: Inferred }>(
 			throw new ParameterError(`${String(expected[i])} is not an inference`)
 	}
 
-	return specifyInference(inferences, specified as Partial<Inferences>, reason, reasons)
+	return specifyInferences(inferences, specified as Partial<Inferences>, reason, reasons)
 }
 
 type MapNumbers<TArray extends any[]> = {
@@ -128,7 +126,7 @@ type MapNumbers<TArray extends any[]> = {
 }
 
 export function resolvedSize<
-	Inferences extends Record<string, Inferred>,
+	Inferences extends AnyInference,
 	SizesSpec extends SizeSpec<Inferences>[],
 >(size: SizesSpec, inferences: Inferences): MapNumbers<SizesSpec> {
 	return size.map((s) => {
@@ -144,13 +142,50 @@ export const infer3D = [undefined, undefined, undefined] as const
 export const infer4D = [undefined, undefined, undefined, undefined] as const
 export const basicInference = infer({}, { threads: infer3D })
 
-// Test part
-const testInference = { ...basicInference }
-const furtherInference = infer(testInference, { tests: infer2D, t1: infer1D })
-type T = typeof furtherInference
-const worksOk = furtherInference['threads.y']
-//@ts-expect-error
-const ShouldNotWork = furtherInference['qwe.u']
-
-const spec = specifyInference(testInference, { 'threads.z': 3 })
-const spec2 = specifyInference(testInference, { 'threads.z': 4 })
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 1
+): [number]
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 2
+): [number, number]
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 3
+): [number, number, number]
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 4
+): [number, number, number, number]
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 1 | 2 | 3 | 4
+): [number] | [number, number] | [number, number, number] | [number, number, number, number]
+export function extractInference<Inferences extends AnyInference>(
+	inferences: Inferences,
+	name: string,
+	dimension: 1 | 2 | 3 | 4
+) {
+	switch (dimension) {
+		case 1:
+			return [inferences[name]]
+		case 2:
+			return [inferences[`${name}.x`], inferences[`${name}.y`]]
+		case 3:
+			return [inferences[`${name}.x`], inferences[`${name}.y`], inferences[`${name}.z`]]
+		case 4:
+			return [
+				inferences[`${name}.x`],
+				inferences[`${name}.y`],
+				inferences[`${name}.z`],
+				inferences[`${name}.w`],
+			]
+	}
+	throw new ParameterError(`Invalid inference dimension: ${dimension}`)
+}
