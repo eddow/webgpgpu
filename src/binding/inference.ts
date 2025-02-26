@@ -8,6 +8,7 @@ import {
 import { Bindings } from './bindings'
 
 export class InferenceBindings<
+	Inferences extends AnyInference,
 	Input extends Record<
 		string,
 		| Inferred
@@ -15,7 +16,7 @@ export class InferenceBindings<
 		| readonly [Inferred, Inferred, Inferred]
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
-> extends Bindings {
+> extends Bindings<Inferences> {
 	public readonly wgslNames: string[]
 	public readonly addedInferences: CreatedInferences<Input>
 
@@ -44,7 +45,7 @@ export class InferenceBindings<
 			},
 		}))
 	}
-	entries(inferences: AnyInference): Omit<GPUBindGroupEntry, 'binding'>[] {
+	entries(inferences: AnyInference) {
 		const { device } = this
 		return this.dimensioned.map(({ name, dimension }) => {
 			const buffer = device.createBuffer({
@@ -61,6 +62,7 @@ export class InferenceBindings<
 }
 
 export default function inference<
+	Inferences extends AnyInference,
 	Input extends Record<
 		string,
 		| Inferred
@@ -69,5 +71,5 @@ export default function inference<
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
 >(input: Input) {
-	return new InferenceBindings(input)
+	return new InferenceBindings<Inferences, Input>(input)
 }

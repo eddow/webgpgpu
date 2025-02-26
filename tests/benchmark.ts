@@ -1,6 +1,6 @@
-import createWebGpGpu, { f32, u32, type WebGpGpu } from '../src/server'
+import createWebGpGpu, { type RootWebGpGpu, u32 } from '../src/server'
 
-let webGpGpu: WebGpGpu
+let webGpGpu: RootWebGpGpu
 
 function cpu(n: number) {
 	const result = new Float32Array(n)

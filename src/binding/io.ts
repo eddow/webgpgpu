@@ -1,9 +1,10 @@
 import type { Buffable } from '../buffers'
 import { ParameterError, type TypedArray } from '../types'
+import type { GPUUnboundGroupLayoutEntry } from './bindings'
 
 export interface BindingEntryDescription {
 	declaration: string
-	layoutEntry: Omit<GPUBindGroupLayoutEntry, 'binding'>
+	layoutEntry: GPUUnboundGroupLayoutEntry
 }
 export function layoutGroupEntry(
 	name: string,

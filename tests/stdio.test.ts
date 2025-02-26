@@ -4,14 +4,15 @@ import createWebGpGpu, {
 	InferenceValidationError,
 	ParameterError,
 	Vector2,
-	type WebGpGpu,
+	type RootWebGpGpu,
 	f32,
 	u32,
 	vec2f,
 	inputs,
+	commons,
 } from 'webgpgpu'
 
-let webGpGpu: WebGpGpu
+let webGpGpu: RootWebGpGpu
 
 before(async () => {
 	webGpGpu = await createWebGpGpu()
@@ -159,20 +160,24 @@ describe('inputs', () => {
 describe('infers size', () => {
 	it('infer', async () => {
 		const kernel = webGpGpu
-			.common({
-				a: f32.array('threads.x').value([1, 2, 3]),
-				b: f32.array('threads.y').value([4, 5, 6, 7, 8]),
-			})
+			.bind(
+				commons({
+					a: f32.array('threads.x').value([1, 2, 3]),
+					b: f32.array('threads.y').value([4, 5, 6, 7, 8]),
+				})
+			)
 			.kernel('')
 		expect(kernel.toString()).to.match(/@workgroup_size\(4,8,/)
 	})
 	it('custom', async () => {
 		const kernel = webGpGpu
 			.bind(inference({ custom: [undefined, undefined] }))
-			.common({
-				a: u32.array('threads.x').value([1, 2, 3]),
-				b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
-			})
+			.bind(
+				commons({
+					a: u32.array('threads.x').value([1, 2, 3]),
+					b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
+				})
+			)
 			.output({ output: u32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x] + custom.y;')
 		const { output } = await kernel({})
@@ -243,7 +248,7 @@ describe('diverse', () => {
 		expect(() => kernel.input({ b: f32.array('threads.y') })).to.throw()
 	})
 	it('manages big buffers', async () => {
-		// TODO: Do something with the error ... Throw ?
+		// TODO: Do something with the error ... Throw ? Catch it first
 		const length = 0x400000
 		const kernel = webGpGpu.output({ output: u32.array('threads.x') }).kernel(/*wgsl*/ `
 let modX = thread.x % 453;

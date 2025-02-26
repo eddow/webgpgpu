@@ -130,7 +130,6 @@ export const infer1D = undefined
 export const infer2D = [undefined, undefined] as const
 export const infer3D = [undefined, undefined, undefined] as const
 export const infer4D = [undefined, undefined, undefined, undefined] as const
-export const basicInference = infer({}, { threads: infer3D })
 
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,

@@ -17,8 +17,10 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 }
 
 type EmptyIfUndefined<T> = T extends undefined ? {} : T
+export type GPUUnboundGroupEntry = Omit<GPUBindGroupEntry, 'binding'>
+export type GPUUnboundGroupLayoutEntry = Omit<GPUBindGroupLayoutEntry, 'binding'>
 
-export type BoundTypes<BG> = BG extends Bindings
+export type BoundTypes<BG> = BG extends Bindings<any>
 	? {
 			inputs: EmptyIfUndefined<Parameters<BG['entries']>[1]>
 			outputs: {} //TODO
@@ -26,15 +28,19 @@ export type BoundTypes<BG> = BG extends Bindings
 		}
 	: never
 
-export type BindingType = { new (...args: any[]): Bindings }
+export type BindingType<Inferences extends AnyInference> = {
+	new (...args: any[]): Bindings<Inferences>
+}
 
-export abstract class Bindings {
+export abstract class Bindings<Inferences extends AnyInference> {
 	private deviceRef?: WeakRef<GPUDevice>
 	/**
 	 * Specifies the names used in the wgsl code
 	 */
 	public abstract readonly wgslNames: string[]
 	public readonly addedInferences: {} = {}
+	// TODO: usedInferences : inferences type-checking
+	//public readonly usedInferences: (keyof Inferences)[] = []
 
 	protected get device() {
 		if (!this.deviceRef?.deref()) throw new Error('Binding group disposed / not initialized')
@@ -42,18 +48,21 @@ export abstract class Bindings {
 	}
 	private staticGenerated?: {
 		declarations: string[]
-		layoutEntries: Omit<GPUBindGroupLayoutEntry, 'binding'>[]
+		layoutEntries: GPUUnboundGroupLayoutEntry[]
 		definitions?: string
 	}
 	public get statics() {
 		if (!this.staticGenerated) throw new Error('Binding group not initialized')
 		return this.staticGenerated
 	}
-	protected abstract init(): BindingEntryDescription[]
-	setScope(device: GPUDevice) {
+	protected abstract init(
+		inferences: Inferences,
+		reasons: Record<string, string>
+	): BindingEntryDescription[]
+	setScope(device: GPUDevice, inferences: Inferences, reasons: Record<string, string>) {
 		if (this.deviceRef) throw new Error('Binding group already initialized')
 		this.deviceRef = new WeakRef(device)
-		const entryDescriptors = this.init()
+		const entryDescriptors = this.init(inferences, reasons)
 		this.staticGenerated = {
 			declarations: entryDescriptors.map(({ declaration }) => declaration),
 			layoutEntries: entryDescriptors.map(({ layoutEntry }) => layoutEntry),
@@ -63,5 +72,5 @@ export abstract class Bindings {
 		inferences: AnyInference,
 		inputs: {},
 		reasons: Record<string, string>
-	): Omit<GPUBindGroupEntry, 'binding'>[]
+	): GPUUnboundGroupEntry[]
 }

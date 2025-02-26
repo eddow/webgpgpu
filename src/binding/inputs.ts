@@ -6,26 +6,30 @@ import type { InputType } from '../webgpgpu'
 import { Bindings } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
 
-export class InputBindings<InputSpecs extends Record<string, Buffable>> extends Bindings {
+export class InputBindings<
+	Inferences extends AnyInference,
+	InputSpecs extends Record<string, Buffable>,
+> extends Bindings<Inferences> {
 	public readonly wgslNames: string[]
 	private readonly inputSpecs: { name: string; buffable: Buffable<AnyInference> }[]
 	constructor(inputSpecs: InputSpecs) {
 		super()
 		// TODO default values
 		this.wgslNames = Object.keys(inputSpecs)
-		for (const name in inputSpecs)
-			if (!isBuffable(inputSpecs[name])) throw new ParameterError(`Bad value for input \`${name}\``)
-		this.inputSpecs = Object.entries(inputSpecs).map(([name, buffable]) => ({
-			name,
-			buffable: buffable as Buffable<AnyInference>,
-		}))
+		this.inputSpecs = Object.entries(inputSpecs).map(([name, buffable]) => {
+			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
+			return {
+				name,
+				buffable: buffable as Buffable<AnyInference>,
+			}
+		})
 	}
 	init() {
 		return this.inputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}
 	entries(
 		inferences: AnyInference,
-		inputs: Record<keyof InputSpecs, InputType<InputSpecs[keyof InputSpecs]>>,
+		inputs: { [K in keyof InputSpecs]: InputType<InputSpecs[K]> },
 		reasons: Record<string, string>
 	) {
 		const { device, inputSpecs } = this

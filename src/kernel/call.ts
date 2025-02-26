@@ -6,7 +6,6 @@ import { workGroupCount } from '../typedArrays'
 import { type AnyInput, CompilationError, ParameterError } from '../types'
 import {
 	type OutputEntryDescription,
-	commonBindGroupIndex,
 	customBindGroupIndex,
 	outputBindGroupIndex,
 	outputGroupEntry,
@@ -36,7 +35,6 @@ export async function callKernel<
 		kernelWorkGroupSize,
 		outputDescription,
 		pipeline,
-		commonBindGroup,
 		customBindGroupLayout,
 		orderedGroups,
 	}: ReturnType<typeof kernelScope<Inferences>>
@@ -107,7 +105,6 @@ export async function callKernel<
 	})
 	const passEncoder = commandEncoder.beginComputePass()
 	passEncoder.setPipeline(pipeline)
-	passEncoder.setBindGroup(commonBindGroupIndex, commonBindGroup)
 	passEncoder.setBindGroup(outputBindGroupIndex, outputBindGroup)
 	passEncoder.setBindGroup(customBindGroupIndex, customBindGroup)
 	passEncoder.dispatchWorkgroups(

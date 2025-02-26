@@ -60,9 +60,9 @@ export type Input4D<Element, TArray extends TypedArray = TypedArray> =
 	| Input3D<Element, TArray>[]
 	| TArray
 export type InputXD<
-	Element,
-	SizesSpec extends number[],
-	TArray extends TypedArray,
+	Element = any,
+	SizesSpec extends number[] = number[],
+	TArray extends TypedArray = TypedArray,
 > = SizesSpec extends []
 	? Input0D<Element, TArray>
 	: SizesSpec extends [number]
