@@ -20,7 +20,7 @@ export default {
 			sourceMap: false,
 		}),
 		typescript({
-			tsconfig: './tests/tsconfig.json',
+			tsconfig: './tsconfig.json',
 			paths: {
 				webgpgpu: ["./src/client/index.ts"]
 			}

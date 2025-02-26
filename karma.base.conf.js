@@ -56,6 +56,7 @@ export default {
                 '--enable-webgpu-developer-features',
                 '--enable-vulkan',
                 '--enable-features=Vulkan',
+                '--remote-debugging-port=9222'
             ]
         }
     },

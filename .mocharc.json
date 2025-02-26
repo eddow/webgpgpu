@@ -1,12 +1,10 @@
 {
 	"loader": "tsx",
 	"node-option": ["import=tsx"],
-	"extension": [
-		"ts"
-	],
+	"extension": ["ts"],
 	"spec": "tests/**/*.test.ts",
-	"require": [
-		"tsx"
-	],
-	"recursive": true
+	"require": ["tsx"],
+	"recursive": true,
+	"watch-files": ["src/**/*.ts", "tests/**/*.ts"], 
+	"watch-ignore": ["node_modules"]
 }

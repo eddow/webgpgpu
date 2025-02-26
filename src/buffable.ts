@@ -1,5 +1,5 @@
 import { Float16Array } from '@petamoriken/float16'
-import { Buffable, BufferReader, elementsToTypedArray, ValuedBuffable } from './buffers'
+import { type Buffable, BufferReader, type ValuedBuffable, elementsToTypedArray } from './buffers'
 import { type AnyInference, type Inferred, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
@@ -111,7 +111,7 @@ class GpGpuData<
 		return {
 			buffable: this,
 			value: v,
-		}// as ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+		} // as ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	}
 }
 
@@ -148,7 +148,15 @@ export class GpGpuXFloat16<OriginElement> extends GpGpuData<
 		elementRecover?: (element: ArrayLike<number>) => OriginElement
 	) {
 		// `as any` for rollup version problems
-		super(Float16Array as any, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
+		super(
+			Float16Array as any,
+			elementSize,
+			wgslSpecification,
+			[],
+			[],
+			elementConvert,
+			elementRecover
+		)
 	}
 }
 

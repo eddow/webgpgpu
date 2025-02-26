@@ -1,12 +1,6 @@
 import type { Bindings } from '../binding'
 import type { BufferReader } from '../buffers'
-import {
-	type AnyInference,
-	defaultedInference,
-	extractInference,
-	resolvedSize,
-	specifyInferences,
-} from '../inference'
+import { type AnyInference, extractInference, resolvedSize, specifyInferences } from '../inference'
 import { log } from '../log'
 import { workGroupCount } from '../typedArrays'
 import { type AnyInput, CompilationError, ParameterError } from '../types'
@@ -54,9 +48,10 @@ export async function callKernel<
 		if (hasError) throw new CompilationError(messages)
 	}
 	// Inference can be done here as non-compulsory inference are not compelling
-	const callInfer = defaultedInference(
-		specifyInferences(kernelInferences, defaultInfers as Partial<Inferences>) as Inferences
-	)
+	const callInfer = specifyInferences(
+		kernelInferences,
+		defaultInfers as Partial<Inferences>
+	) as Inferences
 	// #region Output
 
 	const outputBindGroupEntries: GPUBindGroupEntry[] = []

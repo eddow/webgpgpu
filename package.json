@@ -4,7 +4,7 @@
 	"scripts": {
 		"test": "mocha",
 		"test:build": "rollup -c rollup.tests.config.js",
-		"test:karma": "karma start ./karma.debug.conf.js --browsers ChromeGPU",
+		"test:karma": "karma start ./karma.debug.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
 		"test:watch": "mocha watch",
 		"build": "rollup -c",
 		"watch": "rollup -c -w",

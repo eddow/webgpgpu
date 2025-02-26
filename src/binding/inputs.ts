@@ -29,7 +29,8 @@ export class InputBindings<InputSpecs extends Record<string, Buffable>> extends 
 	) {
 		const { device, inputSpecs } = this
 		return inputSpecs.map(({ name, buffable }) => {
-			const typeArray = buffable.toTypedArray(inferences, inputs[name], name, {})
+			// TODO: Give reasons
+			const typeArray = buffable.toTypedArray(inferences, inputs[name], `Given input ${name}`, {})
 			const resource = inputGroupEntry(
 				device,
 				name,

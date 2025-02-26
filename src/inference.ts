@@ -82,16 +82,6 @@ export function specifyInferences<Inferences extends AnyInference>(
 	return inferences
 }
 
-export function defaultedInference<Inferences extends AnyInference>(
-	inferences: Inferences,
-	dft = 1
-): Inferences & Record<keyof Inferences, number> {
-	return mapEntries<Inferred, number, Inferences>(
-		inferences,
-		(value) => value ?? dft
-	) as Inferences & Record<keyof Inferences, number>
-}
-
 export type SizeSpec<Inferences extends AnyInference = AnyInference> = number | keyof Inferences
 
 export function assertSize<Inferences extends AnyInference>(
@@ -172,20 +162,18 @@ export function extractInference<Inferences extends AnyInference>(
 	name: string,
 	dimension: 1 | 2 | 3 | 4
 ) {
-	switch (dimension) {
-		case 1:
-			return [inferences[name]]
-		case 2:
-			return [inferences[`${name}.x`], inferences[`${name}.y`]]
-		case 3:
-			return [inferences[`${name}.x`], inferences[`${name}.y`], inferences[`${name}.z`]]
-		case 4:
-			return [
-				inferences[`${name}.x`],
-				inferences[`${name}.y`],
-				inferences[`${name}.z`],
-				inferences[`${name}.w`],
-			]
-	}
-	throw new ParameterError(`Invalid inference dimension: ${dimension}`)
+	if (![1, 2, 3, 4].includes(dimension))
+		throw new ParameterError(`Invalid inference dimension: ${dimension}`)
+	const names =
+		dimension === 1
+			? [name]
+			: 'xyzw'
+					.substring(0, dimension)
+					.split('')
+					.map((c) => `${name}.${c}`)
+
+	return names.map((n) => {
+		;(inferences as AnyInference)[n] ??= 1
+		return inferences[n as keyof Inferences]
+	})
 }
