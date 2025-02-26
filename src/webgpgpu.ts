@@ -46,6 +46,8 @@ export interface Kernel<
 	inferred: Inferences
 }
 
+// #region Kill me when bind has multiple arguments
+
 export type WebGpGpuTypes<WGG> = WGG extends WebGpGpu<infer Inputs, infer Outputs, infer Inferences>
 	? {
 			inputs: Inputs
@@ -71,6 +73,8 @@ export type MixedTypes<TDs extends { inputs: any; outputs: any; inferences: any 
 
 export type MixedWebGpGpu<TypesDef extends { inputs: any; outputs: any; inferences: any }> =
 	WebGpGpu<TypesDef['inputs'], TypesDef['outputs'], TypesDef['inferences']>
+
+// #endregion
 
 export class WebGpGpu<
 	Inputs extends Record<string, AnyInput> = {},

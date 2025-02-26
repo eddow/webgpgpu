@@ -1,6 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import typescript from '@rollup/plugin-typescript'
+import strip from '@rollup/plugin-strip'
 import pluginDts from 'rollup-plugin-dts'
 import { rm } from 'node:fs/promises'
 
@@ -34,19 +35,13 @@ export default  [
 	},
 	{
 		input,
-		output: {
+		output: [{
 			banner,
 			dir: 'lib',
 			entryFileNames: '[name].js',
 			sourcemap: true,
 			format: 'esm'
-		},
-		plugins,
-		external
-	},
-	{
-		input,
-		output: {
+		}, {
 			banner,
 			dir: 'lib',
 			entryFileNames: '[name].cjs',
@@ -54,8 +49,13 @@ export default  [
 			sourcemap: true,
 			format: 'cjs',
 			exports: 'named'
-		},
-		plugins,
+		}],
+		plugins: [
+			...plugins,
+			strip({
+				exclude: ['src/log.ts']
+			})
+		],
 		external
-	}
+	},
 ]

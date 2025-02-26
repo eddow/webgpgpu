@@ -1,5 +1,3 @@
-import { expect } from 'chai'
-import { after, before, describe, it } from 'mocha'
 import createWebGpGpu, {
 	inference,
 	InferenceValidationError,
@@ -9,12 +7,8 @@ import createWebGpGpu, {
 	f32,
 	u32,
 	vec2f,
-	type BoundTypes,
-	type WebGpGpuTypes,
-	type MixedTypes,
-	type MixedWebGpGpu,
 	inputs,
-} from '../src/server'
+} from 'webgpgpu'
 
 let webGpGpu: WebGpGpu
 
@@ -50,8 +44,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		expect(empty).to.be.an('object').that.is.empty
 	})
 	it('one input', async () => {
-		const kernel = webGpGpu.workGroup(3).input({ a: f32 }).kernel('')
-		const empty = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 3 })
+		const kernel = webGpGpu.input({ a: f32 }).kernel('')
+		const empty = await kernel({ a: Float32Array.from([43]) })
 		expect(empty).to.be.an('object').that.is.empty
 	})
 	it('one output', async () => {
@@ -64,23 +58,20 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 describe('inputs', () => {
 	it('an uniform - TypedArray', async () => {
 		const kernel = webGpGpu
-			.workGroup(3)
-			//.input({ a: f32 })
 			.bind(inputs({ a: f32 }))
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 3 })
+		const { output } = await kernel({ a: Float32Array.from([43]) })
 		expect(output).to.exist
-		expect(output.toArray()).to.deep.equal([43, 43, 43])
+		expect(output.toArray()).to.deep.equal([43])
 	})
 	it('an uniform - value', async () => {
 		const kernel = webGpGpu
-			.workGroup(3)
 			.input({ a: f32 })
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: 44 }, { 'threads.x': 3 })
-		expect(output.toArray()).to.deep.equal([44, 44, 44])
+		const { output } = await kernel({ a: 44 })
+		expect(output.toArray()).to.deep.equal([44])
 	})
 	it('a float array - TypedArray', async () => {
 		const kernel = webGpGpu

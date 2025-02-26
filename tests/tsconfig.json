@@ -15,7 +15,7 @@
 		"noErrorTruncation": true,
 		"noImplicitAny": true,
 		"paths": {
-			"webgpgpu": ["../src/server"]
+			"webgpgpu": ["./src/server/index.ts"]
 		},
 		"types": ["@webgpu/types"]
 	},

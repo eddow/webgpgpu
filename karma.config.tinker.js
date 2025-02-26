@@ -1,43 +1,39 @@
+import resolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
+import typescript from '@rollup/plugin-typescript'
+
 export default function (config) {
 	config.set({
-		frameworks: ['mocha'],
 		files: [
-      		'node_modules/mocha/mocha.js', // Prebuilt browser Mocha
-			{pattern: 'tests/shims/process.js', type: 'module'},
-			{pattern: 'tests/shims/**/*.js', type: 'module'},
-			//'node_modules/stream-browserify/index.js', // Polyfill stream
-			{pattern: 'tests/**/*.test.ts', type: 'module'},
+			// Watch src files for changes but
+			// don't load them into the browser.
+			//{ pattern: 'src/**/*.ts', included: false },
+			{ pattern: 'tests/**/*.test.ts', type: 'module' }
 		],
-		preprocessors: {
-			"tests/**/*.ts": ["esbuild"], // Transpile TypeScript to ESM
-		},
-		esbuild: {
-			target: "esnext",
-			format: "iife",
-			bundle: true,
-			external: ['util', 'events', 'stream', 'browser-stdout', './src/server/index.ts'],
-			alias: {
-				'browser-stdout': './tests/shims/browser-stdout.js'
+		browsers: ['Chrome'], // Or any other browser
+		frameworks: ['mocha', 'chai'],
+		rollupPreprocessor: {
+			output: {
+				format: 'iife', // Helps prevent naming collisions.
+				name: 'webgpgpu-test', // Required for 'iife' format.
+				sourcemap: 'inline', // Sensible for testing.
 			},
-			define: {
-				'process': 'globalThis.process', // ✅ Prevent process from being removed
-				'process.env': '{}',  // ✅ Ensures Mocha doesn’t crash when checking process.env
-			}
+			plugins: [
+				resolve(),
+				commonjs(),
+				typescript({
+					tsconfig: './tests/tsconfig.json',
+					paths: {
+						webgpgpu: ["./src/client/index.ts"]
+					}
+				})
+			],
+			//external: ['mocha', 'chai']
 		},
-		reporters: ['mocha'],
-		port: 9876,  // karma web server port
-		colors: true,
-		logLevel: config.LOG_INFO,
-		browsers: ['ChromeHeadless'],
-		autoWatch: false,
-		concurrency: Infinity,
 		client: {
 			mocha: {
-				globals: ['mocha', 'chai'], // Expose Mocha and Chai globals
-				setup: function () {
-					mocha.setup('bdd'); // Initialize Mocha
-				},
-			},
-		},
+				reporter: 'html'
+			}
+		}
 	})
 }
