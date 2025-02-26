@@ -8,8 +8,7 @@ import { OutputBindings } from './binding/outputs'
 import type { Buffable, BufferReader, ValuedBuffable } from './buffers'
 import { WgslCodeGenerator } from './code'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
-import { callKernel } from './kernel/call'
-import { kernelScope } from './kernel/scope'
+import { kernelScope } from './kernel'
 import { type Log, log } from './log'
 import { explicitWorkSize } from './typedArrays'
 import { type AnyInput, ParameterError, WebGpGpuError } from './types'
@@ -365,28 +364,25 @@ export class WebGpGpu<
 			}
 		}
 		const { device, inferences, workGroupSize, definitions, groups, inferenceReasons } = this
-		const scope = guarded(() =>
-			kernelScope<Inferences>(compute, kernelDefaults, {
+		const { kernel, code, kernelInferences } = guarded(() =>
+			kernelScope<Inferences, Inputs, Outputs>(
+				compute,
+				kernelDefaults,
 				device,
 				inferences,
 				workGroupSize,
 				definitions,
 				groups,
-				bindingsOrder: WebGpGpu.bindingsOrder,
-			})
+				WebGpGpu.bindingsOrder
+			)
 		)
 		//
 		const getDevice = () => this.device
 		return Object.assign(
 			// Kernel function signature
 			(inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
-				guarded(() =>
-					callKernel<Inputs, Outputs, Inferences>(
-						{ device: getDevice(), inputs, defaultInfers, inferenceReasons },
-						scope
-					)
-				),
-			{ toString: () => scope.code, inferred: scope.kernelInferences }
+				guarded(() => kernel(getDevice(), inputs, defaultInfers, inferenceReasons)),
+			{ toString: () => code, inferred: kernelInferences }
 		)
 	}
 }

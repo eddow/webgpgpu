@@ -7,7 +7,15 @@ import {
 } from './buffable'
 
 // #region GpGpu0x
-
+/* TODO: padding + actual shape (eg [[number, number], [number, number]] instead of [number, number, number, number])
+Type	Intended Size	Actual Padded Size	Extra Padding?
+vec2<f32>	8B	✅ 8B	No
+vec3<f32>	12B	⚠️ 16B	Yes (4B)
+vec4<f32>	16B	✅ 16B	No
+mat2x3f	24B	⚠️ 32B	Yes (2×4B)
+mat3x3f	36B	⚠️ 48B	Yes (3×4B)
+mat4x3f	48B	⚠️ 64B	Yes (4×4B)
+*/
 type vec2 = [number, number]
 type vec3 = [number, number, number]
 type vec4 = [number, number, number, number]

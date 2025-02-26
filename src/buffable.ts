@@ -1,6 +1,6 @@
 import { Float16Array } from '@petamoriken/float16'
 import { type Buffable, BufferReader, type ValuedBuffable, elementsToTypedArray } from './buffers'
-import { type AnyInference, type Inferred, type SizeSpec, resolvedSize } from './inference'
+import { type AnyInference, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
 
