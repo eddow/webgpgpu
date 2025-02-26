@@ -8,5 +8,6 @@
 		"webgpu",
 		"wgsl",
 		"xyzw"
-	]
+	],
+	"karmaTestExplorer.enableExtension": true
 }

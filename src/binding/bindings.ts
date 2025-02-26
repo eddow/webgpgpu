@@ -26,8 +26,10 @@ export type BoundTypes<BG> = BG extends Bindings
 		}
 	: never
 
+export type BindingType = { new (...args: any[]): Bindings }
+
 export abstract class Bindings {
-	deviceRef?: WeakRef<GPUDevice>
+	private deviceRef?: WeakRef<GPUDevice>
 	/**
 	 * Specifies the names used in the wgsl code
 	 */
@@ -57,5 +59,9 @@ export abstract class Bindings {
 			layoutEntries: entryDescriptors.map(({ layoutEntry }) => layoutEntry),
 		}
 	}
-	abstract entries(inferences: AnyInference, inputs: {}): Omit<GPUBindGroupEntry, 'binding'>[]
+	abstract entries(
+		inferences: AnyInference,
+		inputs: {},
+		reasons: Record<string, string>
+	): Omit<GPUBindGroupEntry, 'binding'>[]
 }

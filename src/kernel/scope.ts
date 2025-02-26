@@ -1,5 +1,5 @@
-import { Buffable } from '../buffers'
-import type { Bindings } from '../binding'
+import type { BindingType, Bindings } from '../binding'
+import type { Buffable } from '../buffers'
 import { type AnyInference, specifyInferences } from '../inference'
 import { workgroupSize } from '../typedArrays'
 import type { BoundDataEntry } from '../webgpgpu'
@@ -15,21 +15,21 @@ export function kernelScope<Inferences extends AnyInference>(
 	{
 		device,
 		commonData,
-		inputs,
 		outputs,
 		inferences,
 		workGroupSize,
 		definitions,
 		groups,
+		bindingsOrder,
 	}: {
 		device: GPUDevice
 		commonData: readonly BoundDataEntry[]
-		inputs: Record<string, Buffable<Inferences>>
 		outputs: Record<string, Buffable<Inferences>>
 		inferences: Inferences
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
 		groups: Bindings[]
+		bindingsOrder: BindingType[]
 	}
 ) {
 	// #region Common
@@ -98,13 +98,21 @@ export function kernelScope<Inferences extends AnyInference>(
 			device
 		)
 
+	function order(binding: BindingType) {
+		const index = bindingsOrder.indexOf(binding)
+		return index === -1 ? bindingsOrder.length : index
+	}
+	const orderedGroups = [...groups].sort(
+		(a, b) => order(a.constructor as BindingType) - order(b.constructor as BindingType)
+	)
+
 	const customBindGroupLayout = device.createBindGroupLayout({
 		label: 'custom-bind-group-layout',
-		entries: groups
+		entries: orderedGroups
 			.flatMap(({ statics: { layoutEntries } }) => layoutEntries)
 			.map((layoutEntry, binding) => ({ ...layoutEntry, binding })),
 	})
-	const customDeclarations = groups
+	const customDeclarations = orderedGroups
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${customBindGroupIndex}) @binding(${binding}) ${wgsl}`)
 
@@ -150,5 +158,6 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		pipeline,
 		commonBindGroup,
 		customBindGroupLayout,
+		orderedGroups,
 	}
 }

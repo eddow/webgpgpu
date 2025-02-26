@@ -25,12 +25,17 @@ export class InputBindings<InputSpecs extends Record<string, Buffable>> extends 
 	}
 	entries(
 		inferences: AnyInference,
-		inputs: Record<keyof InputSpecs, InputType<InputSpecs[keyof InputSpecs]>>
+		inputs: Record<keyof InputSpecs, InputType<InputSpecs[keyof InputSpecs]>>,
+		reasons: Record<string, string>
 	) {
 		const { device, inputSpecs } = this
 		return inputSpecs.map(({ name, buffable }) => {
-			// TODO: Give reasons
-			const typeArray = buffable.toTypedArray(inferences, inputs[name], `Given input ${name}`, {})
+			const typeArray = buffable.toTypedArray(
+				inferences,
+				inputs[name],
+				`Given input ${name}`,
+				reasons
+			)
 			const resource = inputGroupEntry(
 				device,
 				name,

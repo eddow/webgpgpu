@@ -1,4 +1,4 @@
-import type { Bindings } from '../binding'
+import type { Bindings, inference } from '../binding'
 import type { BufferReader } from '../buffers'
 import { type AnyInference, extractInference, resolvedSize, specifyInferences } from '../inference'
 import { log } from '../log'
@@ -18,10 +18,17 @@ export async function callKernel<
 	Outputs extends Record<string, BufferReader>,
 	Inferences extends AnyInference,
 >(
-	device: GPUDevice,
-	inputs: Inputs,
-	defaultInfers: Partial<Record<keyof Inferences, number>>,
-	groups: Bindings[],
+	{
+		device,
+		inputs,
+		defaultInfers,
+		inferenceReasons,
+	}: {
+		device: GPUDevice
+		inputs: Inputs
+		defaultInfers: Partial<Record<keyof Inferences, number>>
+		inferenceReasons: Record<string, string>
+	},
 	{
 		kernelInferences,
 		shaderModuleCompilationInfo,
@@ -31,6 +38,7 @@ export async function callKernel<
 		pipeline,
 		commonBindGroup,
 		customBindGroupLayout,
+		orderedGroups,
 	}: ReturnType<typeof kernelScope<Inferences>>
 ) {
 	const messages = (await shaderModuleCompilationInfo).messages
@@ -52,6 +60,20 @@ export async function callKernel<
 		kernelInferences,
 		defaultInfers as Partial<Inferences>
 	) as Inferences
+	const customEntries = orderedGroups.flatMap((group) => {
+		const entries = group.entries(callInfer, inputs, inferenceReasons)
+		if (entries.length !== group.statics.layoutEntries.length)
+			throw Error(
+				`BindingGroup entries count (${entries.length}) don't match layout entries length (${group.statics.layoutEntries.length})`
+			)
+		return entries
+	})
+
+	const customBindGroup = device.createBindGroup({
+		label: 'custom-bind-group',
+		layout: customBindGroupLayout,
+		entries: customEntries.map((entry, binding) => ({ ...entry, binding })),
+	})
 	// #region Output
 
 	const outputBindGroupEntries: GPUBindGroupEntry[] = []
@@ -78,24 +100,6 @@ export async function callKernel<
 	})
 
 	// #endregion
-	const customEntries = [...groups]
-		.reverse()
-		.map((group) => {
-			const entries = group.entries(callInfer, inputs)
-			if (entries.length !== group.statics.layoutEntries.length)
-				throw Error(
-					`BindingGroup entries count (${entries.length}) don't match layout entries length (${group.statics.layoutEntries.length})`
-				)
-			return entries
-		})
-		.reverse()
-		.flat()
-
-	const customBindGroup = device.createBindGroup({
-		label: 'custom-bind-group',
-		layout: customBindGroupLayout,
-		entries: customEntries.map((entry, binding) => ({ ...entry, binding })),
-	})
 	// Encode and dispatch work
 
 	const commandEncoder = device.createCommandEncoder({

@@ -1,6 +1,6 @@
 import { activateF16 } from './atomicTypesList'
 import { inference } from './binding'
-import type { Bindings, BoundTypes } from './binding/bindings'
+import type { BindingType, Bindings, BoundTypes } from './binding/bindings'
 import { InferenceBindings } from './binding/inference'
 import { InputBindings } from './binding/inputs'
 import { isBuffable } from './buffable'
@@ -81,6 +81,12 @@ export class WebGpGpu<
 	Outputs extends Record<string, BufferReader> = {},
 	Inferences extends AnyInference = typeof basicInference,
 > extends WgslCodeGenerator {
+	/**
+	 * This is the order the bindings are processed through at run time
+	 * 1 inputs (usually fix the values of inferences at run-time)
+	 * all the others who don't specify any inference but use them (to produce an input to wgsl)
+	 */
+	static bindingsOrder: BindingType[] = [InputBindings]
 	// #region Creation
 
 	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): WebGpGpu
@@ -111,7 +117,7 @@ export class WebGpGpu<
 		function create(device: GPUDevice) {
 			activateF16(device.features.has('f16'))
 			const zero = new WebGpGpu(
-				undefined,
+				undefined, // this forces all the "optional" new values to be given
 				{
 					importUsage: [],
 					inferences: basicInference,
@@ -119,7 +125,6 @@ export class WebGpGpu<
 					inferenceReasons: {},
 					definitions: [],
 					commonData: [],
-					inputs: {},
 					outputs: {},
 					workGroupSize: null,
 					usedNames: new Set(['thread']),
@@ -171,7 +176,6 @@ export class WebGpGpu<
 	public readonly inferred: Record<string, 1 | 2 | 3 | 4> //var name => dimension
 	public readonly inferenceReasons: Record<string, string>
 	private readonly commonData: readonly BoundDataEntry[]
-	private readonly inputs: Record<string, Buffable<Inferences>>
 	private readonly outputs: Record<string, Buffable<Inferences>>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
@@ -190,7 +194,6 @@ export class WebGpGpu<
 			inferred,
 			inferenceReasons,
 			commonData,
-			inputs,
 			outputs,
 			workGroupSize,
 			usedNames,
@@ -202,7 +205,6 @@ export class WebGpGpu<
 			inferred: Record<string, 1 | 2 | 3 | 4>
 			inferenceReasons: Record<string, string>
 			commonData: BoundDataEntry[]
-			inputs: Record<string, Buffable<Inferences>>
 			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
@@ -215,7 +217,6 @@ export class WebGpGpu<
 		this.inferred = inferred ?? parent!.inferred
 		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
 		this.commonData = commonData ?? parent!.commonData
-		this.inputs = inputs ?? (parent!.inputs as Record<string, Buffable<Inferences>>)
 		this.outputs = outputs ?? (parent!.outputs as Record<string, Buffable<Inferences>>)
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
 		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
@@ -355,7 +356,7 @@ export class WebGpGpu<
 			groups: [...(this.groups as any[]), group as any],
 			usedNames: this.checkNameConflicts(...group.wgslNames),
 			inferences: specifyInferences<Inferences & BoundTypes<BG>['inferences']>(
-				this.inferences,
+				{ ...this.inferences },
 				group.addedInferences as Partial<Inferences & BoundTypes<BG>['inferences']>,
 				'binding',
 				inferenceReasons
@@ -405,18 +406,26 @@ export class WebGpGpu<
 				throw e
 			}
 		}
-		const { device, commonData, inputs, outputs, inferences, workGroupSize, definitions, groups } =
-			this
+		const {
+			device,
+			commonData,
+			outputs,
+			inferences,
+			workGroupSize,
+			definitions,
+			groups,
+			inferenceReasons,
+		} = this
 		const scope = guarded(() =>
 			kernelScope<Inferences>(compute, kernelDefaults, {
 				device,
 				commonData,
-				inputs,
 				outputs,
 				inferences,
 				workGroupSize,
 				definitions,
 				groups,
+				bindingsOrder: WebGpGpu.bindingsOrder,
 			})
 		)
 		//
@@ -425,7 +434,10 @@ export class WebGpGpu<
 			// Kernel function signature
 			(inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
 				guarded(() =>
-					callKernel<Inputs, Outputs, Inferences>(getDevice(), inputs, defaultInfers, groups, scope)
+					callKernel<Inputs, Outputs, Inferences>(
+						{ device: getDevice(), inputs, defaultInfers, inferenceReasons },
+						scope
+					)
 				),
 			{ toString: () => scope.code, inferred: scope.kernelInferences }
 		)

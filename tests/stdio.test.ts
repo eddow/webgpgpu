@@ -51,7 +51,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	})
 	it('one output', async () => {
 		const kernel = webGpGpu.output({ output: f32.array('threads.x') }).kernel('output[0] = 42;')
-		const { output } = await kernel({})
+		const { output } = await kernel({}, { 'threads.x': 1 })
 		expect(output).to.exist
 		expect(output.toArray()).to.deep.equal([42])
 	})
@@ -62,7 +62,7 @@ describe('inputs', () => {
 			.bind(inputs({ a: f32 }))
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: Float32Array.from([43]) })
+		const { output } = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 1 })
 		expect(output).to.exist
 		expect(output.toArray()).to.deep.equal([43])
 	})
@@ -71,7 +71,7 @@ describe('inputs', () => {
 			.input({ a: f32 })
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: 44 })
+		const { output } = await kernel({ a: 44 }, { 'threads.x': 1 })
 		expect(output.toArray()).to.deep.equal([44])
 	})
 	it('a float array - TypedArray', async () => {
@@ -221,7 +221,6 @@ describe('infers size', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+2.;')
 		const { output } = await kernel({ a: [1, 2, 3] })
-		console.dir(kernel.inferred)
 		expect(output.toArray()).to.deep.equal([3, 4, 5])
 	})
 })
