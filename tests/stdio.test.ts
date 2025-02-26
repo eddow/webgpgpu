@@ -10,6 +10,7 @@ import createWebGpGpu, {
 	vec2f,
 	inputs,
 	commons,
+	outputs,
 } from 'webgpgpu'
 
 let webGpGpu: RootWebGpGpu
@@ -145,7 +146,7 @@ describe('inputs', () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3), b: f32 })
-			.output({ output: f32.array('threads.x') })
+			.bind(outputs({ output: f32.array('threads.x') }))
 			.kernel('output[thread.x] = a[thread.x] * b;')
 		const { output } = await kernel(
 			{
@@ -178,8 +179,9 @@ describe('infers size', () => {
 					b: f32.array('custom.y').value([4, 5, 6, 7, 8]),
 				})
 			)
-			.output({ output: u32.array('threads.x') })
+			.bind(outputs({ output: u32.array('threads.x') }))
 			.kernel('output[thread.x] = a[thread.x] + custom.y;')
+		const qwe = await kernel({})
 		const { output } = await kernel({})
 		expect(output.toArray()).to.deep.equal([6, 7, 8])
 	})

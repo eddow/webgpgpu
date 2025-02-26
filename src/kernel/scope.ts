@@ -1,15 +1,12 @@
 import type { BindingType, Bindings } from '../binding'
-import type { Buffable } from '../buffers'
 import { type AnyInference, extractInference, specifyInferences } from '../inference'
 import { workgroupSize } from '../typedArrays'
-import { customBindGroupIndex, layoutGroupEntry, outputBindGroupIndex } from './io'
 
 export function kernelScope<Inferences extends AnyInference>(
 	compute: string,
 	kernelDefaults: Partial<Record<keyof Inferences, number>>,
 	{
 		device,
-		outputs,
 		inferences,
 		workGroupSize,
 		definitions,
@@ -17,7 +14,6 @@ export function kernelScope<Inferences extends AnyInference>(
 		bindingsOrder,
 	}: {
 		device: GPUDevice
-		outputs: Record<string, Buffable<Inferences>>
 		inferences: Inferences
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
@@ -25,32 +21,6 @@ export function kernelScope<Inferences extends AnyInference>(
 		bindingsOrder: BindingType<Inferences>[]
 	}
 ) {
-	// #region Output
-
-	const outputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
-	const outputBindGroupDescription: string[] = []
-	const outputDescription: { name: string; binding: number; buffable: Buffable }[] = []
-
-	for (const [name, buffable] of Object.entries(outputs)) {
-		const binding = outputBindGroupLayoutEntries.length
-		const { layoutEntry, description } = layoutGroupEntry(
-			name,
-			buffable,
-			outputBindGroupIndex,
-			binding,
-			false
-		)
-		outputBindGroupLayoutEntries.push(layoutEntry)
-		outputBindGroupDescription.push(description)
-		outputDescription.push({ name, binding, buffable })
-	}
-	const outputBindGroupLayout = device.createBindGroupLayout({
-		label: 'output-bind-group-layout',
-		entries: outputBindGroupLayoutEntries,
-	})
-
-	// #endregion Output
-
 	const kernelInferences = specifyInferences(
 		{ ...inferences },
 		kernelDefaults as Partial<Inferences>
@@ -77,10 +47,9 @@ export function kernelScope<Inferences extends AnyInference>(
 	})
 	const customDeclarations = orderedGroups
 		.flatMap(({ statics: { declarations } }) => declarations)
-		.map((wgsl, binding) => `@group(${customBindGroupIndex}) @binding(${binding}) ${wgsl}`)
+		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
 	const code = /*wgsl*/ `
-${outputBindGroupDescription.join('\n')}
 ${customDeclarations.join('\n')}
 
 ${definitions.join('\n')}
@@ -99,7 +68,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	const pipeline = device.createComputePipeline({
 		label: 'compute-pipeline',
 		layout: device.createPipelineLayout({
-			bindGroupLayouts: [outputBindGroupLayout, customBindGroupLayout],
+			bindGroupLayouts: [customBindGroupLayout],
 		}),
 		compute: { module: shaderModule, entryPoint: 'main' },
 	})
@@ -108,9 +77,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		code,
 		kernelInferences,
 		shaderModuleCompilationInfo,
-		outputBindGroupLayout,
 		kernelWorkGroupSize,
-		outputDescription,
 		pipeline,
 		customBindGroupLayout,
 		orderedGroups,

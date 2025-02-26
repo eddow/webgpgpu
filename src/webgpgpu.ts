@@ -4,6 +4,7 @@ import type { BindingType, Bindings, BoundTypes } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inference'
 import { InputBindings } from './binding/inputs'
+import { OutputBindings } from './binding/outputs'
 import type { Buffable, BufferReader, ValuedBuffable } from './buffers'
 import { WgslCodeGenerator } from './code'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
@@ -120,7 +121,6 @@ export class WebGpGpu<
 					inferred: {},
 					inferenceReasons: {},
 					definitions: [],
-					outputs: {},
 					workGroupSize: null,
 					usedNames: new Set(['thread']),
 					groups: [],
@@ -174,7 +174,6 @@ export class WebGpGpu<
 	public readonly inferences: Inferences
 	public readonly inferred: Record<string, 1 | 2 | 3 | 4> //var name => dimension
 	public readonly inferenceReasons: Record<string, string>
-	private readonly outputs: Record<string, Buffable<Inferences>>
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
@@ -191,7 +190,6 @@ export class WebGpGpu<
 			inferences,
 			inferred,
 			inferenceReasons,
-			outputs,
 			workGroupSize,
 			usedNames,
 			groups,
@@ -201,7 +199,6 @@ export class WebGpGpu<
 			inferences: Inferences
 			inferred: Record<string, 1 | 2 | 3 | 4>
 			inferenceReasons: Record<string, string>
-			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
 			groups: Bindings<Inferences>[]
@@ -212,7 +209,6 @@ export class WebGpGpu<
 		this.inferences = inferences ?? parent!.inferences
 		this.inferred = inferred ?? parent!.inferred
 		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
-		this.outputs = outputs ?? (parent!.outputs as Record<string, Buffable<Inferences>>)
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
 		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
@@ -287,11 +283,8 @@ export class WebGpGpu<
 	 */
 	output<Specs extends Record<string, Buffable<Inferences>>>(
 		outputs: Specs
-	): WebGpGpu<Inferences, Inputs, Outputs & Record<keyof Specs, OutputType<Specs[keyof Specs]>>> {
-		return new WebGpGpu(this, {
-			outputs: { ...this.outputs, ...outputs },
-			usedNames: this.checkNameConflicts(...Object.keys(outputs)),
-		})
+	): WebGpGpu<Inferences, Inputs, Outputs & { [K in keyof Specs]: OutputType<Specs[K]> }> {
+		return this.bind(new OutputBindings<Inferences, Specs>(outputs))
 	}
 	/**
 	 * Specifies the work group size
@@ -371,12 +364,10 @@ export class WebGpGpu<
 				throw e
 			}
 		}
-		const { device, outputs, inferences, workGroupSize, definitions, groups, inferenceReasons } =
-			this
+		const { device, inferences, workGroupSize, definitions, groups, inferenceReasons } = this
 		const scope = guarded(() =>
 			kernelScope<Inferences>(compute, kernelDefaults, {
 				device,
-				outputs,
 				inferences,
 				workGroupSize,
 				definitions,

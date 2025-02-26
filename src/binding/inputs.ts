@@ -28,7 +28,7 @@ export class InputBindings<
 		return this.inputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}
 	entries(
-		inferences: AnyInference,
+		inferences: Inferences,
 		inputs: { [K in keyof InputSpecs]: InputType<InputSpecs[K]> },
 		reasons: Record<string, string>
 	) {
@@ -51,8 +51,9 @@ export class InputBindings<
 	}
 }
 
-export default function inputs<InputSpecs extends Record<string, Buffable>>(
-	inputSpecs: InputSpecs
-) {
-	return new InputBindings(inputSpecs)
+export default function inputs<
+	Inferences extends AnyInference,
+	InputSpecs extends Record<string, Buffable<Inferences>>,
+>(inputSpecs: InputSpecs) {
+	return new InputBindings<Inferences, InputSpecs>(inputSpecs)
 }

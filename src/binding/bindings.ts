@@ -23,7 +23,7 @@ export type GPUUnboundGroupLayoutEntry = Omit<GPUBindGroupLayoutEntry, 'binding'
 export type BoundTypes<BG> = BG extends Bindings<any>
 	? {
 			inputs: EmptyIfUndefined<Parameters<BG['entries']>[1]>
-			outputs: {} //TODO
+			outputs: Awaited<ReturnType<BG['read']>>
 			inferences: BG['addedInferences']
 		}
 	: never
@@ -34,10 +34,6 @@ export type BindingType<Inferences extends AnyInference> = {
 
 export abstract class Bindings<Inferences extends AnyInference> {
 	private deviceRef?: WeakRef<GPUDevice>
-	/**
-	 * Specifies the names used in the wgsl code
-	 */
-	public abstract readonly wgslNames: string[]
 	public readonly addedInferences: {} = {}
 	// TODO: usedInferences : inferences type-checking
 	//public readonly usedInferences: (keyof Inferences)[] = []
@@ -55,10 +51,6 @@ export abstract class Bindings<Inferences extends AnyInference> {
 		if (!this.staticGenerated) throw new Error('Binding group not initialized')
 		return this.staticGenerated
 	}
-	protected abstract init(
-		inferences: Inferences,
-		reasons: Record<string, string>
-	): BindingEntryDescription[]
 	setScope(device: GPUDevice, inferences: Inferences, reasons: Record<string, string>) {
 		if (this.deviceRef) throw new Error('Binding group already initialized')
 		this.deviceRef = new WeakRef(device)
@@ -68,9 +60,30 @@ export abstract class Bindings<Inferences extends AnyInference> {
 			layoutEntries: entryDescriptors.map(({ layoutEntry }) => layoutEntry),
 		}
 	}
-	abstract entries(
+
+	// #region To override
+
+	/**
+	 * Specifies the names used in the wgsl code
+	 */
+	public abstract readonly wgslNames: string[]
+	protected init(
+		inferences: Inferences,
+		reasons: Record<string, string>
+	): BindingEntryDescription[] {
+		return []
+	}
+	entries(
 		inferences: AnyInference,
 		inputs: {},
 		reasons: Record<string, string>
-	): GPUUnboundGroupEntry[]
+	): GPUUnboundGroupEntry[] {
+		return []
+	}
+	encoder(inputs: {}, commandEncoder: GPUCommandEncoder) {}
+	read(inputs: {}): {} {
+		return {}
+	}
+
+	// #endregion
 }

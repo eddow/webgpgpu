@@ -1,5 +1,5 @@
 import type { Buffable } from '../buffers'
-import { ParameterError, type TypedArray } from '../types'
+import { ParameterError, type TypedArray, type TypedArrayConstructor } from '../types'
 import type { GPUUnboundGroupLayoutEntry } from './bindings'
 
 export interface BindingEntryDescription {
@@ -65,6 +65,54 @@ export function inputGroupEntry(
 			})
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }
+		}
+		/* TODO: 2~3~4D
+		case 2:
+		case 3:*/
+		default:
+			throw new Error('Not implemented')
+	}
+}
+
+export interface OutputEntryDescription {
+	name: string
+	resource: GPUBindingResource
+	encoder(commandEncoder: GPUCommandEncoder): void
+	read(): Promise<TypedArray>
+}
+
+export function outputGroupEntry(
+	device: GPUDevice,
+	name: string,
+	size: number[],
+	elementSize: number,
+	bufferType: TypedArrayConstructor<TypedArray>
+): OutputEntryDescription {
+	const totalSize = elementSize * bufferType.BYTES_PER_ELEMENT * size.reduce((a, b) => a * b, 1)
+	switch (size.length) {
+		//case 0: impossible - throws on layout
+		case 1: {
+			const outputBuffer = device.createBuffer({
+				label: `${name}-output-buffer`,
+				size: totalSize,
+				usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC, // Used in compute shader
+			})
+			const readBuffer = device.createBuffer({
+				label: `${name}-read-buffer`,
+				size: totalSize,
+				usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, // Used for CPU read back
+			})
+			function encoder(commandEncoder: GPUCommandEncoder) {
+				commandEncoder.copyBufferToBuffer(outputBuffer, 0, readBuffer, 0, totalSize)
+			}
+			async function read() {
+				await readBuffer.mapAsync(GPUMapMode.READ)
+				// `getMappedRange` returns a view in the GPU memory - it has to be copied then unmapped (to free GPU memory)
+				const rv = new bufferType(readBuffer.getMappedRange().slice(0))
+				readBuffer.unmap()
+				return rv
+			}
+			return { resource: { buffer: outputBuffer }, encoder, read, name }
 		}
 		/* TODO: 2~3~4D
 		case 2:
