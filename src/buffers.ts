@@ -1,14 +1,67 @@
-import type { Buffable } from './buffable'
+
 import {
 	type AnyInference,
-	type Inferred,
 	type SizeSpec,
 	assertSize,
 	resolvedSize,
 } from './inference'
 import { log } from './log'
 import { type NumericSizesSpec, isTypedArrayXD } from './typedArrays'
-import { InferenceValidationError, ParameterError, type TypedArray } from './types'
+import { InferenceValidationError, InputXD, ParameterError, TypedArrayConstructor, type TypedArray } from './types'
+
+type ValidateSizeSpec<
+	Inferences extends AnyInference,
+	SizesSpec,
+> = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
+export type ValuedBuffable<
+	Inferences extends AnyInference = AnyInference,
+	Buffer extends TypedArray = TypedArray,
+	OriginElement = any,
+	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	InputSizesSpec extends SizeSpec<Inferences>[] = [],
+	InputSpec extends number[] = number[],
+> = {
+	buffable: Buffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+	value: InputXD<OriginElement, InputSpec, Buffer>
+} & ValidateSizeSpec<Inferences, SizesSpec>
+/**
+ * Interface is needed for type inference
+ */
+export interface Buffable<
+	Inferences extends AnyInference = any,
+	Buffer extends TypedArray = TypedArray,
+	OriginElement = any,
+	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	InputSizesSpec extends SizeSpec<Inferences>[] = [],
+	InputSpec extends number[] = number[],
+> {
+	readonly elementConvert?: (
+		element: OriginElement,
+		size: NumericSizesSpec<InputSizesSpec>
+	) => ArrayLike<number>
+	readonly elementRecover?: (
+		element: ArrayLike<number>,
+		size: NumericSizesSpec<InputSizesSpec>
+	) => OriginElement
+	readonly size: SizesSpec
+	readonly bufferType: TypedArrayConstructor<Buffer>
+	toTypedArray(
+		inferences: Inferences,
+		data: InputXD<OriginElement, InputSpec, Buffer>,
+		reason: string,
+		reasons: Record<string, string>
+	): Buffer
+	value(
+		v: InputXD<OriginElement, InputSpec, Buffer>
+	): ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+	readonly wgslSpecification: string
+	readonly elementSize: number
+	readonly transformSize: InputSizesSpec
+	readTypedArray(
+		buffer: Buffer,
+		inferences: AnyInference
+	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+}
 
 function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
@@ -208,8 +261,8 @@ export class BufferReader<
 				pos += elementSize
 			} while (nextXdIndex(index, size))
 	}
-	*values(): Generator<OriginElement> {
-		yield* this.entries().map(([_, v]) => v)
+	values(): OriginElement[] {
+		return Array.from(this.entries()).map(([_, v]) => v)
 	}
 	toArray(): OriginElement[] {
 		return [...this.values()]

@@ -38,9 +38,24 @@ export default {
             flags: [
                 '--no-sandbox',
                 '--headless',
-                '--disable-gpu',
                 '--disable-translate',
-                '--disable-extensions'
+                '--disable-extensions',
+                '--enable-unsafe-webgpu',
+                '--enable-webgpu-developer-features',
+                '--enable-vulkan',
+                '--enable-features=Vulkan',
+            ]
+        },
+        ChromeGPU: {
+            base: 'Chrome',
+            flags: [
+                '--no-sandbox',
+                '--disable-translate',
+                '--disable-extensions',
+                '--enable-unsafe-webgpu',
+                '--enable-webgpu-developer-features',
+                '--enable-vulkan',
+                '--enable-features=Vulkan',
             ]
         }
     },

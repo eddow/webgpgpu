@@ -1,4 +1,4 @@
-import type { Buffable } from '../buffable'
+import type { Buffable } from '../buffers'
 import { ParameterError, type TypedArray } from '../types'
 
 export interface BindingEntryDescription {

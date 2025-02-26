@@ -83,8 +83,8 @@ export async function callKernel<
 	})
 
 	// #endregion
-	const customEntries = groups
-		.toReversed()
+	const customEntries = [...groups]
+		.reverse()
 		.map((group) => {
 			const entries = group.entries(callInfer, inputs)
 			if (entries.length !== group.statics.layoutEntries.length)

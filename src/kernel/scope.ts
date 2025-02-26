@@ -1,5 +1,5 @@
+import { Buffable } from '../buffers'
 import type { Bindings } from '../binding'
-import type { Buffable } from '../buffable'
 import { type AnyInference, specifyInferences } from '../inference'
 import { workgroupSize } from '../typedArrays'
 import type { BoundDataEntry } from '../webgpgpu'

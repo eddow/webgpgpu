@@ -1,65 +1,12 @@
 import { Float16Array } from '@petamoriken/float16'
-import { BufferReader, elementsToTypedArray } from './buffers'
+import { Buffable, BufferReader, elementsToTypedArray, ValuedBuffable } from './buffers'
 import { type AnyInference, type Inferred, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
-type ValidateSizeSpec<
-	Inferences extends AnyInference,
-	SizesSpec,
-> = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
-export type ValuedBuffable<
-	Inferences extends AnyInference = AnyInference,
-	Buffer extends TypedArray = TypedArray,
-	OriginElement = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	InputSizesSpec extends SizeSpec<Inferences>[] = [],
-	InputSpec extends number[] = number[],
-> = {
-	buffable: Buffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
-	value: InputXD<OriginElement, InputSpec, Buffer>
-} & ValidateSizeSpec<Inferences, SizesSpec>
+
 export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof GpGpuData
 }
-/**
- * Interface is needed for type inference
- */
-export interface Buffable<
-	Inferences extends AnyInference = any,
-	Buffer extends TypedArray = TypedArray,
-	OriginElement = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	InputSizesSpec extends SizeSpec<Inferences>[] = [],
-	InputSpec extends number[] = number[],
-> {
-	readonly elementConvert?: (
-		element: OriginElement,
-		size: NumericSizesSpec<InputSizesSpec>
-	) => ArrayLike<number>
-	readonly elementRecover?: (
-		element: ArrayLike<number>,
-		size: NumericSizesSpec<InputSizesSpec>
-	) => OriginElement
-	readonly size: SizesSpec
-	readonly bufferType: TypedArrayConstructor<Buffer>
-	toTypedArray(
-		inferences: Inferences,
-		data: InputXD<OriginElement, InputSpec, Buffer>,
-		reason: string,
-		reasons: Record<string, string>
-	): Buffer
-	value(
-		v: InputXD<OriginElement, InputSpec, Buffer>
-	): ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
-	readonly wgslSpecification: string
-	readonly elementSize: number
-	readonly transformSize: InputSizesSpec
-	readTypedArray(
-		buffer: Buffer,
-		inferences: AnyInference
-	): BufferReader<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
-}
-
 class GpGpuData<
 	Inferences extends AnyInference,
 	Buffer extends TypedArray,
@@ -160,10 +107,11 @@ class GpGpuData<
 	value(
 		v: InputXD<OriginElement, InputSpec, Buffer>
 	): ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec> {
+		// @ts-expect-error old rollup make an error
 		return {
 			buffable: this,
 			value: v,
-		} as ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
+		}// as ValuedBuffable<Inferences, Buffer, OriginElement, SizesSpec, InputSizesSpec, InputSpec>
 	}
 }
 
@@ -199,7 +147,8 @@ export class GpGpuXFloat16<OriginElement> extends GpGpuData<
 		elementConvert?: (element: OriginElement) => ArrayLike<number>,
 		elementRecover?: (element: ArrayLike<number>) => OriginElement
 	) {
-		super(Float16Array, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
+		// `as any` for rollup version problems
+		super(Float16Array as any, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
 	}
 }
 

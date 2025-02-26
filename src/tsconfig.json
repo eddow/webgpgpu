@@ -12,7 +12,8 @@
 		"strictBindCallApply": true,
 		"baseUrl": "..",
 		"noImplicitAny": true,
-		"types": ["@webgpu/types"]
+		"types": ["@webgpu/types"],
+		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"]
 	},
 	"include": ["./**/*.ts"]
 }

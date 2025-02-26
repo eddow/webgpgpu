@@ -3,8 +3,8 @@ import { inference } from './binding'
 import type { Bindings, BoundTypes } from './binding/bindings'
 import { InferenceBindings } from './binding/inference'
 import { InputBindings } from './binding/inputs'
-import { type Buffable, type ValuedBuffable, isBuffable } from './buffable'
-import type { BufferReader } from './buffers'
+import { isBuffable } from './buffable'
+import type { Buffable, BufferReader, ValuedBuffable } from './buffers'
 import { WgslCodeGenerator } from './code'
 import {
 	type AnyInference,
@@ -36,7 +36,7 @@ interface RootInfo {
 	dispose?(): void
 	device?: GPUDevice
 }
-// TODO: allocate binding group + custom bindings
+
 export interface Kernel<
 	Inputs extends Record<string, AnyInput>,
 	Outputs extends Record<string, BufferReader>,
@@ -137,6 +137,7 @@ export class WebGpGpu<
 			root instanceof GPUAdapter ? Promise.resolve(root) : root.requestAdapter(adapterOptions)
 		return adapter
 			.then((adapter) => {
+				debugger
 				if (!adapter) throw new Error('Adapter not created')
 				return adapter.requestDevice(deviceDescriptor)
 			})
@@ -237,7 +238,7 @@ export class WebGpGpu<
 	 * @param definitions WGSL code to add in the end-kernel
 	 * @returns Chainable
 	 */
-	define(...definitions: string[]) {
+	define(...definitions: string[]): WebGpGpu<Inputs, Outputs, Inferences> {
 		return new WebGpGpu<Inputs, Outputs, Inferences>(this, {
 			definitions: [...this.definitions, ...definitions],
 		})

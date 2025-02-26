@@ -3,7 +3,7 @@
 		"module": "es2022",
 		"moduleResolution": "node",
 		"target": "ESNext",
-		"lib": ["esnext", "DOM"],
+		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"],
 		"declaration": false,
 		"strict": true,
 		"esModuleInterop": true,
@@ -17,7 +17,12 @@
 		"paths": {
 			"webgpgpu": ["./src/server/index.ts"]
 		},
-		"types": ["@webgpu/types"]
+		"types": [
+			"@webgpu/types", 
+            "mocha",
+            "node",
+            "chai"
+		]
 	},
 	"include": ["./**/*.test.ts"]
 }

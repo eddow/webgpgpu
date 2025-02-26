@@ -23,10 +23,5 @@ export default function (config) {
             'karma-sourcemap-loader'
         ],
         singleRun: false,
-		client: {
-			mocha: {
-				reporter: 'html'
-			}
-		}
     });
 };

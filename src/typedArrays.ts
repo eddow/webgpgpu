@@ -36,7 +36,7 @@ export function dimensionedArray(
 		| [number, number, number, number] = [],
 	expectedElementSize?: number
 ): TypedArrayXD {
-	const elementSize = typedArray.length / size.reduce((a, b) => a * b, 1)
+	const elementSize = typedArray.length / (size as number[]).reduce((a, b) => a * b, 1)
 	if (
 		![1, 2, 3, 4, 6, 8, 9, 12, 16].includes(elementSize) ||
 		(expectedElementSize && elementSize !== expectedElementSize)
