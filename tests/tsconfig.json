@@ -2,6 +2,8 @@
 	"compilerOptions": {
 		"module": "es2022",
 		"moduleResolution": "node",
+		"inlineSourceMap": true,
+		"inlineSources": true,
 		"target": "ESNext",
 		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"],
 		"declaration": false,

@@ -137,7 +137,6 @@ export class WebGpGpu<
 			root instanceof GPUAdapter ? Promise.resolve(root) : root.requestAdapter(adapterOptions)
 		return adapter
 			.then((adapter) => {
-				debugger
 				if (!adapter) throw new Error('Adapter not created')
 				return adapter.requestDevice(deviceDescriptor)
 			})

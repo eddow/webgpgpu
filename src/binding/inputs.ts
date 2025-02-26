@@ -1,5 +1,5 @@
 import { isBuffable } from '../buffable'
-import { Buffable } from '../buffers'
+import type { Buffable } from '../buffers'
 import { type AnyInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import type { InputType } from '../webgpgpu'

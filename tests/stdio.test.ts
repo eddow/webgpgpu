@@ -221,6 +221,7 @@ describe('infers size', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+2.;')
 		const { output } = await kernel({ a: [1, 2, 3] })
+		console.dir(kernel.inferred)
 		expect(output.toArray()).to.deep.equal([3, 4, 5])
 	})
 })

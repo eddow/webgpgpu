@@ -1,13 +1,13 @@
-
-import {
-	type AnyInference,
-	type SizeSpec,
-	assertSize,
-	resolvedSize,
-} from './inference'
+import { type AnyInference, type SizeSpec, assertSize, resolvedSize } from './inference'
 import { log } from './log'
 import { type NumericSizesSpec, isTypedArrayXD } from './typedArrays'
-import { InferenceValidationError, InputXD, ParameterError, TypedArrayConstructor, type TypedArray } from './types'
+import {
+	InferenceValidationError,
+	type InputXD,
+	ParameterError,
+	type TypedArray,
+	type TypedArrayConstructor,
+} from './types'
 
 type ValidateSizeSpec<
 	Inferences extends AnyInference,
