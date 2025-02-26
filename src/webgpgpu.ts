@@ -2,6 +2,7 @@ import { activateF16 } from './atomicTypesList'
 import { inference } from './binding'
 import type { Bindings, BoundTypes } from './binding/bindings'
 import { InferenceBindings } from './binding/inference'
+import { InputBindings } from './binding/inputs'
 import { type Buffable, type ValuedBuffable, isBuffable } from './buffable'
 import type { BufferReader } from './buffers'
 import { WgslCodeGenerator } from './code'
@@ -171,7 +172,7 @@ export class WebGpGpu<
 	private readonly workGroupSize: [number, number, number] | null
 	private readonly usedNames: Set<string>
 	private readonly rootInfo: RootInfo
-	private readonly groups: Bindings<Inputs, Outputs, Inferences>[]
+	private readonly groups: Bindings[]
 	/**
 	 * Allows hooking the library's log messages
 	 */
@@ -201,7 +202,7 @@ export class WebGpGpu<
 			outputs: Record<string, Buffable<Inferences>>
 			workGroupSize: [number, number, number] | null
 			usedNames: Iterable<string>
-			groups: Bindings<Inputs, Outputs, Inferences>[]
+			groups: Bindings[]
 		}>,
 		rootInfo?: RootInfo
 	) {
@@ -307,15 +308,8 @@ export class WebGpGpu<
 	 * @param inputs
 	 * @returns Chainable
 	 */
-	input<Specs extends Record<string, Buffable>>(
-		inputs: Specs
-	): WebGpGpu<Inputs & Record<keyof Specs, InputType<Specs[keyof Specs]>>, Outputs, Inferences> {
-		for (const [name, buffable] of Object.entries(inputs))
-			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
-		return new WebGpGpu(this, {
-			inputs: { ...this.inputs, ...inputs },
-			usedNames: this.checkNameConflicts(...Object.keys(inputs)),
-		})
+	input<Specs extends Record<string, Buffable>>(inputs: Specs) {
+		return this.bind(new InputBindings(inputs))
 	}
 	/**
 	 * Defines kernel' outputs
@@ -341,7 +335,7 @@ export class WebGpGpu<
 		})
 	}
 
-	bind<BG extends Bindings<any, any, any>>(
+	bind<BG extends Bindings>(
 		group: BG
 	): WebGpGpu<
 		Inputs & BoundTypes<BG>['inputs'],
@@ -364,7 +358,7 @@ export class WebGpGpu<
 			),
 			inferenceReasons,
 		})
-		group.setScope(this.device, this.groups.length + customBindGroupIndex)
+		group.setScope(this.device)
 		return rv
 	}
 

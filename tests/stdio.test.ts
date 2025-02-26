@@ -13,6 +13,7 @@ import createWebGpGpu, {
 	type WebGpGpuTypes,
 	type MixedTypes,
 	type MixedWebGpGpu,
+	inputs,
 } from '../src/server'
 
 let webGpGpu: WebGpGpu
@@ -61,17 +62,18 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	})
 })
 describe('inputs', () => {
-	it('a uniform - TypedArray', async () => {
+	it('an uniform - TypedArray', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
-			.input({ a: f32 })
+			//.input({ a: f32 })
+			.bind(inputs({ a: f32 }))
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
 		const { output } = await kernel({ a: Float32Array.from([43]) }, { 'threads.x': 3 })
 		expect(output).to.exist
 		expect(output.toArray()).to.deep.equal([43, 43, 43])
 	})
-	it('a uniform - value', async () => {
+	it('an uniform - value', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32 })
@@ -80,7 +82,7 @@ describe('inputs', () => {
 		const { output } = await kernel({ a: 44 }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([44, 44, 44])
 	})
-	it('an float array - TypedArray', async () => {
+	it('a float array - TypedArray', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
@@ -89,7 +91,7 @@ describe('inputs', () => {
 		const { output } = await kernel({ a: Float32Array.from([11, 12, 13]) }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([33, 36, 39])
 	})
-	it('an float array - value', async () => {
+	it('a float array - value', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: f32.array(3) })
@@ -98,7 +100,7 @@ describe('inputs', () => {
 		const { output } = await kernel({ a: [11, 12, 13] }, { 'threads.x': 3 })
 		expect(output.toArray()).to.deep.equal([33, 36, 39])
 	})
-	it('an vec2 array - TypedArray', async () => {
+	it('a vec2 array - TypedArray', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
@@ -110,7 +112,7 @@ describe('inputs', () => {
 		)
 		expect(output.toArray()).to.deep.equal([36, 42, 48])
 	})
-	it('an vec2 array - value', async () => {
+	it('a vec2 array - value', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: vec2f.array(3) })
@@ -128,7 +130,7 @@ describe('inputs', () => {
 		)
 		expect(output.toArray()).to.deep.equal([36, 42, 48])
 	})
-	it('an vec2 array - transform', async () => {
+	it('a vec2 array - transform', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
 			.input({ a: Vector2.array(3) })

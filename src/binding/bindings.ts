@@ -1,10 +1,5 @@
-import type { WebGpGpu } from 'webgpgpu'
 import type { AnyInference } from '../inference'
-
-export interface BindingGroupEntry {
-	declaration: string
-	layoutEntry: Omit<GPUBindGroupLayoutEntry, 'binding'>
-}
+import type { BindingEntryDescription } from './io'
 
 export class FieldsDescriptor<FieldInfo extends {}> {
 	public readonly entries: (FieldInfo & { name: string })[] = []
@@ -20,26 +15,24 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 		this.entries.push(info)
 	}
 }
-export type BoundTypes<BG> = BG extends Bindings<infer Inputs, infer Outputs, infer Inferences>
+
+type EmptyIfUndefined<T> = T extends undefined ? {} : T
+
+export type BoundTypes<BG> = BG extends Bindings
 	? {
-			inputs: Inputs
-			outputs: Outputs
-			inferences: Inferences
+			inputs: EmptyIfUndefined<Parameters<BG['entries']>[1]>
+			outputs: {} //TODO
+			inferences: BG['addedInferences']
 		}
 	: never
-export type BoundInferences<BG extends Bindings> = BG['addedInferences']
 
-export abstract class Bindings<
-	Inputs extends Record<string, any> = Record<string, any>,
-	Outputs extends Record<string, any> = Record<string, any>,
-	Inferences extends AnyInference = AnyInference,
-> {
+export abstract class Bindings {
 	deviceRef?: WeakRef<GPUDevice>
 	/**
 	 * Specifies the names used in the wgsl code
 	 */
 	public abstract readonly wgslNames: string[]
-	public abstract readonly addedInferences: Inferences
+	public readonly addedInferences: {} = {}
 
 	protected get device() {
 		if (!this.deviceRef?.deref()) throw new Error('Binding group disposed / not initialized')
@@ -54,8 +47,9 @@ export abstract class Bindings<
 		if (!this.staticGenerated) throw new Error('Binding group not initialized')
 		return this.staticGenerated
 	}
-	protected abstract init(): BindingGroupEntry[]
-	setScope(device: GPUDevice, groupId: number) {
+	protected abstract init(): BindingEntryDescription[]
+	setScope(device: GPUDevice) {
+		if (this.deviceRef) throw new Error('Binding group already initialized')
 		this.deviceRef = new WeakRef(device)
 		const entryDescriptors = this.init()
 		this.staticGenerated = {
@@ -63,5 +57,5 @@ export abstract class Bindings<
 			layoutEntries: entryDescriptors.map(({ layoutEntry }) => layoutEntry),
 		}
 	}
-	abstract entries(inferences: Inferences, inputs: Inputs): Omit<GPUBindGroupEntry, 'binding'>[]
+	abstract entries(inferences: AnyInference, inputs: {}): Omit<GPUBindGroupEntry, 'binding'>[]
 }

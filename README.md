@@ -74,7 +74,7 @@ Example kernel produced :
 // #generated
 @group(0) @binding(0) var<uniform> threads : vec3u;
 @group(2) @binding(0) var<storage, read> a : array<f32>;
-@group(3) @binding(0) var<storage, read_write> outputBuffer : array<f32>;
+@group(3) @binding(0) var<storage, read_write> output : array<f32>;
 // #user-defined
 
 fn myFunc(a: f32, b: f32) -> f32 {
@@ -87,7 +87,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
 // #user-defined
 
-		outputBuffer[thread.x] = myFunc(a[thread.x], 3.);
+		output[thread.x] = myFunc(a[thread.x], 3.);
 
 // #generated
 	}
@@ -110,7 +110,7 @@ This is the only non-chainable function : creates a kernel (in javascript, a fun
 const kernel = webGpGpu
 	...
 	.kernel(/*wgsl*/`
-outputBuffer[thread.x] = a[thread.x] * b;
+output[thread.x] = a[thread.x] * b;
 	`)
 ```
 
@@ -157,7 +157,7 @@ const kernel = webGpGpu
 	.input({ b: f32.array('threads.x') })
 	.common({ a: f32.array('threads.x').value([1, 2, 3]) })
 	.output({ output: f32.array('threads.x') })
-	.kernel('outputBuffer[thread.x] = a[thread.x] + b[thread.x];')
+	.kernel('output[thread.x] = a[thread.x] + b[thread.x];')
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
 
@@ -295,7 +295,7 @@ Generate the 10 first squares:
 ```ts
 const kernel = webGpGpu
 	.output({output: f32.array('threads.x')})
-	.kernel('outputBuffer[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
+	.kernel('output[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
 const { output } = await kernel({})
 ```
 
@@ -303,7 +303,7 @@ Generate the N first squares:
 ```ts
 const kernel = webGpGpu
 	.output({output: f32.array('threads.x')})
-	.kernel('outputBuffer[thread.x] = thread.x*thread.x;')
+	.kernel('output[thread.x] = thread.x*thread.x;')
 const { output } = await kernel({}, { 'threads.x': 10 })
 ```
 

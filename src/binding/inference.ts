@@ -1,4 +1,10 @@
-import { type CreatedInferences, type Inferred, extractInference, infer } from '../inference'
+import {
+	type AnyInference,
+	type CreatedInferences,
+	type Inferred,
+	extractInference,
+	infer,
+} from '../inference'
 import { Bindings } from './bindings'
 
 export class InferenceBindings<
@@ -9,7 +15,7 @@ export class InferenceBindings<
 		| readonly [Inferred, Inferred, Inferred]
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
-> extends Bindings<{}, {}, CreatedInferences<Input>> {
+> extends Bindings {
 	public readonly wgslNames: string[]
 	public readonly addedInferences: CreatedInferences<Input>
 
@@ -38,7 +44,7 @@ export class InferenceBindings<
 			},
 		}))
 	}
-	entries(inferences: CreatedInferences<Input>): Omit<GPUBindGroupEntry, 'binding'>[] {
+	entries(inferences: AnyInference): Omit<GPUBindGroupEntry, 'binding'>[] {
 		const { device } = this
 		return this.dimensioned.map(({ name, dimension }) => {
 			const buffer = device.createBuffer({

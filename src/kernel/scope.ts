@@ -6,7 +6,6 @@ import type { BoundDataEntry } from '../webgpgpu'
 import {
 	commonBindGroupIndex,
 	customBindGroupIndex,
-	inputBindGroupIndex,
 	layoutGroupEntry,
 	outputBindGroupIndex,
 } from './io'
@@ -30,7 +29,7 @@ export function kernelScope<Inferences extends AnyInference>(
 		inferences: Inferences
 		workGroupSize: [number, number, number] | null
 		definitions: readonly string[]
-		groups: Bindings<never, never, Inferences>[]
+		groups: Bindings[]
 	}
 ) {
 	// #region Common
@@ -61,31 +60,6 @@ export function kernelScope<Inferences extends AnyInference>(
 	})
 
 	// #endregion Common
-
-	// #region Input
-	const inputBindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
-	const inputBindGroupDescription: string[] = []
-	const inputsDescription: [string, number, Buffable<Inferences>][] = []
-
-	for (const [name, buffable] of Object.entries(inputs)) {
-		const binding = inputBindGroupLayoutEntries.length
-		const { layoutEntry, description } = layoutGroupEntry(
-			name,
-			buffable,
-			inputBindGroupIndex,
-			binding,
-			true
-		)
-		inputBindGroupLayoutEntries.push(layoutEntry)
-		inputBindGroupDescription.push(description)
-		inputsDescription.push([name, binding, buffable])
-	}
-	const inputBindGroupLayout = device.createBindGroupLayout({
-		label: 'input-bind-group-layout',
-		entries: inputBindGroupLayoutEntries,
-	})
-
-	// #endregion Input
 
 	// #region Output
 
@@ -136,7 +110,6 @@ export function kernelScope<Inferences extends AnyInference>(
 
 	const code = /*wgsl*/ `
 ${commonBindGroupDescription.join('\n')}
-${inputBindGroupDescription.join('\n')}
 ${outputBindGroupDescription.join('\n')}
 ${customDeclarations.join('\n')}
 
@@ -156,12 +129,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	const pipeline = device.createComputePipeline({
 		label: 'compute-pipeline',
 		layout: device.createPipelineLayout({
-			bindGroupLayouts: [
-				commonBindGroupLayout,
-				inputBindGroupLayout,
-				outputBindGroupLayout,
-				customBindGroupLayout,
-			],
+			bindGroupLayouts: [commonBindGroupLayout, outputBindGroupLayout, customBindGroupLayout],
 		}),
 		compute: { module: shaderModule, entryPoint: 'main' },
 	})
@@ -174,10 +142,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 	return {
 		code,
-		inputsDescription,
 		kernelInferences,
 		shaderModuleCompilationInfo,
-		inputBindGroupLayout,
 		outputBindGroupLayout,
 		kernelWorkGroupSize,
 		outputDescription,

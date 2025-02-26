@@ -127,7 +127,7 @@ type MapNumbers<TArray extends any[]> = {
 
 export function resolvedSize<
 	Inferences extends AnyInference,
-	SizesSpec extends SizeSpec<Inferences>[],
+	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 >(size: SizesSpec, inferences: Inferences): MapNumbers<SizesSpec> {
 	return size.map((s) => {
 		const rv = typeof s === 'number' ? s : (inferences[s] as number)

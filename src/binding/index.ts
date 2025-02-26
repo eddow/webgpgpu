@@ -1,3 +1,4 @@
 export * from './bindings'
 import inference from './inference'
-export { inference }
+import inputs from './inputs'
+export { inference, inputs }

@@ -14,8 +14,6 @@ import {
 	type OutputEntryDescription,
 	commonBindGroupIndex,
 	customBindGroupIndex,
-	inputBindGroupIndex,
-	inputGroupEntry,
 	outputBindGroupIndex,
 	outputGroupEntry,
 } from './io'
@@ -29,12 +27,10 @@ export async function callKernel<
 	device: GPUDevice,
 	inputs: Inputs,
 	defaultInfers: Partial<Record<keyof Inferences, number>>,
-	groups: Bindings<Inputs, Outputs, Inferences>[],
+	groups: Bindings[],
 	{
-		inputsDescription,
 		kernelInferences,
 		shaderModuleCompilationInfo,
-		inputBindGroupLayout,
 		outputBindGroupLayout,
 		kernelWorkGroupSize,
 		outputDescription,
@@ -61,36 +57,6 @@ export async function callKernel<
 	const callInfer = defaultedInference(
 		specifyInferences(kernelInferences, defaultInfers as Partial<Inferences>) as Inferences
 	)
-
-	// #region Input
-
-	const usedInputs = new Set<string>()
-	const inputBindGroupEntries: GPUBindGroupEntry[] = []
-	for (const [name, binding, buffable] of inputsDescription) {
-		usedInputs.add(name)
-		// TODO: default values
-		if (!inputs[name]) throw new ParameterError(`Missing input: ${name}`)
-		const typeArray = buffable.toTypedArray(callInfer, inputs[name]!, `input \`${name}\``, {})
-		const resource = inputGroupEntry(
-			device,
-			name,
-			resolvedSize(buffable.size, callInfer),
-			typeArray
-		)
-		inputBindGroupEntries.push({
-			binding,
-			resource,
-		})
-	}
-	const unusedInputs = Object.keys(inputs).filter((name) => !usedInputs.has(name))
-	if (unusedInputs.length) log.warn(`Unused inputs: ${unusedInputs.join(', ')}`)
-	const inputBindGroup = device.createBindGroup({
-		label: 'input-bind-group',
-		layout: inputBindGroupLayout,
-		entries: inputBindGroupEntries,
-	})
-
-	// #endregion
 	// #region Output
 
 	const outputBindGroupEntries: GPUBindGroupEntry[] = []
@@ -143,7 +109,6 @@ export async function callKernel<
 	const passEncoder = commandEncoder.beginComputePass()
 	passEncoder.setPipeline(pipeline)
 	passEncoder.setBindGroup(commonBindGroupIndex, commonBindGroup)
-	passEncoder.setBindGroup(inputBindGroupIndex, inputBindGroup)
 	passEncoder.setBindGroup(outputBindGroupIndex, outputBindGroup)
 	passEncoder.setBindGroup(customBindGroupIndex, customBindGroup)
 	passEncoder.dispatchWorkgroups(
