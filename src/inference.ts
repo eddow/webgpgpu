@@ -134,32 +134,38 @@ export const infer4D = [undefined, undefined, undefined, undefined] as const
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 1
+	dimension: 1,
+	defaultInfers?: number
 ): [number]
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 2
+	dimension: 2,
+	defaultInfers?: number
 ): [number, number]
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 3
+	dimension: 3,
+	defaultInfers?: number
 ): [number, number, number]
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 4
+	dimension: 4,
+	defaultInfers?: number
 ): [number, number, number, number]
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 1 | 2 | 3 | 4
+	dimension: 1 | 2 | 3 | 4,
+	defaultInfers?: number
 ): [number] | [number, number] | [number, number, number] | [number, number, number, number]
 export function extractInference<Inferences extends AnyInference>(
 	inferences: Inferences,
 	name: string,
-	dimension: 1 | 2 | 3 | 4
+	dimension: 1 | 2 | 3 | 4,
+	defaultInfers?: number
 ) {
 	if (![1, 2, 3, 4].includes(dimension))
 		throw new ParameterError(`Invalid inference dimension: ${dimension}`)
@@ -172,7 +178,7 @@ export function extractInference<Inferences extends AnyInference>(
 					.map((c) => `${name}.${c}`)
 
 	return names.map((n) => {
-		;(inferences as AnyInference)[n] ??= 1
+		;(inferences as AnyInference)[n] ??= defaultInfers
 		return inferences[n as keyof Inferences]
 	})
 }

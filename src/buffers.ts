@@ -223,6 +223,11 @@ export class BufferReader<
 		const pos = bufferPosition(index, size, elementSize)
 		return read(buffer, pos)
 	}
+	/**
+	 * Retrieves the [index, value] pairs, where `index` is the index array and `value` is the value at that index
+	 * Index is *not* cloned, so its content will be modified along browsing and should not be stored as-is
+	 * @returns Generator<[InputSpec, OriginElement]>
+	 */
 	*entries(): Generator<[InputSpec, OriginElement]> {
 		const {
 			size,
@@ -239,12 +244,12 @@ export class BufferReader<
 		const index: number[] = size.map(() => 0)
 		let pos = 0
 		do {
-			yield [[...index] as InputSpec, read(buffer, pos)]
+			yield [index as InputSpec, read(buffer, pos)]
 			pos += elementSize
 		} while (nextXdIndex(index, size))
 	}
-	values(): OriginElement[] {
-		return Array.from(this.entries()).map(([_, v]) => v)
+	*values() {
+		for (const [_, v] of this.entries()) yield v
 	}
 	toArray(): OriginElement[] {
 		return [...this.values()]

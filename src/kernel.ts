@@ -50,7 +50,6 @@ export function kernelScope<
 
 	const code = `
 ${declarations.join('\n')}
-
 ${definitions.join('\n')}
 
 @compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
@@ -93,7 +92,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		}
 		// Inference can be done here as non-compulsory inference are not compelling
 		const callInfer = specifyInferences(
-			kernelInferences,
+			{ ...kernelInferences },
 			defaultInfers as Partial<Inferences>
 		) as Inferences
 		// First a flat-map
@@ -120,9 +119,8 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		const passEncoder = commandEncoder.beginComputePass()
 		passEncoder.setPipeline(pipeline)
 		passEncoder.setBindGroup(0, customBindGroup)
-		passEncoder.dispatchWorkgroups(
-			...workGroupCount(extractInference(callInfer, 'threads', 3), kernelWorkGroupSize)
-		)
+		const wgc = workGroupCount(extractInference(callInfer, 'threads', 3, 1), kernelWorkGroupSize)
+		passEncoder.dispatchWorkgroups(...wgc)
 		passEncoder.end()
 
 		// Add the "copy from output-buffer to read-buffer" command
@@ -132,7 +130,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		device.queue.submit([commandEncoder.finish()])
 
 		const reads = await Promise.all(orderedGroups.map((bindings) => bindings.read(inputs)))
-
+		// TODO add `inferred` in the result
 		return reads.reduce(
 			(acc, read) => ({
 				...acc,

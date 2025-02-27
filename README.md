@@ -72,12 +72,14 @@ With real pieces of :
 Example kernel produced :
 ```rust
 // #generated
-@group(0) @binding(0) var<uniform> threads : vec3u;
-@group(2) @binding(0) var<storage, read> a : array<f32>;
-@group(3) @binding(0) var<storage, read_write> output : array<f32>;
+@group(0) @binding(0) var<storage, read> a : array<mat2x2f>;
+@group(0) @binding(1) var<storage, read> b : array<mat2x2f>;
+@group(0) @binding(2) var<uniform> threads : vec3u;
+@group(0) @binding(3) var<storage, read_write> output : array<mat2x2f>;
+
 // #user-defined
 
-fn myFunc(a: f32, b: f32) -> f32 {
+fn myFunc(a: mat2x2f, b: mat2x2f) -> mat2x2f {
 	return a + b;
 }
 
@@ -87,7 +89,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
 // #user-defined
 
-		output[thread.x] = myFunc(a[thread.x], 3.);
+		output[thread.x] = myFunc(a[thread.x], b[thread.x]);
 
 // #generated
 	}

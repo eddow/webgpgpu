@@ -52,7 +52,7 @@ export class InferenceBindings<
 				size: 16,
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			})
-			const value = extractInference(inferences, name, dimension)
+			const value = extractInference(inferences, name, dimension, 1)
 			device.queue.writeBuffer(buffer, 0, new Uint32Array(value!))
 			return {
 				resource: { buffer },

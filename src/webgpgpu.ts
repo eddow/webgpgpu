@@ -79,10 +79,10 @@ export class WebGpGpu<
 > extends WgslCodeGenerator {
 	/**
 	 * This is the order the bindings are processed through at run time
-	 * 1 inputs (usually fix the values of inferences at run-time)
-	 * all the others who don't specify any inference but use them (to produce an input to wgsl)
+	 * 1 inputs - usually fix the values of inferences at run-time from parameters
+	 * 2 inferences - defaults values to `1`
 	 */
-	static bindingsOrder: BindingType<any>[] = [InputBindings]
+	static bindingsOrder: BindingType<any>[] = [InputBindings, InferenceBindings]
 	// #region Creation
 
 	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): RootWebGpGpu
