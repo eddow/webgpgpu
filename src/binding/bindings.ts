@@ -35,8 +35,7 @@ export type BindingType<Inferences extends AnyInference> = {
 export abstract class Bindings<Inferences extends AnyInference> {
 	private deviceRef?: WeakRef<GPUDevice>
 	public readonly addedInferences: {} = {}
-	// TODO: usedInferences : inferences type-checking
-	//public readonly usedInferences: (keyof Inferences)[] = []
+	// TODO: List inferences (provided/needed) in order to order groups ?
 
 	protected get device() {
 		if (!this.deviceRef?.deref()) throw new Error('Binding group disposed / not initialized')

@@ -7,6 +7,7 @@ import {
 } from '../inference'
 import { Bindings } from './bindings'
 
+// TODO: Type-check no interference in inference (no common key)
 export class InferenceBindings<
 	Inferences extends AnyInference,
 	Input extends Record<

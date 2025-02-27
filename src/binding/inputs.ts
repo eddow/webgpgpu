@@ -1,6 +1,6 @@
 import { isBuffable } from '../buffable'
 import type { Buffable } from '../buffers'
-import { type AnyInference, resolvedSize } from '../inference'
+import { type AnyInference, type DeducedInference, type SizeSpec, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import type { InputType } from '../webgpgpu'
 import { Bindings } from './bindings'
@@ -9,7 +9,7 @@ import { inputGroupEntry, layoutGroupEntry } from './io'
 export class InputBindings<
 	Inferences extends AnyInference,
 	InputSpecs extends Record<string, Buffable>,
-> extends Bindings<Inferences> {
+> extends Bindings<Inferences & DeducedInference<InputSpecs[keyof InputSpecs]>> {
 	public readonly wgslNames: string[]
 	private readonly inputSpecs: { name: string; buffable: Buffable<AnyInference> }[]
 	constructor(inputSpecs: InputSpecs) {
@@ -24,6 +24,7 @@ export class InputBindings<
 			}
 		})
 	}
+
 	init() {
 		return this.inputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}

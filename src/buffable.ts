@@ -5,7 +5,7 @@ import {
 	type ValuedBuffable,
 	elementsToTypedArray,
 } from './buffers'
-import { type AnyInference, type SizeSpec, resolvedSize } from './inference'
+import { type AnyInference, type InferencesList, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
 
@@ -14,7 +14,7 @@ export function isBuffable(buffable: any): buffable is Buffable {
 }
 
 export class GpGpuData<
-	Inferences extends AnyInference,
+	Inferences extends {},
 	Buffer extends TypedArray,
 	OriginElement,
 	SizesSpec extends SizeSpec<Inferences>[],
@@ -75,9 +75,9 @@ export class GpGpuData<
 			InputSpec
 		>(this, buffer, resolvedSize<Inferences, SizesSpec>(this.size, inferences))
 	}
-	array<SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
+	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
 		return new GpGpuData<
-			Inferences,
+			Inferences & InferencesList<SubSizesSpec>,
 			Buffer,
 			OriginElement,
 			[...SizesSpec, ...SubSizesSpec],

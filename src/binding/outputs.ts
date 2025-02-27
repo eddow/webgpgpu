@@ -1,7 +1,7 @@
 import type { OutputType } from 'src/webgpgpu'
 import { isBuffable } from '../buffable'
 import type { Buffable } from '../buffers'
-import { type AnyInference, resolvedSize } from '../inference'
+import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import { Bindings } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry } from './io'
@@ -16,7 +16,7 @@ type OutputDescription<Inferences extends AnyInference> = {
 export class OutputBindings<
 	Inferences extends AnyInference,
 	OutputSpecs extends Record<string, Buffable<Inferences>>,
-> extends Bindings<Inferences> {
+> extends Bindings<Inferences & DeducedInference<OutputSpecs[keyof OutputSpecs]>> {
 	public readonly wgslNames: string[]
 	private readonly outputSpecs: { name: string; buffable: Buffable<Inferences> }[]
 	constructor(inputSpecs: OutputSpecs) {

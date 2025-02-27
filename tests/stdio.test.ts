@@ -235,7 +235,7 @@ describe('infers size', () => {
 describe('diverse', () => {
 	it('defines', async () => {
 		const kernel = webGpGpu
-			.input({ a: f32.array('threads.x') })
+			.bind(inputs({ a: f32.array('threads.x') }))
 			.common({ b: f32.array('threads.x').value([2, 4, 6]) })
 			.define('fn myFunc(a: f32, b: f32) -> f32 { return a + b; }')
 			.output({ output: f32.array('threads.x') })

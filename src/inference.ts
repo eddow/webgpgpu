@@ -1,3 +1,4 @@
+import type { Buffable } from './buffers'
 import { InferenceValidationError, ParameterError, mapEntries } from './types'
 
 export type Inferred = number | undefined
@@ -23,7 +24,7 @@ export type CreatedInferences<Input> = {} & UnionToIntersection<
 		[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
 	}[keyof Input]
 >
-export type AnyInference = { [K: string]: Inferred }
+export type AnyInference<Key extends string = string> = { [K in Key]: Inferred }
 export function infer<
 	Inferences extends AnyInference,
 	Input extends Record<
@@ -182,3 +183,17 @@ export function extractInference<Inferences extends AnyInference>(
 		return inferences[n as keyof Inferences]
 	})
 }
+
+export type StringOnly<ST> = ST extends string ? ST : never
+export type InferencesList<SSs extends readonly any[]> = SSs extends readonly [
+	infer First,
+	...infer Rest, // ✅ Remove extends constraint
+]
+	? Rest extends readonly SizeSpec<AnyInference>[] // ✅ Apply constraint after inference
+		? StringOnly<First> | InferencesList<Rest> // Collect strings
+		: StringOnly<First>
+	: never
+export type DeducedInference<OneBuff extends Buffable> = Record<
+	InferencesList<OneBuff['size']>,
+	Inferred
+>
