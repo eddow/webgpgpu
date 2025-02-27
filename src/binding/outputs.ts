@@ -13,7 +13,7 @@ export class OutputBindings<
 	OutputSpecs extends Record<string, Buffable<Inferences>>,
 > extends Bindings<Inferences> {
 	public readonly wgslNames: string[]
-	private readonly outputSpecs: { name: string; buffable: Buffable<AnyInference> }[]
+	private readonly outputSpecs: { name: string; buffable: Buffable<Inferences> }[]
 	constructor(inputSpecs: OutputSpecs) {
 		super()
 		// TODO allow input/output?
@@ -22,7 +22,7 @@ export class OutputBindings<
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for output \`${name}\``)
 			return {
 				name,
-				buffable: buffable as Buffable<AnyInference>,
+				buffable: buffable as Buffable<Inferences>,
 			}
 		})
 	}

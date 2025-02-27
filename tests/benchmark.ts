@@ -1,7 +1,5 @@
 import createWebGpGpu, { type RootWebGpGpu, u32 } from '../src/server'
 
-let webGpGpu: RootWebGpGpu
-
 function cpu(n: number) {
 	const result = new Float32Array(n)
 	for (let i = 0; i < n; i++) {
@@ -17,7 +15,7 @@ async function benchmark(fct: (n: number) => Promise<unknown>, n: number) {
 	return performance.measure(fct.name, `start ${fct.name} ${n}`, `end ${fct.name} ${n}`).duration
 }
 async function main() {
-	webGpGpu = await createWebGpGpu()
+	const webGpGpu = await createWebGpGpu()
 	const gpuSquaresKernel = webGpGpu.output({ output: u32.array('threads.x') }).kernel(/*wgsl*/ `
 let modX = thread.x % 453;
 output[thread.x] = modX * modX;

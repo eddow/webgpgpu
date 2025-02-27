@@ -181,7 +181,6 @@ describe('infers size', () => {
 			)
 			.bind(outputs({ output: u32.array('threads.x') }))
 			.kernel('output[thread.x] = a[thread.x] + custom.y;')
-		const qwe = await kernel({})
 		const { output } = await kernel({})
 		expect(output.toArray()).to.deep.equal([6, 7, 8])
 	})

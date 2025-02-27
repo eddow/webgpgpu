@@ -1,5 +1,10 @@
-import { Float16Array } from '@petamoriken/float16'
-import { type Buffable, BufferReader, type ValuedBuffable, elementsToTypedArray } from './buffers'
+import {
+	type Buffable,
+	BufferReader,
+	type ElementAccessor,
+	type ValuedBuffable,
+	elementsToTypedArray,
+} from './buffers'
 import { type AnyInference, type SizeSpec, resolvedSize } from './inference'
 import type { NumericSizesSpec } from './typedArrays'
 import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
@@ -7,7 +12,8 @@ import type { InputXD, TypedArray, TypedArrayConstructor } from './types'
 export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof GpGpuData
 }
-class GpGpuData<
+
+export class GpGpuData<
 	Inferences extends AnyInference,
 	Buffer extends TypedArray,
 	OriginElement,
@@ -22,33 +28,16 @@ class GpGpuData<
 		public readonly wgslSpecification: string,
 		public readonly size: SizesSpec,
 		public readonly transformSize: InputSizesSpec,
-		public readonly elementConvert?: (
-			element: OriginElement,
-			size: NumericSizesSpec<InputSizesSpec>
-		) => ArrayLike<number>,
-		public readonly elementRecover?: (
-			element: ArrayLike<number>,
-			size: NumericSizesSpec<InputSizesSpec>
-		) => OriginElement
+		public readonly elementAccessor: ElementAccessor<OriginElement>
 	) {}
-	transform<NewOriginElement>(
-		elementConvert: (
-			element: NewOriginElement,
-			size: NumericSizesSpec<SizesSpec>
-		) => ArrayLike<number>,
-		elementRecover: (
-			element: ArrayLike<number>,
-			size: NumericSizesSpec<SizesSpec>
-		) => NewOriginElement
-	) {
+	transform<NewOriginElement>(elementAccessor: ElementAccessor<NewOriginElement>) {
 		return new GpGpuData<Inferences, Buffer, NewOriginElement, SizesSpec, SizesSpec, []>(
 			this.bufferType,
 			this.elementSize,
 			this.wgslSpecification,
 			this.size,
 			this.size,
-			elementConvert,
-			elementRecover
+			elementAccessor
 		)
 	}
 	/**
@@ -100,8 +89,7 @@ class GpGpuData<
 			this.wgslSpecification,
 			[...this.size, ...size],
 			this.transformSize,
-			this.elementConvert,
-			this.elementRecover
+			this.elementAccessor
 		)
 	}
 	value(
@@ -126,73 +114,9 @@ export class GpGpuXFloat32<OriginElement> extends GpGpuData<
 	constructor(
 		elementSize: number,
 		wgslSpecification: string,
-		elementConvert?: (element: OriginElement) => ArrayLike<number>,
-		elementRecover?: (element: ArrayLike<number>) => OriginElement
+		elementAccessor: ElementAccessor<OriginElement>
 	) {
-		super(Float32Array, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
+		super(Float32Array, elementSize, wgslSpecification, [], [], elementAccessor)
 	}
 }
-
-export class GpGpuXFloat16<OriginElement> extends GpGpuData<
-	AnyInference,
-	Float16Array,
-	OriginElement,
-	[],
-	[],
-	[]
-> {
-	constructor(
-		elementSize: number,
-		wgslSpecification: string,
-		elementConvert?: (element: OriginElement) => ArrayLike<number>,
-		elementRecover?: (element: ArrayLike<number>) => OriginElement
-	) {
-		// `as any` for rollup version problems
-		super(
-			Float16Array as any,
-			elementSize,
-			wgslSpecification,
-			[],
-			[],
-			elementConvert,
-			elementRecover
-		)
-	}
-}
-
-export class GpGpuXUint32<OriginElement> extends GpGpuData<
-	AnyInference,
-	Uint32Array,
-	OriginElement,
-	[],
-	[],
-	[]
-> {
-	constructor(
-		elementSize: number,
-		wgslSpecification: string,
-		elementConvert?: (element: OriginElement) => ArrayLike<number>,
-		elementRecover?: (element: ArrayLike<number>) => OriginElement
-	) {
-		super(Uint32Array, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
-	}
-}
-
-export class GpGpuXInt32<OriginElement> extends GpGpuData<
-	AnyInference,
-	Int32Array,
-	OriginElement,
-	[],
-	[],
-	[]
-> {
-	constructor(
-		elementSize: number,
-		wgslSpecification: string,
-		elementConvert?: (element: OriginElement) => ArrayLike<number>,
-		elementRecover?: (element: ArrayLike<number>) => OriginElement
-	) {
-		super(Int32Array, elementSize, wgslSpecification, [], [], elementConvert, elementRecover)
-	}
-}
-export type GpGpuSingleton<Element> = GpGpuData<AnyInference, TypedArray, Element, [], [], []>
+export type GpGpuSingleton<Element> = GpGpuData<any, TypedArray, Element, [], [], []>

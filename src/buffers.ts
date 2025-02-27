@@ -9,6 +9,11 @@ import {
 	type TypedArrayConstructor,
 } from './types'
 
+export interface ElementAccessor<T> {
+	read(array: TypedArray, index: number): T
+	write(array: TypedArray, index: number, element: T): void
+}
+
 type ValidateSizeSpec<
 	Inferences extends AnyInference,
 	SizesSpec,
@@ -35,14 +40,7 @@ export interface Buffable<
 	InputSizesSpec extends SizeSpec<Inferences>[] = [],
 	InputSpec extends number[] = number[],
 > {
-	readonly elementConvert?: (
-		element: OriginElement,
-		size: NumericSizesSpec<InputSizesSpec>
-	) => ArrayLike<number>
-	readonly elementRecover?: (
-		element: ArrayLike<number>,
-		size: NumericSizesSpec<InputSizesSpec>
-	) => OriginElement
+	readonly elementAccessor: ElementAccessor<OriginElement>
 	readonly size: SizesSpec
 	readonly bufferType: TypedArrayConstructor<Buffer>
 	toTypedArray(
@@ -83,7 +81,12 @@ export function elementsToTypedArray<
 	reason: string,
 	reasons: Record<string, string>
 ): Buffer {
-	const { bufferType, elementSize, elementConvert, transformSize } = specification
+	const {
+		bufferType,
+		elementSize,
+		elementAccessor: { write },
+		transformSize,
+	} = specification
 	if (data instanceof bufferType && 'elementSize' in data && data.elementSize !== elementSize)
 		assertElementSize(data.elementSize, elementSize)
 	// #region 0D
@@ -92,10 +95,9 @@ export function elementsToTypedArray<
 			assertElementSize((data as Buffer).length, elementSize)
 			return data as Buffer
 		}
-		const elm = elementConvert
-			? elementConvert(data as OriginElement, resolvedSize(transformSize, inferences))
-			: data
-		return elm instanceof bufferType ? (elm as Buffer) : new bufferType(elm)
+		const buffer = new bufferType(elementSize)
+		write(buffer, 0, data as OriginElement)
+		return buffer
 	}
 	// #endregion 0D
 	// #region 1D
@@ -114,21 +116,10 @@ export function elementsToTypedArray<
 		const rv = new bufferType(data.length * elementSize) as Buffer
 		let dst = 0
 		// Make the `if` early not to not make it in the loop
-		if (elementConvert) {
-			for (const element of data as OriginElement[]) {
-				rv.set(
-					elementConvert(element, [
-						/*todo*/
-					] as NumericSizesSpec<InputSizesSpec>),
-					dst
-				)
-				dst += elementSize
-			}
-		} else
-			for (const element of data as number[][]) {
-				rv.set(element, dst)
-				dst += elementSize
-			}
+		for (const element of data as OriginElement[]) {
+			write(rv, dst, element)
+			dst += elementSize
+		}
 		return rv
 	}
 	// #endregion 1D
@@ -219,24 +210,27 @@ export class BufferReader<
 		const {
 			size,
 			buffer,
-			buffable: { elementSize, elementRecover, transformSize },
+			buffable: {
+				elementSize,
+				elementAccessor: { read },
+				transformSize,
+			},
 		} = this
 		if (index.length !== size.length)
 			throw new InferenceValidationError(
 				`Index length mismatch: taking ${index.length}-D index element out of ${size.length}-D buffer`
 			)
 		const pos = bufferPosition(index, size, elementSize)
-		const element = buffer.subarray(pos, pos + elementSize)
-		// @ts-expect-error TODO: fix size
-		return (elementRecover?.(element, [
-			/*todo*/
-		]) ?? element) as OriginElement
+		return read(buffer, pos)
 	}
 	*entries(): Generator<[InputSpec, OriginElement]> {
 		const {
 			size,
 			buffer,
-			buffable: { elementSize, elementRecover },
+			buffable: {
+				elementSize,
+				elementAccessor: { read },
+			},
 		} = this
 		if (size.some((s) => s === 0)) {
 			log.warn('Zero size buffer as output')
@@ -244,22 +238,10 @@ export class BufferReader<
 		}
 		const index: number[] = size.map(() => 0)
 		let pos = 0
-		if (elementRecover)
-			do {
-				yield [
-					[...index] as InputSpec,
-					// @ts-expect-error TODO: fix size
-					elementRecover(buffer.subarray(pos, pos + elementSize), [
-						/*todo*/
-					]),
-				]
-				pos += elementSize
-			} while (nextXdIndex(index, size))
-		else
-			do {
-				yield [[...index] as InputSpec, buffer.subarray(pos, pos + elementSize) as OriginElement]
-				pos += elementSize
-			} while (nextXdIndex(index, size))
+		do {
+			yield [[...index] as InputSpec, read(buffer, pos)]
+			pos += elementSize
+		} while (nextXdIndex(index, size))
 	}
 	values(): OriginElement[] {
 		return Array.from(this.entries()).map(([_, v]) => v)

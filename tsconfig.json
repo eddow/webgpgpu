@@ -23,7 +23,8 @@
 			"@webgpu/types", 
             "mocha",
             "node",
-            "chai"
+            "chai",
+			"./tests/chai-ext.d.ts"
 		]
 	},
 	"include": ["./**/*.test.ts"]
