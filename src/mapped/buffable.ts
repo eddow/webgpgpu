@@ -44,6 +44,7 @@ export interface Buffable<
 	ElementSizeSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > {
 	readonly size: SizesSpec
+	readonly elementSize: ElementSizeSpec
 	toArrayBuffer(
 		data: InputXD<Element, SizesSpec>,
 		inferences: Inferences,

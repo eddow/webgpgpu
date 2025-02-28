@@ -118,15 +118,22 @@ output[thread.x] = a[thread.x] * b;
 
 > Note: The kernel function retrieves the *whole* generated code on `toString()`
 
-### define
+### define & use
 
-Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`.
+Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `initialization`. The former is added outside the function, the latter inside the main function, before the main code
 
+- direct definition
 ```ts
-webGpGpu.define(/*wgsl*/`
+webGpGpu.define({
+	declaration: /*wgsl*/`
 fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
-`)
+`
+	})
 ```
+
+- non-repeating usage
+`WebGpGpu` has a static property `imports` that is editable at will and just contain a named collection of code chunks. The function `webGpGpu.import(...)` can be used with the key of such import making sure the import will be included once.
+
 
 ### input
 
@@ -181,11 +188,6 @@ webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.arr
 
 With this code, the variable `myTableSize` will be a `vec2u` available in the wgsl code that will be fixed (here, when a `myTable` of a certain size will be given as argument)
 
-### TODO: document
-
-- static imports
-- import(PropertyKey)
-
 ## Types
 
 The main types from wgsl are available with their wgsl name (`f32`, `vec2f`, etc.). Note: These are *values* who specify a wgsl *type* - it is not a typescript type. These  types (like `Input1D<number, Float32Array>`) are produced and used automatically.
@@ -195,15 +197,13 @@ Types can be array-ed. Ex:
 f32.array(3)
 f32.array(3).array(4)
 //or
-f32.array(3, 4)
+f32.array(4, 3)	// take care .array(X).array(Y) -> .array(Y, X)
 ```
 
-Arguments (simple, arrays of any dimension) can always be passed as corresponding `TypedArray`. So, `mat3x2f.array(5).value(new Float32Array(3*2*5))` is doing the job! (even if array sizes are still validated)
+Arguments (simple, arrays of any dimension) can always be passed as corresponding `ArrayBuffer`. So, `mat3x2f.array(5).value(Float32Array.from([...]).buffer)` is doing the job! (even if array sizes are still validated)
 
-Types also specify how to read/write elements from/to a `TypedArray` (`Float32Buffer`, ...).
- - most (all `vec...` and `mat...`) *do not* copy for read, `subarray` is used, so each element is an `ArrayLike` (who access directly the middle of the `Xxx##Array`)
- - singletons just set/get from the TypedArray without transformation
-
+Types also specify how to read/write elements from/to an `ArrayBuffer`.
+ 
 For convenience, these types have been added:
 - `Vector2`
 - `Vector3`
@@ -230,23 +230,6 @@ These types object offer (if needed) these functions. The functions changing the
 
 Declares an `array of` something. Ex: `f32.array(3, 4)`
 
-#### transform
-
-Declares a transformation to read/write `TypedArray`.
-- `elementConvert` gives an array-like (perhaps directly a `TypedArray`) from a value
-- `elementRecover` creates a value from an array-like (a `TypedArray.subarray`)
-
-Note that arrays can be converted! The next code is doing the expected job : `MyClass` is transferable to an array of float (hence the transform function have a 1-D size parameter) and an array
-
-```ts
-const myValues: MyClass[] = [...]
-const myType = f32.array('threads.x').transform<MyClass>(
-	(m: MyClass, [size]: [number])=> [...],
-	(o: ArrayLike<number>, [size]: [number])=> new MyClass(o)
-)
-myType.array('threads.y').value(myValues)
-```
-
 #### value
 
 Just creates a "typed value" (ex: `f32.value(1)`) that can be used as argument of many WebGpGpu functions.
@@ -254,18 +237,6 @@ Just creates a "typed value" (ex: `f32.value(1)`) that can be used as argument o
 The given value can always be a `FlatSomethingArray` (`TypedArray`) or some combination (array of D-1 inputs).
 
 > Not chainable! A "typed value" is not a type. It wraps it as buffable in `{ buffable, value }`
-
-#### toArrayBuffer
-
-Creates a `TypedArray` from the given value. It also manages the size inference.
-
-```ts
-toArrayBuffer(
-	workSizeInfer: WorkSizeInfer,
-	data: InputXD<Element, InputSpec, Buffer>,
-	required?: string
-)
-```
 
 ## Size inference
 

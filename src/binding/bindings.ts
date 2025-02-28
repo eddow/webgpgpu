@@ -1,4 +1,4 @@
-import type { AnyInference } from '../inference'
+import type { AnyInference, SizeSpec } from '../inference'
 import type { BindingEntryDescription } from './io'
 
 export class FieldsDescriptor<FieldInfo extends {}> {
@@ -30,6 +30,10 @@ export type BoundTypes<BG> = BG extends Bindings<any>
 
 export type BindingType<Inferences extends AnyInference> = {
 	new (...args: any[]): Bindings<Inferences>
+}
+
+export interface WgslEntry<Inferences extends AnyInference = any> {
+	size: SizeSpec<Inferences>[]
 }
 
 export abstract class Bindings<Inferences extends AnyInference> {
@@ -65,7 +69,7 @@ export abstract class Bindings<Inferences extends AnyInference> {
 	/**
 	 * Specifies the names used in the wgsl code
 	 */
-	public abstract readonly wgslNames: string[]
+	public abstract readonly wgslEntries: Record<string, WgslEntry<Inferences>>
 	protected init(
 		inferences: Inferences,
 		reasons: Record<string, string>

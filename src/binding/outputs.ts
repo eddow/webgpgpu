@@ -1,12 +1,16 @@
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import type { Buffable } from '../mapped/buffable'
 import { isBuffable } from '../mapped/ggData'
-import { ParameterError } from '../types'
+import { ParameterError, mapEntries } from '../types'
 import type { OutputType } from '../webgpgpu'
-import { Bindings } from './bindings'
+import { Bindings, type WgslEntry } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry } from './io'
 
 type Outputs<Specs extends Record<string, Buffable>> = { [K in keyof Specs]: OutputType<Specs[K]> }
+type SubInferences<
+	Inferences extends AnyInference,
+	OutputSpecs extends Record<string, Buffable>,
+> = Inferences & DeducedInference<OutputSpecs[keyof OutputSpecs]>
 
 type OutputDescription<Inferences extends AnyInference> = {
 	entries: OutputEntryDescription[]
@@ -15,15 +19,17 @@ type OutputDescription<Inferences extends AnyInference> = {
 
 export class OutputBindings<
 	Inferences extends AnyInference,
-	OutputSpecs extends Record<string, Buffable<Inferences>>,
-> extends Bindings<Inferences & DeducedInference<OutputSpecs[keyof OutputSpecs]>> {
-	public readonly wgslNames: string[]
+	OutputSpecs extends Record<string, Buffable>,
+> extends Bindings<SubInferences<Inferences, OutputSpecs>> {
+	public readonly wgslEntries: Record<string, WgslEntry>
 	private readonly outputSpecs: { name: string; buffable: Buffable<Inferences> }[]
-	constructor(inputSpecs: OutputSpecs) {
+	constructor(outputSpecs: OutputSpecs) {
 		super()
 		// TODO allow input/output?
-		this.wgslNames = Object.keys(inputSpecs)
-		this.outputSpecs = Object.entries(inputSpecs).map(([name, buffable]) => {
+		this.wgslEntries = mapEntries(outputSpecs, ({ size, elementSize }) => ({
+			size: [...size, ...elementSize],
+		}))
+		this.outputSpecs = Object.entries(outputSpecs).map(([name, buffable]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for output \`${name}\``)
 			return {
 				name,

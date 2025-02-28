@@ -321,7 +321,7 @@ export class WebGpGpu<
 			Outputs & BoundTypes<BG>['outputs']
 		>(this, {
 			groups: [...(this.groups as any[]), group as any],
-			usedNames: this.checkNameConflicts(...group.wgslNames),
+			usedNames: this.checkNameConflicts(...Object.keys(group.wgslEntries)),
 			inferences,
 			inferenceReasons,
 		})

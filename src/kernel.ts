@@ -55,7 +55,7 @@ ${declarations.join('\n')}
 @compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
-${initializations.join('\n')}
+		${initializations.join('\n')}
 		${compute}
 	}
 }

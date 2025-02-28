@@ -5,7 +5,8 @@ import {
 	extractInference,
 	infer,
 } from '../inference'
-import { Bindings } from './bindings'
+import { mapEntries } from '../types'
+import { Bindings, type WgslEntry } from './bindings'
 
 // TODO: Type-check no interference in inference (no common key)
 export class InferenceBindings<
@@ -18,12 +19,14 @@ export class InferenceBindings<
 		| readonly [Inferred, Inferred, Inferred, Inferred]
 	>,
 > extends Bindings<Inferences> {
-	public readonly wgslNames: string[]
+	public readonly wgslEntries: Record<string, WgslEntry>
 	public readonly addedInferences: CreatedInferences<Input>
 
 	constructor(private inferred: Input) {
 		super()
-		this.wgslNames = Object.keys(this.inferred)
+		this.wgslEntries = mapEntries(inferred, () => ({
+			size: [],
+		}))
 		this.addedInferences = infer({}, inferred)
 	}
 	private get dimensioned() {

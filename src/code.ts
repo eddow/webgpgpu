@@ -9,16 +9,13 @@ export abstract class WgslCodeGenerator {
 		protected readonly importUsage: Iterable<PropertyKey>
 	) {}
 
+	protected get allEntries() {
+		return [...this.definitions, ...[...this.importUsage].map((name) => this.getImport(name))]
+	}
 	protected get declarations() {
-		return [
-			...this.definitions.map(({ declaration }) => declaration).filter(Boolean),
-			[...this.importUsage].map((name) => this.getImport(name).declaration).filter(Boolean),
-		] as string[]
+		return this.allEntries.map(({ declaration }) => declaration).filter(Boolean) as string[]
 	}
 	protected get initializations() {
-		return [
-			...this.definitions.map(({ initialization }) => initialization).filter(Boolean),
-			[...this.importUsage].map((name) => this.getImport(name).initialization).filter(Boolean),
-		] as string[]
+		return this.allEntries.map(({ initialization }) => initialization).filter(Boolean) as string[]
 	}
 }

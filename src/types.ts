@@ -15,8 +15,8 @@ export class CompilationError extends WebGpGpuError {
 	}
 }
 
-export function mapEntries<From, To, T extends { [key: string]: From }>(
-	obj: T,
+export function mapEntries<From, To>(
+	obj: { [key: string]: From },
 	fn: (value: From, key: PropertyKey) => To
 ): { [key: string]: To } {
 	return Object.fromEntries(

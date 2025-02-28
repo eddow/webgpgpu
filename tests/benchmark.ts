@@ -24,7 +24,7 @@ output[thread.x] = modX * modX;
 		return gpuSquaresKernel({}, { 'threads.x': n })
 	}
 	/*await gpu(65536)*/
-	console.log(webGpGpu.device.limits.maxBufferSize / 4) //*/
+	console.dir(Object.entries(webGpGpu.device.limits)) //*/
 	for (let exp = 2; exp <= 5; exp++) {
 		console.log('---')
 		console.log(exp, ':', await benchmark(gpu, exp), '|', await benchmark(cpu, exp))

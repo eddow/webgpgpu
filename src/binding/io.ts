@@ -30,6 +30,9 @@ export function layoutGroupEntry(
 					visibility: GPUShaderStage.COMPUTE,
 					buffer: { type: readOnly ? 'read-only-storage' : 'storage' },
 				},
+				// TODO: if < 16Kb & read-only & fixed-size, var<uniform>
+				// cf. device.limits.maxUniformBuffersPerShaderStage
+				// cf. device.limits.maxUniformBufferBindingSize
 				declaration: `var<storage, ${readOnly ? 'read' : 'read_write'}> ${name} : array<${buffable.wgslSpecification}>;`,
 			}
 		}

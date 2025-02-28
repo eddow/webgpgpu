@@ -1,21 +1,28 @@
 import { type AnyInference, type DeducedInference, type SizeSpec, resolvedSize } from '../inference'
 import type { Buffable } from '../mapped/buffable'
 import { isBuffable } from '../mapped/ggData'
-import { ParameterError } from '../types'
+import { ParameterError, mapEntries } from '../types'
 import type { InputType } from '../webgpgpu'
-import { Bindings } from './bindings'
+import { Bindings, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
+
+type SubInferences<
+	Inferences extends AnyInference,
+	InputSpecs extends Record<string, Buffable>,
+> = Inferences & DeducedInference<InputSpecs[keyof InputSpecs]>
 
 export class InputBindings<
 	Inferences extends AnyInference,
 	InputSpecs extends Record<string, Buffable>,
 > extends Bindings<Inferences & DeducedInference<InputSpecs[keyof InputSpecs]>> {
-	public readonly wgslNames: string[]
+	public readonly wgslEntries: Record<string, WgslEntry>
 	private readonly inputSpecs: { name: string; buffable: Buffable<AnyInference> }[]
 	constructor(inputSpecs: InputSpecs) {
 		super()
 		// TODO default values
-		this.wgslNames = Object.keys(inputSpecs)
+		this.wgslEntries = mapEntries(inputSpecs, ({ size, elementSize }) => ({
+			size: [...size, ...elementSize],
+		}))
 		this.inputSpecs = Object.entries(inputSpecs).map(([name, buffable]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 			return {

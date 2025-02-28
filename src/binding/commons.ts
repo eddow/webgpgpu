@@ -1,19 +1,26 @@
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { isBuffable, type Buffable, type InputXD, type ValuedBuffable } from '../mapped'
-import { ParameterError } from '../types'
-import { Bindings, type GPUUnboundGroupEntry } from './bindings'
+import { type Buffable, type InputXD, type ValuedBuffable, isBuffable } from '../mapped'
+import { ParameterError, mapEntries } from '../types'
+import { Bindings, type GPUUnboundGroupEntry, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
+
+type SubInferences<
+	Inferences extends AnyInference,
+	CommonSpecs extends Record<string, ValuedBuffable<Inferences>>,
+> = Inferences & DeducedInference<CommonSpecs[keyof CommonSpecs]['buffable']>
 
 export class CommonBindings<
 	Inferences extends AnyInference,
 	CommonSpecs extends Record<string, ValuedBuffable<Inferences>>,
-> extends Bindings<Inferences & DeducedInference<CommonSpecs[keyof CommonSpecs]['buffable']>> {
-	public readonly wgslNames: string[]
+> extends Bindings<SubInferences<Inferences, CommonSpecs>> {
+	public readonly wgslEntries: Record<string, WgslEntry<SubInferences<Inferences, CommonSpecs>>>
 	commonSpecs: { name: string; buffable: Buffable<Inferences>; value: InputXD }[]
 	private precomputedEntries?: GPUUnboundGroupEntry[]
 	constructor(commonSpecs: CommonSpecs) {
 		super()
-		this.wgslNames = Object.keys(commonSpecs)
+		this.wgslEntries = mapEntries(commonSpecs, ({ buffable: { size, elementSize } }) => ({
+			size: [...size, ...elementSize],
+		}))
 		this.commonSpecs = Object.entries(commonSpecs).map(([name, { buffable, value }]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 			return {
