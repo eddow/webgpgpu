@@ -54,7 +54,7 @@ export function inputGroupEntry(
 		case 0: {
 			const buffer = device.createBuffer({
 				label: name,
-				size: 16,
+				size: data.byteLength,
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			})
 			device.queue.writeBuffer(buffer, 0, data)

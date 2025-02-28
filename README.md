@@ -134,6 +134,24 @@ fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 - non-repeating usage
 `WebGpGpu` has a static property `imports` that is editable at will and just contain a named collection of code chunks. The function `webGpGpu.import(...)` can be used with the key of such import making sure the import will be included once.
 
+### workGroup
+
+If you know what a workgroup is and really want to specify its size, do it here.
+
+```ts
+webGpGpu.workGroup(8, 8)
+```
+
+## Bindings
+
+These functions are shortcuts to [`Bindings`](./src/binding/README.md) creation and are chainable.
+
+Example of equivalence:
+```ts
+webGpGpu.input({a: f32})
+
+webGpGpu.bind(inputs/*->InputBindings*/({a: f32}))
+```
 
 ### input
 
@@ -168,14 +186,6 @@ const kernel = webGpGpu
 	.output({ output: f32.array('threads.x') })
 	.kernel('output[thread.x] = a[thread.x] + b[thread.x];')
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
-```
-
-### workGroup
-
-If you know what a workgroup is and really want to specify its size, do it here.
-
-```ts
-webGpGpu.workGroup(8, 8)
 ```
 
 ### infer
@@ -309,7 +319,7 @@ async function main() {
 
 #### Hand-made
 
-If you manage to have your own, want to share a device, ...
+If you manage to have your own adapter/device, want to share a device, ...
 `WebGpGpu` exposes :
 ```ts
 class WebGpGpu {
@@ -366,11 +376,9 @@ It is supported in some browsers but poorly support automated testing.
 
 For node, this library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who is really fresh and does not yet allow a smooth ride for all cases (automated testing is possible in some specific circumstances)
 
-- karma -> test in browser
 - Texture management (for now, only 0/1-D)
   - Code modification for array indexing (for now, only 0/1-D)
   - Code modification to support `f16` immediate values
 - structures
-- Perhaps some canvas output ?
 - Chaining (output become input of next kernel without transfer in CPU memory)
   - Even more complex pipeline management?
