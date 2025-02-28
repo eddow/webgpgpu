@@ -1,10 +1,9 @@
 import type { BindingType, Bindings } from './binding'
 import { type AnyInference, extractInference, specifyInferences } from './inference'
 import { log } from './log'
-import { workgroupSize } from './typedArrays'
-import { workGroupCount } from './typedArrays'
-import { type AnyInput, CompilationError } from './types'
-import type { BufferReader } from './types/buffable'
+import type { AnyInput, BufferReader } from './mapped'
+import { CompilationError } from './types'
+import { workGroupCount, workgroupSize } from './workgroup'
 
 export function kernelScope<
 	Inferences extends AnyInference,
@@ -16,7 +15,8 @@ export function kernelScope<
 	device: GPUDevice,
 	inferences: Inferences,
 	workGroupSize: [number, number, number] | null,
-	definitions: readonly string[],
+	declarations: string[],
+	initializations: string[],
 	groups: Bindings<Inferences>[],
 	bindingsOrder: BindingType<Inferences>[]
 ) {
@@ -44,17 +44,18 @@ export function kernelScope<
 			.flatMap(({ statics: { layoutEntries } }) => layoutEntries)
 			.map((layoutEntry, binding) => ({ ...layoutEntry, binding })),
 	})
-	const declarations = orderedGroups
+	const bindingsDeclarations = orderedGroups
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
 	const code = `
+${bindingsDeclarations.join('\n')}
 ${declarations.join('\n')}
-${definitions.join('\n')}
 
 @compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
+${initializations.join('\n')}
 		${compute}
 	}
 }

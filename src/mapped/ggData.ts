@@ -5,15 +5,9 @@ import {
 	type SizeSpec,
 	resolvedSize,
 } from '../inference'
-import type { NumericSizesSpec } from '../typedArrays'
-import type { Input0D, InputXD, TypedArray, TypedArrayConstructor } from '../types'
-import {
-	type Buffable,
-	BufferReader,
-	type ValuedBuffable,
-	type Writer,
-	toArrayBuffer,
-} from './buffable'
+import type { NumericSizesSpec, TypedArray, TypedArrayConstructor } from './arrays'
+import type { Buffable, InputXD, ValuedBuffable } from './buffable'
+import { BufferReader, type Writer, toArrayBuffer } from './io'
 
 export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof GpGpuData

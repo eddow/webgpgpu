@@ -1,5 +1,5 @@
-import { ParameterError, type TypedArray, type TypedArrayConstructor } from '../types'
-import type { Buffable } from '../types/buffable'
+import type { Buffable } from '../mapped/buffable'
+import { ParameterError } from '../types'
 import type { GPUUnboundGroupLayoutEntry } from './bindings'
 
 export interface BindingEntryDescription {

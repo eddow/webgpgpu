@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import createWebGpGpu, {
-	f32,
 	mat2x2f,
 	mat2x3f,
 	mat2x4f,
@@ -10,7 +9,6 @@ import createWebGpGpu, {
 	mat4x2f,
 	mat4x3f,
 	mat4x4f,
-	Struct,
 	vec2f,
 	vec3f,
 	vec4f,

@@ -1,7 +1,6 @@
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { type InputXD, ParameterError } from '../types'
-import type { Buffable, ValuedBuffable } from '../types/buffable'
-import { isBuffable } from '../types/ggData'
+import { isBuffable, type Buffable, type InputXD, type ValuedBuffable } from '../mapped'
+import { ParameterError } from '../types'
 import { Bindings, type GPUUnboundGroupEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
 

@@ -1,5 +1,5 @@
 import { Float16Array } from '@petamoriken/float16'
-import type { TypedArray } from '../types'
+import type { TypedArray } from './arrays'
 import { type AtomicAccessor, GpGpuAtomicData, type GpGpuSingleton } from './ggData'
 
 /* padding:

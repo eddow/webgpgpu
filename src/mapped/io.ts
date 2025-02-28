@@ -1,58 +1,17 @@
-import { type AnyInference, type SizeSpec, assertSize, resolvedSize } from '../inference'
+import { type AnyInference, type SizeSpec, assertSize } from '../inference'
 import { log } from '../log'
-import { type NumericSizesSpec, isTypedArrayXD } from '../typedArrays'
-import { InferenceValidationError, type InputXD, ParameterError } from '../types'
+import { InferenceValidationError, ParameterError } from '../types'
+import type { InputXD } from './buffable'
 
-type ValidateSizeSpec<
-	Inferences extends AnyInference,
-	SizesSpec,
-> = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
-export type ValuedBuffable<
-	Inferences extends AnyInference = AnyInference,
-	Element = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-> = {
-	buffable: Buffable<Inferences, Element, SizesSpec, ElementSizeSpec>
-	value: InputXD<Element, SizesSpec>
-} // & ValidateSizeSpec<Inferences, SizesSpec>
-
-/**
- * Interface is needed for type inference
- */
-export interface Buffable<
-	Inferences extends AnyInference = any,
-	Element = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-> {
-	readonly size: SizesSpec
-	toArrayBuffer(
-		data: InputXD<Element, SizesSpec>,
-		inferences: Inferences,
-		reason: string,
-		reasons: Record<string, string>
-	): ArrayBuffer
-	value(
-		v: InputXD<Element, SizesSpec>
-	): ValuedBuffable<Inferences, Element, SizesSpec, ElementSizeSpec>
-	readonly wgslSpecification: string
-	readArrayBuffer(
-		buffer: ArrayBuffer,
-		inferences: AnyInference
-	): BufferReader<Element, NumericSizesSpec<SizesSpec>>
-	elementByteSize(inferences: Inferences): number
+export interface Writer<Element> {
+	write(index: number, value: Element): void
+	writeMany?(index: number, values: Element[]): void
 }
 
 function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
 		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
 }
-export interface Writer<Element> {
-	write(index: number, value: Element): void
-	writeMany?(index: number, values: Element[]): void
-}
-
 // Poorly typed but for internal use only
 export function toArrayBuffer<
 	Inferences extends AnyInference,

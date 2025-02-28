@@ -1,8 +1,8 @@
-import type { OutputType } from 'src/webgpgpu'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
+import type { Buffable } from '../mapped/buffable'
+import { isBuffable } from '../mapped/ggData'
 import { ParameterError } from '../types'
-import type { Buffable } from '../types/buffable'
-import { isBuffable } from '../types/ggData'
+import type { OutputType } from '../webgpgpu'
 import { Bindings } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry } from './io'
 

@@ -4,14 +4,19 @@ import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inference'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
-import { WgslCodeGenerator } from './code'
+import { type CodeParts, WgslCodeGenerator } from './code'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
 import { kernelScope } from './kernel'
 import { type Log, log } from './log'
-import { explicitWorkSize } from './typedArrays'
-import { type AnyInput, ParameterError, WebGpGpuError } from './types'
-import { activateF16 } from './types/atomics'
-import type { Buffable, BufferReader, ValuedBuffable } from './types/buffable'
+import {
+	type AnyInput,
+	type Buffable,
+	type BufferReader,
+	type ValuedBuffable,
+	activateF16,
+} from './mapped'
+import { ParameterError, WebGpGpuError } from './types'
+import { explicitWorkSize } from './workgroup'
 
 export type InputType<T extends Buffable> = Parameters<T['value']>[0]
 export type OutputType<T extends Buffable> = ReturnType<T['readArrayBuffer']>
@@ -193,7 +198,7 @@ export class WebGpGpu<
 			usedNames,
 			groups,
 		}: Partial<{
-			definitions: string[]
+			definitions: CodeParts[]
 			importUsage: Iterable<PropertyKey>
 			inferences: Inferences
 			inferred: Record<string, 1 | 2 | 3 | 4>
@@ -228,7 +233,7 @@ export class WebGpGpu<
 	 * @param definitions WGSL code to add in the end-kernel
 	 * @returns Chainable
 	 */
-	define(...definitions: string[]) {
+	define(...definitions: CodeParts[]) {
 		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
 			definitions: [...this.definitions, ...definitions],
 		})
@@ -252,8 +257,8 @@ export class WebGpGpu<
 	/**
 	 * Definitions of standard imports - these can directly be edited by setting/deleting keys
 	 */
-	public static readonly imports: Record<PropertyKey, string> = Object.create(null)
-	protected getImport(name: PropertyKey): string {
+	public static readonly imports: Record<PropertyKey, CodeParts> = Object.create(null)
+	protected getImport(name: PropertyKey): CodeParts {
 		return WebGpGpu.imports[name]
 	}
 
@@ -363,7 +368,15 @@ export class WebGpGpu<
 				throw e
 			}
 		}
-		const { device, inferences, workGroupSize, definitions, groups, inferenceReasons } = this
+		const {
+			device,
+			inferences,
+			workGroupSize,
+			declarations,
+			initializations,
+			groups,
+			inferenceReasons,
+		} = this
 		const { kernel, code, kernelInferences } = guarded(() =>
 			kernelScope<Inferences, Inputs, Outputs>(
 				compute,
@@ -371,7 +384,8 @@ export class WebGpGpu<
 				device,
 				inferences,
 				workGroupSize,
-				definitions,
+				declarations,
+				initializations,
 				groups,
 				WebGpGpu.bindingsOrder
 			)
