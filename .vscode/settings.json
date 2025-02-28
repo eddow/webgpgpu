@@ -9,5 +9,6 @@
 		"wgsl",
 		"xyzw"
 	],
-	"karmaTestExplorer.enableExtension": true
+	"karmaTestExplorer.enableExtension": true,
+	"zencoder.enableRepoIndexing": true
 }

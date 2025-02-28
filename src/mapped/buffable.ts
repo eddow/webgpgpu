@@ -1,9 +1,10 @@
-import { type AnyInference, type SizeSpec, assertSize } from '../inference'
+import type { AnyInference, SizeSpec } from '../inference'
 import type { NumericSizesSpec } from './arrays'
 import type { BufferReader } from './io'
 
 export type Input0D<Element> = Element | ArrayBufferLike
-export type Input1D<Element> = Input0D<Element>[] | ArrayBufferLike
+// Here, no Input0D<Element>[], as direct entries and array buffers should not be mixed up in an entry
+export type Input1D<Element> = Element[] | ArrayBufferLike[] | ArrayBufferLike
 export type Input2D<Element> = Input1D<Element>[] | ArrayBufferLike
 export type Input3D<Element> = Input2D<Element>[] | ArrayBufferLike
 export type Input4D<Element> = Input3D<Element>[] | ArrayBufferLike
@@ -20,10 +21,6 @@ export type InputXD<Element = any, SizesSpec extends any[] = any[]> = SizesSpec 
 					: unknown
 export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
 
-type ValidateSizeSpec<
-	Inferences extends AnyInference,
-	SizesSpec,
-> = SizesSpec extends SizeSpec<Inferences>[] ? unknown : never
 export type ValuedBuffable<
 	Inferences extends AnyInference = AnyInference,
 	Element = any,
@@ -32,7 +29,7 @@ export type ValuedBuffable<
 > = {
 	buffable: Buffable<Inferences, Element, SizesSpec, ElementSizeSpec>
 	value: InputXD<Element, SizesSpec>
-} // & ValidateSizeSpec<Inferences, SizesSpec>
+}
 
 /**
  * Interface is needed for type inference

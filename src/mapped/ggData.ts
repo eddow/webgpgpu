@@ -50,10 +50,12 @@ export abstract class GpGpuData<
 	): BufferReader<Element, NumericSizesSpec<SizesSpec>> {
 		return new BufferReader<Element, NumericSizesSpec<SizesSpec>>(
 			this.read(buffer),
+			buffer,
 			resolvedSize<Inferences, SizesSpec>(this.size, inferences)
 		)
 	}
 	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
+		if (this.size.length > 0) throw Error('Making array of nor-scalar nor array')
 		return new GpGpuArrayData<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
@@ -85,7 +87,7 @@ export class GpGpuArrayData<
 	read(buffer: ArrayBuffer): (index: number) => Element {
 		return this.parent.read(buffer)
 	}
-	get bytesPerAtomic(): number {
+	get bytesPerAtomic() {
 		return this.parent.bytesPerAtomic
 	}
 	get wgslSpecification() {

@@ -3,8 +3,8 @@
 		"module": "es2022",
 		"moduleResolution": "node",
 		"target": "ESNext",
-		"composite": true,
-		"declaration": true,
+		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"],
+		"declaration": false,
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": false,
@@ -14,8 +14,15 @@
 		"baseUrl": ".",
 		"noErrorTruncation": true,
 		"noImplicitAny": true,
+		"paths": {
+			"webgpgpu": ["../src/server/index.ts"]
+		},
 		"types": [
-			"@webgpu/types"
+			"@webgpu/types", 
+            "mocha",
+            "node",
+            "chai",
+			"../chai-ext.d.ts"
 		]
 	},
 	"include": ["./**/*.ts"]

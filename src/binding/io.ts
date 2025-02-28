@@ -24,7 +24,7 @@ export function layoutGroupEntry(
 				declaration: `var<uniform> ${name} : ${buffable.wgslSpecification};`,
 			}
 		}
-		case 1: {
+		default: {
 			return {
 				layoutEntry: {
 					visibility: GPUShaderStage.COMPUTE,
@@ -36,11 +36,6 @@ export function layoutGroupEntry(
 				declaration: `var<storage, ${readOnly ? 'read' : 'read_write'}> ${name} : array<${buffable.wgslSpecification}>;`,
 			}
 		}
-		/* TODO: 2~3~4D
-		case 2:
-		case 3:*/
-		default:
-			throw new Error(`Not implemented (LGE dimension ${buffable.size.length})`)
 	}
 }
 

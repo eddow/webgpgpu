@@ -198,9 +198,42 @@ webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.arr
 
 With this code, the variable `myTableSize` will be a `vec2u` available in the wgsl code that will be fixed (here, when a `myTable` of a certain size will be given as argument)
 
+## Kernel
+
+The kernel is the function that takes the input and returns (a `Promise` of) the output(s).
+
+```ts
+const kernel = webGpGpu
+	.input({ a: f32.array('threads.x'), b: f32.array('threads.x') })
+	.output({ output: f32.array('threads.x') })
+	.kernel('output[thread.x] = a[thread.x] + b[thread.x];')
+const { output } = await kernel({ a: [1, 2, 3], b: [4, 5, 6] }) // output ~= [5, 7, 9]
+```
+
+### Calling
+
+The kernel can take as a second argument an object containing defaults for the inferences. These values *will not* be forced/asserted and might not be used. See [Size inference](#size-inference) section.
+
+### Inputs
+
+Inputs are given as an object `{name: value}`. Values can be either an `ArrayBufferLike` or
+- Their element if not an array (`D = 0`), like a number, a triplet of vector (depending on the type used)
+- An array of dimension `D - 1` inputs when it is an array of some dimension (`D > 0`).
+
+### Outputs
+
+In all array accesses in TS, the multi-dimensional indexes are given *most-important first*.
+- `f32.array(3).value([1, 2, 3])`
+- `f32.array(2, 3) -> f32.array(3).array(2)` 
+  - `value([[1, 2, 3], [4, 5, 6]]).at(1, 2) === 6`
+  - `value([[1, 2, 3], [4, 5, 6]]).slice(0) ~ [1, 2, 3]`
+- `f32.array(3, 2) -> f32.array(2).array(3)`
+  - `value([[1, 2], [3, 4], [5, 6]]).at(2, 1) === 6`
+  - `value([[1, 2], [3, 4], [5, 6]]).slice(0) ~ [1, 2]`
+
 ## Types
 
-The main types from wgsl are available with their wgsl name (`f32`, `vec2f`, etc.). Note: These are *values* who specify a wgsl *type* - it is not a typescript type. These  types (like `Input1D<number, Float32Array>`) are produced and used automatically.
+The main types from wgsl are available with their wgsl name (`f32`, `vec2f`, etc.). Note: These are *values* who specify a wgsl *type* - it is not a typescript type. These  types (like `Input1D<[number, number]>`) are produced and used automatically (here, from a `vec2f.array(x)`).
 
 Types can be array-ed. Ex:
 ```ts
@@ -244,7 +277,7 @@ Declares an `array of` something. Ex: `f32.array(3, 4)`
 
 Just creates a "typed value" (ex: `f32.value(1)`) that can be used as argument of many WebGpGpu functions.
 
-The given value can always be a `FlatSomethingArray` (`TypedArray`) or some combination (array of D-1 inputs).
+Ways to give the value happen the same as for the [inputs](#inputs).
 
 > Not chainable! A "typed value" is not a type. It wraps it as buffable in `{ buffable, value }`
 
@@ -274,20 +307,20 @@ If inferences cannot be retrieved from an array size, they can be defaulted to a
 
 Note: This defaulting system doesn't assert anything and will perhaps not even be taken into account if the value was already inferred. To force a value, use `.infer`.
 
-Generate the 10 first squares:
-```ts
-const kernel = webGpGpu
-	.output({output: f32.array('threads.x')})
-	.kernel('output[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
-const { output } = await kernel({})
-```
-
 Generate the N first squares:
 ```ts
 const kernel = webGpGpu
 	.output({output: f32.array('threads.x')})
 	.kernel('output[thread.x] = thread.x*thread.x;')
 const { output } = await kernel({}, { 'threads.x': 10 })
+```
+
+Generate the N(default 10) first squares:
+```ts
+const kernel = webGpGpu
+	.output({output: f32.array('threads.x')})
+	.kernel('output[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
+const { output } = await kernel({})
 ```
 
 ## System calls

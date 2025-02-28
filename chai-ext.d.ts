@@ -1,5 +1,3 @@
-//import Chai from 'chai'
-
 declare global {
 	namespace Chai {
 		interface Assertion {

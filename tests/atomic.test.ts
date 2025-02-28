@@ -42,7 +42,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[4, 6],
 				[40, 60],
 			])
@@ -63,7 +63,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[4, 6, 8],
 				[40, 60, 80],
 			])
@@ -84,7 +84,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[3, 8, 15],
 				[300, 800, 1500],
 			])
@@ -105,7 +105,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[4, 6, 8, 10],
 				[40, 60, 80, 100],
 			])
@@ -140,7 +140,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6],
 					[12, 14],
@@ -179,7 +179,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8],
 					[12, 14, 16],
@@ -219,7 +219,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8, 10],
 					[12, 14, 16, 18],
@@ -265,7 +265,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6],
 					[12, 14],
@@ -312,7 +312,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8],
 					[12, 14, 16],
@@ -359,7 +359,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8, 10],
 					[12, 14, 16, 18],
@@ -411,7 +411,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6],
 					[12, 14],
@@ -464,7 +464,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8],
 					[12, 14, 16],
@@ -517,7 +517,7 @@ describe('atomic', () => {
 				],
 			})
 
-			expect(output.toArray()).to.typedArrayEqual([
+			expect(output.flat()).to.typedArrayEqual([
 				[
 					[4, 6, 8, 10],
 					[12, 14, 16, 18],

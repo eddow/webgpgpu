@@ -1,3 +1,4 @@
+import { Indexable } from '../hacks'
 import { type AnyInference, type SizeSpec, assertSize } from '../inference'
 import { log } from '../log'
 import { InferenceValidationError, ParameterError } from '../types'
@@ -12,6 +13,7 @@ function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
 		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
 }
+// TODO: Optionally give an ArrayBuffer & position
 // Poorly typed but for internal use only
 export function toArrayBuffer<
 	Inferences extends AnyInference,
@@ -112,6 +114,7 @@ export function toArrayBuffer<
 
 function bufferPosition(index: number[], size: number[]): number {
 	let pos = 0
+	//for (let i = size.length - 1; i >= 0; i--) {
 	for (let i = 0; i < size.length; i++) {
 		if (index[i] >= size[i]) throw new ParameterError(`Index out of range (${index[i]}/${size[i]})`)
 		pos *= size[i]
@@ -129,11 +132,38 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 	return false
 }
 
-export class BufferReader<Element = any, InputSpec extends number[] = number[]> {
+function dot(a: number[], b: number[]): number {
+	let sum = 0
+	const length = Math.min(a.length, b.length)
+	for (let i = 0; i < length; i++) sum += a[i] * b[i]
+	return sum
+}
+
+function prod(a: number[], product = 1): number {
+	return a.reduce((a, b) => a * b, product)
+}
+
+type IndexableReturn<Element, InputSpec extends number[]> = InputSpec extends [number]
+	? Element
+	: InputSpec extends [number, ...infer Rest extends number[]]
+		? BufferReader<Element, Rest>
+		: never
+export class BufferReader<Element = any, InputSpec extends number[] = number[]> extends Indexable<
+	IndexableReturn<Element, InputSpec>
+> {
 	constructor(
 		private readonly read: (index: number) => Element,
-		public readonly size: number[]
-	) {}
+		public readonly buffer: ArrayBuffer,
+		public readonly size: InputSpec,
+		public readonly offset: number = 0
+	) {
+		super()
+	}
+	/**
+	 * Take an element by its index - given `least significant` first:
+	 * @param index The index of the element to retrieve
+	 * @returns
+	 */
 	at(...index: InputSpec): Element {
 		const { size } = this
 		if (index.length !== size.length)
@@ -142,26 +172,76 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 			)
 		return this.read(bufferPosition(index, size))
 	}
-	/**
-	 * Retrieves the [index, value] pairs, where `index` is the index array and `value` is the value at that index
-	 * Index is *not* cloned, so its content will be modified along browsing and should not be stored as-is
-	 * @returns Generator<[InputSpec, Element]>
-	 */
-	*entries(): Generator<[InputSpec, Element]> {
+	*keys(): IterableIterator<InputSpec> {
 		const { size } = this
 		if (size.some((s) => s === 0)) {
 			log.warn('Zero size buffer as output')
 			return
 		}
 		const index: number[] = size.map(() => 0)
-		let pos = 0
-		do yield [index as InputSpec, this.read(pos++)]
+		do yield index as InputSpec
 		while (nextXdIndex(index, size))
 	}
-	*values() {
-		for (const [_, v] of this.entries()) yield v
+	/**
+	 * Retrieves the [index, value] pairs, where `index` is the index array and `value` is the value at that index
+	 * Index is *not* cloned, so its content will be modified along browsing and should not be stored as-is
+	 * @returns Generator<[InputSpec, Element]>
+	 */
+	*entries(): Generator<[InputSpec, Element]> {
+		let pos = 0
+		for (const index of this.keys()) yield [index as InputSpec, this.read(pos++)]
 	}
-	toArray(): Element[] {
+	// TODO: Cache these
+	get length(): number {
+		return prod(this.size)
+	}
+	get stride(): InputSpec {
+		const { size } = this
+		let remaining = this.length
+		return size.map((s) => {
+			remaining /= s
+			return remaining
+		}) as InputSpec
+	}
+	*values() {
+		const { length } = this
+		for (let pos = 0; pos < length; ++pos) yield this.read(pos)
+	}
+	flat(): Element[] {
 		return [...this.values()]
 	}
+	/**
+	 * Retrieves a subsection of the buffer.
+	 * This does not create a copy of the underlying buffer, it just creates a view on top of it.
+	 * @param sSpec The specification of the section to take
+	 * @returns
+	 * @example myBuffer.section(x,y).at(z,w) == myBuffer.at(x,y,z,w)
+	 */
+	section<SSpec extends SubSpec<InputSpec>>(
+		...sSpec: SSpec
+	): BufferReader<Element, SubtractLengths<InputSpec, SSpec>> {
+		const { stride, buffer, size } = this
+		return new BufferReader(
+			this.read,
+			buffer,
+			size.slice(sSpec.length) as SubtractLengths<InputSpec, SSpec>,
+			this.offset + dot(sSpec, stride)
+		)
+	}
+	*sections() {
+		// TODO: Implement
+	}
+	getAtIndex(index: number): any {
+		// @ts-expect-error We know InputSpec but only programmatically
+		return this.size.length === 1 ? this.at(index) : this.section(index)
+	}
 }
+
+type SubSpec<Spec> = Spec extends [number, ...infer Rest extends number[]]
+	? Rest extends []
+		? never
+		: Rest | SubSpec<Rest>
+	: number[]
+type SubtractLengths<A extends any[], B extends any[]> = A extends [...B, ...infer Rest]
+	? Rest
+	: never
