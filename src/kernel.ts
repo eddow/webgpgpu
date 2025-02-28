@@ -1,10 +1,10 @@
 import type { BindingType, Bindings } from './binding'
-import type { BufferReader } from './buffers'
 import { type AnyInference, extractInference, specifyInferences } from './inference'
 import { log } from './log'
 import { workgroupSize } from './typedArrays'
 import { workGroupCount } from './typedArrays'
 import { type AnyInput, CompilationError } from './types'
+import type { BufferReader } from './types/buffable'
 
 export function kernelScope<
 	Inferences extends AnyInference,

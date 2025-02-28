@@ -1,5 +1,5 @@
-import type { Buffable } from './buffers'
 import { InferenceValidationError, ParameterError, mapEntries } from './types'
+import type { Buffable } from './types/buffable'
 
 export type Inferred = number | undefined
 // Redo the [required] for debug

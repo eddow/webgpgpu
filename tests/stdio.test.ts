@@ -48,7 +48,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	})
 	it('one input', async () => {
 		const kernel = webGpGpu.input({ a: f32 }).kernel('')
-		const empty = await kernel({ a: Float32Array.from([43]) })
+		const empty = await kernel({ a: Float32Array.from([43]).buffer })
 		expect(empty).to.be.an('object').that.is.empty
 	})
 	it('one output', async () => {
@@ -66,7 +66,7 @@ describe('inputs', () => {
 			.bind(inputs({ a: f32 }))
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: Float32Array.from([43]) })
+		const { output } = await kernel({ a: Float32Array.from([43]).buffer })
 		expect(output).to.exist
 		expect(output.toArray()).to.typedArrayEqual([43])
 	})
@@ -84,7 +84,10 @@ describe('inputs', () => {
 			.input({ a: f32.array(3) })
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]*3;')
-		const { output } = await kernel({ a: Float32Array.from([11, 12, 13]) }, { 'threads.x': 3 })
+		const { output } = await kernel(
+			{ a: Float32Array.from([11, 12, 13]).buffer },
+			{ 'threads.x': 3 }
+		)
 		expect(output.toArray()).to.typedArrayEqual([33, 36, 39])
 	})
 	it('a float array - value', async () => {
@@ -103,7 +106,7 @@ describe('inputs', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = (a[thread.x]*3).x + (a[thread.x]*3).y;')
 		const { output } = await kernel(
-			{ a: Float32Array.from([1, 11, 2, 12, 3, 13]) },
+			{ a: Float32Array.from([1, 11, 2, 12, 3, 13]).buffer },
 			{ 'threads.x': 3 }
 		)
 		expect(output.toArray()).to.typedArrayEqual([36, 42, 48])
@@ -152,7 +155,7 @@ describe('inputs', () => {
 			.kernel('output[thread.x] = a[thread.x] * b;')
 		const { output } = await kernel(
 			{
-				a: Float32Array.from([1, 2, 3]),
+				a: Float32Array.from([1, 2, 3]).buffer,
 				b: 5,
 			},
 			{ 'threads.x': 3 }
@@ -240,7 +243,7 @@ describe('diverse', () => {
 			.define('fn myFunc(a: f32, b: f32) -> f32 { return a + b; }')
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = myFunc(a[thread.x], b[thread.x]);')
-		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]) })
+		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]).buffer })
 		expect(output.toArray()).to.typedArrayEqual([3, 6, 9])
 	})
 	it('name conflict', async () => {

@@ -255,14 +255,14 @@ The given value can always be a `FlatSomethingArray` (`TypedArray`) or some comb
 
 > Not chainable! A "typed value" is not a type. It wraps it as buffable in `{ buffable, value }`
 
-#### toTypedArray
+#### toArrayBuffer
 
 Creates a `TypedArray` from the given value. It also manages the size inference.
 
 ```ts
-toTypedArray(
+toArrayBuffer(
 	workSizeInfer: WorkSizeInfer,
-	data: InputXD<OriginElement, InputSpec, Buffer>,
+	data: InputXD<Element, InputSpec, Buffer>,
 	required?: string
 )
 ```

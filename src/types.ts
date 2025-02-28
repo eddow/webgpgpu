@@ -17,9 +17,9 @@ export class CompilationError extends WebGpGpuError {
 	}
 }
 
-export type TypedArrayConstructor<TArray> = {
-	new (content: number[] | number): TArray
-	new (ab: ArrayBuffer): TArray
+export type TypedArrayConstructor<ArrayBufferLike> = {
+	new (content: number[] | number): ArrayBufferLike
+	new (ab: ArrayBuffer): ArrayBufferLike
 	BYTES_PER_ELEMENT: number
 }
 export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
@@ -46,33 +46,21 @@ export type TypedArray4D<T extends TypedArray = TypedArray> = T & {
 	size: [number, number, number, number]
 }
 
-export type Input0D<Element, TArray extends TypedArray = TypedArray> = Element | TArray
-export type Input1D<Element, TArray extends TypedArray = TypedArray> =
-	| Input0D<Element, TArray>[]
-	| TArray
-export type Input2D<Element, TArray extends TypedArray = TypedArray> =
-	| Input1D<Element, TArray>[]
-	| TArray
-export type Input3D<Element, TArray extends TypedArray = TypedArray> =
-	| Input2D<Element, TArray>[]
-	| TArray
-export type Input4D<Element, TArray extends TypedArray = TypedArray> =
-	| Input3D<Element, TArray>[]
-	| TArray
-export type InputXD<
-	Element = any,
-	SizesSpec extends number[] = number[],
-	TArray extends TypedArray = TypedArray,
-> = SizesSpec extends []
-	? Input0D<Element, TArray>
-	: SizesSpec extends [number]
-		? Input1D<Element, TArray>
-		: SizesSpec extends [number, number]
-			? Input2D<Element, TArray>
-			: SizesSpec extends [number, number, number]
-				? Input3D<Element, TArray>
-				: SizesSpec extends [number, number, number, number]
-					? Input4D<Element, TArray>
+export type Input0D<Element> = Element | ArrayBufferLike
+export type Input1D<Element> = Input0D<Element>[] | ArrayBufferLike
+export type Input2D<Element> = Input1D<Element>[] | ArrayBufferLike
+export type Input3D<Element> = Input2D<Element>[] | ArrayBufferLike
+export type Input4D<Element> = Input3D<Element>[] | ArrayBufferLike
+export type InputXD<Element = any, SizesSpec extends any[] = any[]> = SizesSpec extends []
+	? Input0D<Element>
+	: SizesSpec extends [any]
+		? Input1D<Element>
+		: SizesSpec extends [any, any]
+			? Input2D<Element>
+			: SizesSpec extends [any, any, any]
+				? Input3D<Element>
+				: SizesSpec extends [any, any, any, any]
+					? Input4D<Element>
 					: unknown
 export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
 

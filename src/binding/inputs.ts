@@ -1,7 +1,7 @@
-import { isBuffable } from '../buffable'
-import type { Buffable } from '../buffers'
 import { type AnyInference, type DeducedInference, type SizeSpec, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
+import type { Buffable } from '../types/buffable'
+import { isBuffable } from '../types/ggData'
 import type { InputType } from '../webgpgpu'
 import { Bindings } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
@@ -35,9 +35,9 @@ export class InputBindings<
 	) {
 		const { device, inputSpecs } = this
 		return inputSpecs.map(({ name, buffable }) => {
-			const typeArray = buffable.toTypedArray(
-				inferences,
+			const arrayBuffer = buffable.toArrayBuffer(
 				inputs[name],
+				inferences,
 				`Given input ${name}`,
 				reasons
 			)
@@ -45,7 +45,7 @@ export class InputBindings<
 				device,
 				name,
 				resolvedSize(buffable.size, inferences),
-				typeArray
+				arrayBuffer
 			)
 			return { resource }
 		})

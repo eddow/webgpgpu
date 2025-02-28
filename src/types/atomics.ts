@@ -1,6 +1,6 @@
 import { Float16Array } from '@petamoriken/float16'
-import { GpGpuData, type GpGpuSingleton } from './buffable'
-import type { ElementAccessor } from './buffers'
+import type { TypedArray } from '../types'
+import { type AtomicAccessor, GpGpuAtomicData, type GpGpuSingleton } from './ggData'
 
 /* padding:
 Type	Intended Size	Actual Padded Size	Extra Padding?
@@ -27,13 +27,12 @@ type mat4x2 = lt4<vec2>
 type mat4x3 = lt4<vec3>
 type mat4x4 = lt4<vec4>
 
-const vec = <T extends number[]>(n: number): ElementAccessor<T> => ({
+const vec = <T extends number[]>(n: number): AtomicAccessor<T> => ({
 	// @ts-expect-error TypedArray -> [...]
 	read: (array, pos) => array.subarray(pos, pos + n),
 	write: (array, pos, value) => array.set(value.slice(0, n), pos),
-	padded: n === 3 || undefined,
 })
-const mat = <T extends number[][]>(cols: number, rows: number): ElementAccessor<T> => {
+const mat = <T extends number[][]>(cols: number, rows: number): AtomicAccessor<T> => {
 	const positions: number[] = []
 	const colSize = rows === 3 ? 4 : rows
 	for (let c = 0; c < cols; c++) positions.push(colSize * c)
@@ -43,50 +42,44 @@ const mat = <T extends number[][]>(cols: number, rows: number): ElementAccessor<
 		write: (array, pos, value) => {
 			for (let c = 0; c < cols; c++) array.set(value[c].slice(0, rows), pos + colSize * c)
 		},
-		padded: rows === 3 || undefined,
 	}
 }
 
 function typeTriplet<T>(
 	elementSize: number,
 	wgslSpecification: string,
-	elementAccessor: ElementAccessor<T>
+	elementAccessor: AtomicAccessor<T>
 ): [
-	GpGpuData<any, Float32Array, T, [], [], []>,
-	GpGpuData<any, Uint32Array, T, [], [], []>,
-	GpGpuData<any, Int32Array, T, [], [], []>,
+	GpGpuAtomicData<Float32Array, T>,
+	GpGpuAtomicData<Uint32Array, T>,
+	GpGpuAtomicData<Int32Array, T>,
 ] {
 	return [
-		new GpGpuData(
+		new GpGpuAtomicData(
 			Float32Array,
 			elementSize,
 			wgslSpecification.replace('#', 'f'),
-			[],
-			[],
 			elementAccessor
 		),
-		new GpGpuData(
+		new GpGpuAtomicData(
 			Uint32Array,
 			elementSize,
 			wgslSpecification.replace('#', 'u'),
-			[],
-			[],
 			elementAccessor
 		),
-		new GpGpuData(
+		new GpGpuAtomicData(
 			Int32Array,
 			elementSize,
 			wgslSpecification.replace('#', 'i'),
-			[],
-			[],
 			elementAccessor
 		),
 	]
 }
 
 export const [f32, u32, i32] = typeTriplet<number>(1, '#32', {
-	read: (array, pos) => array.at(pos)!,
-	write: (array, pos, value) => array.set([value], pos),
+	read: (array, index) => array.at(index)!,
+	write: (array, index, value) => array.set([value], index),
+	writeMany: (array, index, values) => array.set(values, index),
 })
 
 export const [vec2f, vec2u, vec2i] = typeTriplet<vec2>(2, 'vec2#', vec(2))
@@ -104,12 +97,11 @@ export const [mat4x4f, mat4x4u, mat4x4i] = typeTriplet<mat4x4>(16, 'mat4x4#', ma
 
 // #region f16
 // Only exist as vec#h shape
+export let vec2h: GpGpuAtomicData<TypedArray, vec2> = vec2f
+export let vec3h: GpGpuAtomicData<TypedArray, vec3> = vec3f
+export let vec4h: GpGpuAtomicData<TypedArray, vec4> = vec4f
 
-export let vec2h: GpGpuSingleton<vec2> = vec2f
-export let vec3h: GpGpuSingleton<vec3> = vec3f
-export let vec4h: GpGpuSingleton<vec4> = vec4f
-
-function structAccessor<T extends Record<string, number>>(alphabet: string): ElementAccessor<T> {
+function structAccessor<T extends Record<string, number>>(alphabet: string): AtomicAccessor<T> {
 	const letters = alphabet.split('')
 	return {
 		read(array, index) {
@@ -127,21 +119,23 @@ const xyzwAcc = structAccessor<{ x: number; y: number; z: number; w: number }>('
 const rgbAcc = structAccessor<{ r: number; g: number; b: number }>('rgb')
 const rgbaAcc = structAccessor<{ r: number; g: number; b: number; a: number }>('rgba')
 
-export let Vector2: GpGpuSingleton<{ x: number; y: number }> = vec2f.transform(xyAcc)
-export let Vector3: GpGpuSingleton<{ x: number; y: number; z: number }> = vec3f.transform(xyzAcc)
-export let Vector4: GpGpuSingleton<{ x: number; y: number; z: number; w: number }> =
+export let Vector2: GpGpuAtomicData<TypedArray, { x: number; y: number }> = vec2f.transform(xyAcc)
+export let Vector3: GpGpuAtomicData<TypedArray, { x: number; y: number; z: number }> =
+	vec3f.transform(xyzAcc)
+export let Vector4: GpGpuAtomicData<TypedArray, { x: number; y: number; z: number; w: number }> =
 	vec4f.transform(xyzwAcc)
-export let RGB: GpGpuSingleton<{ r: number; g: number; b: number }> = vec3f.transform(rgbAcc)
-export let RGBA: GpGpuSingleton<{ r: number; g: number; b: number; a: number }> =
+export let RGB: GpGpuAtomicData<TypedArray, { r: number; g: number; b: number }> =
+	vec3f.transform(rgbAcc)
+export let RGBA: GpGpuAtomicData<TypedArray, { r: number; g: number; b: number; a: number }> =
 	vec4f.transform(rgbaAcc)
 let f16Activated = false
 export function activateF16(available: boolean) {
 	if (f16Activated) return
 	f16Activated = true
 	if (!available) return
-	vec2h = new GpGpuData(Float16Array, 2, 'vec2h', [], [], vec(2))
-	vec3h = new GpGpuData(Float16Array, 4, 'vec3h', [], [], vec(3))
-	vec4h = new GpGpuData(Float16Array, 4, 'vec4h', [], [], vec(4))
+	vec2h = new GpGpuAtomicData(Float16Array, 2, 'vec2h', vec(2))
+	vec3h = new GpGpuAtomicData(Float16Array, 4, 'vec3h', vec(3))
+	vec4h = new GpGpuAtomicData(Float16Array, 4, 'vec4h', vec(4))
 	Vector2 = vec2h.transform(xyAcc)
 	Vector3 = vec3h.transform(xyzAcc)
 	Vector4 = vec4h.transform(xyzwAcc)

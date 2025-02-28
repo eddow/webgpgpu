@@ -1,8 +1,8 @@
 import type { OutputType } from 'src/webgpgpu'
-import { isBuffable } from '../buffable'
-import type { Buffable } from '../buffers'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
+import type { Buffable } from '../types/buffable'
+import { isBuffable } from '../types/ggData'
 import { Bindings } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry } from './io'
 
@@ -35,15 +35,14 @@ export class OutputBindings<
 		return this.outputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, false))
 	}
 	private readonly callInfo = new WeakMap<{}, OutputDescription<Inferences>>()
-	entries(inferences: Inferences, inputs: {}, reasons: Record<string, string>) {
+	entries(inferences: Inferences, inputs: {}) {
 		const { device, outputSpecs } = this
 		const entries = outputSpecs.map(({ name, buffable }) =>
 			outputGroupEntry(
 				device,
 				name,
 				resolvedSize(buffable.size, inferences),
-				buffable.elementSize,
-				buffable.bufferType
+				buffable.elementByteSize(inferences)
 			)
 		)
 		this.callInfo.set(inputs, { entries, inferences })
@@ -60,7 +59,7 @@ export class OutputBindings<
 		return Object.fromEntries(
 			this.outputSpecs.map(({ name, buffable }, i) => [
 				name,
-				buffable.readTypedArray(buffers[i], inferences),
+				buffable.readArrayBuffer(buffers[i], inferences),
 			])
 		) as Outputs<OutputSpecs>
 	}

@@ -1,20 +1,20 @@
-import { activateF16 } from './atomicTypesList'
 import { inference } from './binding'
 import type { BindingType, Bindings, BoundTypes } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inference'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
-import type { Buffable, BufferReader, ValuedBuffable } from './buffers'
 import { WgslCodeGenerator } from './code'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
 import { kernelScope } from './kernel'
 import { type Log, log } from './log'
 import { explicitWorkSize } from './typedArrays'
 import { type AnyInput, ParameterError, WebGpGpuError } from './types'
+import { activateF16 } from './types/atomics'
+import type { Buffable, BufferReader, ValuedBuffable } from './types/buffable'
 
 export type InputType<T extends Buffable> = Parameters<T['value']>[0]
-export type OutputType<T extends Buffable> = ReturnType<T['readTypedArray']>
+export type OutputType<T extends Buffable> = ReturnType<T['readArrayBuffer']>
 
 /**
  * Contains the information shared in a WebGpGpu tree (root and descendants) and referencing the device

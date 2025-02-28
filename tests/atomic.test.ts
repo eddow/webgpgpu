@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import createWebGpGpu, {
+	f32,
 	mat2x2f,
 	mat2x3f,
 	mat2x4f,
@@ -9,6 +10,7 @@ import createWebGpGpu, {
 	mat4x2f,
 	mat4x3f,
 	mat4x4f,
+	Struct,
 	vec2f,
 	vec3f,
 	vec4f,
@@ -66,6 +68,27 @@ describe('atomic', () => {
 			expect(output.toArray()).to.typedArrayEqual([
 				[4, 6, 8],
 				[40, 60, 80],
+			])
+		})
+		it('vec3*', async () => {
+			const kernel = webGpGpu
+				.input({ a: vec3f.array('threads.x'), b: vec3f.array('threads.x') })
+				.output({ output: vec3f.array('threads.x') })
+				.kernel('output[thread.x] = a[thread.x]*b[thread.x];')
+			const { output } = await kernel({
+				a: [
+					[1, 2, 3],
+					[10, 20, 30],
+				],
+				b: [
+					[3, 4, 5],
+					[30, 40, 50],
+				],
+			})
+
+			expect(output.toArray()).to.typedArrayEqual([
+				[3, 8, 15],
+				[300, 800, 1500],
 			])
 		})
 		it('vec4', async () => {
@@ -512,4 +535,14 @@ describe('atomic', () => {
 			])
 		})
 	})
+	/*describe('structs', () => {
+		it('struct', async () => {
+			const struct = new Struct({memA: f32, memB: vec2f})
+			const kernel = webGpGpu
+				.output({ output: struct.array('threads.x') })
+				.kernel('output[thread.x] = a[thread.x]+b[thread.x];')
+			const { output } = await kernel({
+					
+				}))
+	})*/
 })

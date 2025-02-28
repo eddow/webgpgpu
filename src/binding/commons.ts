@@ -1,7 +1,7 @@
-import { isBuffable } from '../buffable'
-import type { Buffable, ValuedBuffable } from '../buffers'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { type InputXD, ParameterError } from '../types'
+import type { Buffable, ValuedBuffable } from '../types/buffable'
+import { isBuffable } from '../types/ggData'
 import { Bindings, type GPUUnboundGroupEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
 
@@ -27,7 +27,7 @@ export class CommonBindings<
 	init(inferences: Inferences, reasons: Record<string, string>) {
 		const { device, commonSpecs } = this
 		this.precomputedEntries = commonSpecs.map(({ name, buffable, value }) => {
-			const typeArray = buffable.toTypedArray(inferences, value, `Given input ${name}`, reasons)
+			const typeArray = buffable.toArrayBuffer(value, inferences, `Given input ${name}`, reasons)
 			const resource = inputGroupEntry(
 				device,
 				name,
