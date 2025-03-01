@@ -67,6 +67,7 @@ export type MixedWebGpGpu<TypesDef extends { inputs: any; outputs: any; inferenc
 	WebGpGpu<TypesDef['inferences'], TypesDef['inputs'], TypesDef['outputs']>
 
 // #endregion
+
 export type RootWebGpGpu = WebGpGpu<
 	{
 		'threads.x': Inferred

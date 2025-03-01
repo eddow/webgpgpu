@@ -41,7 +41,6 @@ let stride = vec2u(threads.y, 1);
 m[dot(thread.xy, stride)] = a[thread.x]*b[thread.y];
 		`)
 			const { m } = await kernel({ a, b })
-			console.dir(m.flat)
 			expect(m.flat()).to.typedArrayEqual(r)
 		})
 	for (const { a, b, r } of multiplication.vec3u)

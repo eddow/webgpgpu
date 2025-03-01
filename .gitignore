@@ -2,3 +2,5 @@
 /coverage
 /lib
 .*
+bundles/
+**/tsconfig.tsbuildinfo

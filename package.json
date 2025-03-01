@@ -3,7 +3,7 @@
 	"version": "0.0.3",
 	"scripts": {
 		"test": "mocha",
-		"test:karma": "karma start ./karma.debug.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
+		"test:karma": "karma start ./karma.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
 		"test:watch": "mocha watch",
 		"build": "rollup -c",
 		"watch": "rollup -c -w",
@@ -14,13 +14,7 @@
 		"benchmark": "tsx tests/benchmark.ts",
 		"tsx": "tsx tests/test.ts"
 	},
-	"keywords": [
-		"webgpgpu",
-		"gpu",
-		"gpgpu",
-		"webgpu",
-		"typescript"
-	],
+	"keywords": ["webgpgpu", "gpu", "gpgpu", "webgpu", "typescript"],
 	"main": "./lib/server.ts",
 	"types": "./lib/server.d.ts",
 	"exports": {

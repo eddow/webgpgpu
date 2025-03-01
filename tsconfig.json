@@ -5,6 +5,7 @@
 		"target": "ESNext",
 		"composite": true,
 		"declaration": true,
+		"sourceMap": true,
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": false,
@@ -17,7 +18,7 @@
 		"paths": {
 			"webgpgpu": ["./src/server/index.ts"]
 		},
-		"types": ["@webgpu/types"]
+		"types": ["@webgpu/types", "mocha", "node", "chai", "./chai-ext.d.ts"]
 	},
 	"include": ["./**/*.ts"]
 }

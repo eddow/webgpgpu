@@ -1,7 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"],
+		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"]
 	},
 	"include": ["./**/*.ts"]
 }
