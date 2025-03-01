@@ -17,13 +17,7 @@
 		"paths": {
 			"webgpgpu": ["../src/server/index.ts"]
 		},
-		"types": [
-			"@webgpu/types", 
-            "mocha",
-            "node",
-            "chai",
-			"../chai-ext.d.ts"
-		]
+		"types": ["@webgpu/types", "mocha", "node", "chai", "../chai-ext.d.ts"]
 	},
-	"include": ["./**/*.ts"]
+	"include": ["../**/*.ts"]
 }

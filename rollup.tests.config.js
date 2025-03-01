@@ -1,5 +1,5 @@
-import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+import resolve from '@rollup/plugin-node-resolve'
 import typescript from '@rollup/plugin-typescript'
 
 export default {
@@ -8,8 +8,8 @@ export default {
 		sourcemap: true,
 		name: 'webgpgpuTest',
 		globals: {
-			'chai': 'chai'
-		}
+			chai: 'chai',
+		},
 	},
 	external: ['chai'],
 	plugins: [
@@ -22,8 +22,8 @@ export default {
 		typescript({
 			tsconfig: './tests/tsconfig.json',
 			paths: {
-				webgpgpu: ["../src/client/index.ts"]
-			}
-		})
+				webgpgpu: ['../src/client/index.ts'],
+			},
+		}),
 	],
 }

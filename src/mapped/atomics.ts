@@ -14,23 +14,23 @@ mat4x3f	48B	⚠️ 64B	Yes (4×4B)
 type lt2<T> = [T, T]
 type lt3<T> = [T, T, T]
 type lt4<T> = [T, T, T, T]
-type vec2 = lt2<number>
-type vec3 = lt3<number>
-type vec4 = lt4<number>
-type mat2x2 = lt2<vec2>
-type mat2x3 = lt2<vec3>
-type mat2x4 = lt2<vec4>
-type mat3x2 = lt3<vec2>
-type mat3x3 = lt3<vec3>
-type mat3x4 = lt3<vec4>
-type mat4x2 = lt4<vec2>
-type mat4x3 = lt4<vec3>
-type mat4x4 = lt4<vec4>
+export type vec2 = lt2<number>
+export type vec3 = lt3<number>
+export type vec4 = lt4<number>
+export type mat2x2 = lt2<vec2>
+export type mat2x3 = lt2<vec3>
+export type mat2x4 = lt2<vec4>
+export type mat3x2 = lt3<vec2>
+export type mat3x3 = lt3<vec3>
+export type mat3x4 = lt3<vec4>
+export type mat4x2 = lt4<vec2>
+export type mat4x3 = lt4<vec3>
+export type mat4x4 = lt4<vec4>
 
 const vec = <T extends number[]>(n: number): AtomicAccessor<T> => ({
 	// @ts-expect-error TypedArray -> [...]
-	read: (array, pos) => array.subarray(pos, pos + n),
-	write: (array, pos, value) => array.set(value.slice(0, n), pos),
+	read: (typedArray, pos) => typedArray.subarray(pos, pos + n),
+	write: (typedArray, pos, value) => typedArray.set(value.slice(0, n), pos),
 })
 const mat = <T extends number[][]>(cols: number, rows: number): AtomicAccessor<T> => {
 	const positions: number[] = []
@@ -38,62 +38,61 @@ const mat = <T extends number[][]>(cols: number, rows: number): AtomicAccessor<T
 	for (let c = 0; c < cols; c++) positions.push(colSize * c)
 	return {
 		// @ts-expect-error TypedArray -> [...]
-		read: (array, pos) => positions.map((p) => array.subarray(p + pos, p + pos + rows)),
-		write: (array, pos, value) => {
-			for (let c = 0; c < cols; c++) array.set(value[c].slice(0, rows), pos + colSize * c)
+		read: (typedArray, pos) => positions.map((p) => typedArray.subarray(p + pos, p + pos + rows)),
+		write: (typedArray, pos, value) => {
+			for (let c = 0; c < cols; c++) typedArray.set(value[c].slice(0, rows), pos + colSize * c)
 		},
 	}
 }
-
-function typeTriplet<T>(
+const oneF32Type = <T>(
 	elementSize: number,
 	wgslSpecification: string,
 	elementAccessor: AtomicAccessor<T>
-): [
-	GpGpuAtomicData<Float32Array, T>,
-	GpGpuAtomicData<Uint32Array, T>,
-	GpGpuAtomicData<Int32Array, T>,
-] {
-	return [
-		new GpGpuAtomicData(
-			Float32Array,
-			elementSize,
-			wgslSpecification.replace('#', 'f'),
-			elementAccessor
-		),
-		new GpGpuAtomicData(
-			Uint32Array,
-			elementSize,
-			wgslSpecification.replace('#', 'u'),
-			elementAccessor
-		),
-		new GpGpuAtomicData(
-			Int32Array,
-			elementSize,
-			wgslSpecification.replace('#', 'i'),
-			elementAccessor
-		),
-	]
-}
+) =>
+	new GpGpuAtomicData<Float32Array, T>(
+		Float32Array,
+		elementSize,
+		wgslSpecification.replace('#', 'f'),
+		elementAccessor
+	)
+const typeTriplet = <T>(
+	elementSize: number,
+	wgslSpecification: string,
+	elementAccessor: AtomicAccessor<T>
+) => [
+	oneF32Type(elementSize, wgslSpecification, elementAccessor),
+	new GpGpuAtomicData<Uint32Array, T>(
+		Uint32Array,
+		elementSize,
+		wgslSpecification.replace('#', 'u'),
+		elementAccessor
+	),
+	new GpGpuAtomicData<Int32Array, T>(
+		Int32Array,
+		elementSize,
+		wgslSpecification.replace('#', 'i'),
+		elementAccessor
+	),
+]
 
 export const [f32, u32, i32] = typeTriplet<number>(1, '#32', {
-	read: (array, index) => array.at(index)!,
-	write: (array, index, value) => array.set([value], index),
-	writeMany: (array, index, values) => array.set(values, index),
+	read: (typedArray, index) => typedArray.at(index)!,
+	write: (typedArray, index, value) => typedArray.set([value], index),
+	writeMany: (typedArray, index, values) => typedArray.set(values, index),
 })
 
 export const [vec2f, vec2u, vec2i] = typeTriplet<vec2>(2, 'vec2#', vec(2))
 export const [vec3f, vec3u, vec3i] = typeTriplet<vec3>(4, 'vec3#', vec(3))
 export const [vec4f, vec4u, vec4i] = typeTriplet<vec4>(4, 'vec4#', vec(4))
-export const [mat2x2f, mat2x2u, mat2x2i] = typeTriplet<mat2x2>(4, 'mat2x2#', mat(2, 2))
-export const [mat2x3f, mat2x3u, mat2x3i] = typeTriplet<mat2x3>(8, 'mat2x3#', mat(2, 3))
-export const [mat2x4f, mat2x4u, mat2x4i] = typeTriplet<mat2x4>(8, 'mat2x4#', mat(2, 4))
-export const [mat3x2f, mat3x2u, mat3x2i] = typeTriplet<mat3x2>(6, 'mat3x2#', mat(3, 2))
-export const [mat3x3f, mat3x3u, mat3x3i] = typeTriplet<mat3x3>(12, 'mat3x3#', mat(3, 3))
-export const [mat3x4f, mat3x4u, mat3x4i] = typeTriplet<mat3x4>(12, 'mat3x4#', mat(3, 4))
-export const [mat4x2f, mat4x2u, mat4x2i] = typeTriplet<mat4x2>(8, 'mat4x2#', mat(4, 2))
-export const [mat4x3f, mat4x3u, mat4x3i] = typeTriplet<mat4x3>(16, 'mat4x3#', mat(4, 3))
-export const [mat4x4f, mat4x4u, mat4x4i] = typeTriplet<mat4x4>(16, 'mat4x4#', mat(4, 4))
+export const mat2x2f = oneF32Type<mat2x2>(4, 'mat2x2#', mat(2, 2))
+export const mat2x3f = oneF32Type<mat2x3>(8, 'mat2x3#', mat(2, 3))
+export const mat2x4f = oneF32Type<mat2x4>(8, 'mat2x4#', mat(2, 4))
+export const mat3x2f = oneF32Type<mat3x2>(6, 'mat3x2#', mat(3, 2))
+export const mat3x3f = oneF32Type<mat3x3>(12, 'mat3x3#', mat(3, 3))
+export const mat3x4f = oneF32Type<mat3x4>(12, 'mat3x4#', mat(3, 4))
+export const mat4x2f = oneF32Type<mat4x2>(8, 'mat4x2#', mat(4, 2))
+export const mat4x3f = oneF32Type<mat4x3>(16, 'mat4x3#', mat(4, 3))
+export const mat4x4f = oneF32Type<mat4x4>(16, 'mat4x4#', mat(4, 4))
 
 // #region f16
 // Only exist as vec#h shape
@@ -104,11 +103,11 @@ export let vec4h: GpGpuAtomicData<TypedArray, vec4> = vec4f
 function structAccessor<T extends Record<string, number>>(alphabet: string): AtomicAccessor<T> {
 	const letters = alphabet.split('')
 	return {
-		read(array, index) {
-			return Object.fromEntries(letters.map((l, i) => [l, array.at(index + i)!])) as T
+		read(typedArray, index) {
+			return Object.fromEntries(letters.map((l, i) => [l, typedArray.at(index + i)!])) as T
 		},
-		write(array, index, value) {
-			for (let i = 0; i < letters.length; i++) array.set([value[letters[i]]], index + i)
+		write(typedArray, index, value) {
+			for (let i = 0; i < letters.length; i++) typedArray.set([value[letters[i]]], index + i)
 		},
 	}
 }

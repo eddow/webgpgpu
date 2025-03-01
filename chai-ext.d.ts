@@ -1,7 +1,16 @@
 declare global {
 	namespace Chai {
 		interface Assertion {
-			typedArrayEqual(expected: number | number[] | number[][] | number[][][]): Assertion
+			typedArrayEqual(
+				expected:
+					| number
+					| readonly number[]
+					| readonly number[][]
+					| readonly number[][][]
+					| readonly number[][][][]
+					| readonly number[][][][][]
+					| readonly number[][][][][][]
+			): Assertion
 		}
 	}
 }

@@ -14,9 +14,10 @@
 		"baseUrl": ".",
 		"noErrorTruncation": true,
 		"noImplicitAny": true,
-		"types": [
-			"@webgpu/types"
-		]
+		"paths": {
+			"webgpgpu": ["./src/server/index.ts"]
+		},
+		"types": ["@webgpu/types"]
 	},
 	"include": ["./**/*.ts"]
 }

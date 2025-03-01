@@ -194,12 +194,12 @@ export class BufferReader<
 		for (const index of this.keys()) yield [index as InputSpec, this.read(pos++)]
 	}
 	// TODO: Cache these
-	get length(): number {
+	get flatLength(): number {
 		return prod(this.size)
 	}
 	get stride(): InputSpec {
 		const { size } = this
-		let remaining = this.length
+		let remaining = this.flatLength
 		return [
 			...size.map((s) => {
 				remaining /= s
@@ -208,7 +208,7 @@ export class BufferReader<
 		] as const as InputSpec
 	}
 	*values() {
-		const { length, offset } = this
+		const { flatLength: length, offset } = this
 		for (let pos = offset; pos < length; ++pos) yield this.read(pos)
 	}
 	flat(): Element[] {
@@ -239,6 +239,7 @@ export class BufferReader<
 		// @ts-expect-error We know InputSpec but only programmatically
 		return this.size.length === 1 ? this.at(index) : this.section(index)
 	}
+	// TODO: Implement Array<...>
 }
 
 type SubSpec<Spec> = Spec extends readonly [number, ...infer Rest extends number[]]
@@ -252,3 +253,5 @@ type SubtractLengths<A extends readonly any[], B extends readonly any[]> = A ext
 ]
 	? Rest
 	: never
+
+const a = [].map

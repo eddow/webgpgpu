@@ -6,17 +6,32 @@ const { expect } = chai
 // Function to compare a TypedArray to a regular array
 type TypedArray = Uint32Array | Int32Array | Float32Array | Float16Array
 
+// max array depth: mat#x#[...4] -> 6
+
 // Recursive function to compare nested structures
 function typedArrayContentEqual(
 	actual:
 		| TypedArray
 		| TypedArray[]
 		| TypedArray[][]
+		| TypedArray[][][]
+		| TypedArray[][][][]
+		| TypedArray[][][][][]
 		| number
 		| number[]
 		| number[][]
-		| number[][][],
-	expected: number | number[] | number[][] | number[][][]
+		| number[][][]
+		| number[][][][]
+		| number[][][][][]
+		| number[][][][][][],
+	expected:
+		| number
+		| number[]
+		| number[][]
+		| number[][][]
+		| number[][][][]
+		| number[][][][][]
+		| number[][][][][][]
 ): boolean {
 	if (typeof actual === 'number' && typeof expected === 'number') {
 		return actual === expected // Direct number comparison
@@ -45,7 +60,16 @@ function typedArrayContentEqual(
 
 chai.Assertion.addMethod(
 	'typedArrayEqual',
-	function (expected: number | number[] | number[][] | number[][][]) {
+	function (
+		expected:
+			| number
+			| number[]
+			| number[][]
+			| number[][][]
+			| number[][][][]
+			| number[][][][][]
+			| number[][][][][][]
+	) {
 		const actual = this._obj
 
 		this.assert(
@@ -62,9 +86,3 @@ chai.Assertion.addMethod(
 		)
 	}
 )
-/*
-// ✅ Example Usage
-const floatArray = new Float32Array([1.1, 2.2, 3.3])
-
-expect(floatArray).to.typedArrayEqual([1.1, 2.2, 3.3]) // ✅ Passes
-*/

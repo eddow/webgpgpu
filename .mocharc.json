@@ -5,6 +5,6 @@
 	"spec": "tests/**/*.test.ts",
 	"require": ["tsx"],
 	"recursive": true,
-	"watch-files": ["src/**/*.ts", "tests/**/*.ts"], 
+	"watch-files": ["src/**/*.ts", "tests/**/*.ts"],
 	"watch-ignore": ["node_modules"]
 }

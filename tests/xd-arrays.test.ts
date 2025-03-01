@@ -1,17 +1,14 @@
 import { expect } from 'chai'
 import createWebGpGpu, {
-	inference,
-	InferenceValidationError,
-	ParameterError,
-	Vector2,
 	type RootWebGpGpu,
 	f32,
-	u32,
 	vec2f,
-	inputs,
-	commons,
-	outputs,
+	mat2x3f,
+	vec3u,
+	mat3x2f,
+	mat2x2f,
 } from 'webgpgpu'
+import { multiplication } from './xd-arrays.data'
 
 let webGpGpu: RootWebGpGpu
 
@@ -22,15 +19,53 @@ after(() => {
 	webGpGpu.dispose()
 })
 describe('arrays', () => {
-	it('output', async () => {
-		const kernel = webGpGpu
-			.input({ a: f32.array('threads.x'), b: f32.array('threads.y') })
-			.output({ m: f32.array('threads.y', 'threads.x') })
-			.kernel(/*wgsl*/ `
-		let stride = vec2u(1, threads.x);
+	for (const { a, b, r } of multiplication.f32)
+		it('output - f32', async () => {
+			const kernel = webGpGpu
+				.input({ a: f32.array('threads.x'), b: f32.array('threads.y') })
+				.output({ m: f32.array('threads.y', 'threads.x') })
+				.kernel(/*wgsl*/ `
+		let stride = vec2u(threads.y, 1);
 		m[dot(thread.xy, stride)] = a[thread.x]*b[thread.y];
 		`)
-		const { m } = await kernel({ a: [1, 2], b: [3, 5, 7] })
-		expect(m.flat()).to.deep.equal([3, 6, 5, 10, 7, 14])
-	})
+			const { m } = await kernel({ a, b })
+			expect(m.flat()).to.typedArrayEqual(r)
+		})
+	for (const { a, b, r } of multiplication.vec2f)
+		it('output - vec2f', async () => {
+			const kernel = webGpGpu
+				.input({ a: vec2f.array('threads.x'), b: vec2f.array('threads.y') })
+				.output({ m: vec2f.array('threads.y', 'threads.x') })
+				.kernel(/*wgsl*/ `
+let stride = vec2u(threads.y, 1);
+m[dot(thread.xy, stride)] = a[thread.x]*b[thread.y];
+		`)
+			const { m } = await kernel({ a, b })
+			console.dir(m.flat)
+			expect(m.flat()).to.typedArrayEqual(r)
+		})
+	for (const { a, b, r } of multiplication.vec3u)
+		it('output - vec3u', async () => {
+			const kernel = webGpGpu
+				.input({ a: vec3u.array('threads.x'), b: vec3u.array('threads.y') })
+				.output({ m: vec3u.array('threads.y', 'threads.x') })
+				.kernel(/*wgsl*/ `
+		let stride = vec2u(threads.y, 1);
+		m[dot(thread.xy, stride)] = a[thread.x]*b[thread.y];
+		`)
+			const { m } = await kernel({ a, b })
+			expect(m.flat()).to.typedArrayEqual(r)
+		})
+	for (const { a, b, r } of multiplication.mat2x)
+		it('output - mat2x', async () => {
+			const kernel = webGpGpu
+				.input({ a: mat3x2f.array('threads.x'), b: mat2x3f.array('threads.y') })
+				.output({ m: mat2x2f.array('threads.y', 'threads.x') })
+				.kernel(/*wgsl*/ `
+		let stride = vec2u(threads.y, 1);
+		m[dot(thread.xy, stride)] = a[thread.x]*b[thread.y];
+		`)
+			const { m } = await kernel({ a, b })
+			expect(m.flat()).to.typedArrayEqual(r)
+		})
 })

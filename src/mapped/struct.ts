@@ -5,7 +5,7 @@ import type { Writer } from './io'
 // TODO: Type inference for Element
 export class Struct<
 	Inferences extends AnyInference,
-	// TODO It's possible to have one array as the last member
+	// TODO It's possible to have one array as the last member if variable-sized, or many fixed-size arrays.
 	Value extends Record<string, Buffable<Inferences, any, []>>,
 > extends GpGpuData<Inferences, any, [], []> {
 	get elementSize() {

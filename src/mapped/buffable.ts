@@ -4,10 +4,10 @@ import type { BufferReader } from './io'
 
 export type Input0D<Element> = Element | ArrayBufferLike
 // Here, no Input0D<Element>[], as direct entries and array buffers should not be mixed up in an entry
-export type Input1D<Element> = Element[] | ArrayBufferLike[] | ArrayBufferLike
-export type Input2D<Element> = Input1D<Element>[] | ArrayBufferLike
-export type Input3D<Element> = Input2D<Element>[] | ArrayBufferLike
-export type Input4D<Element> = Input3D<Element>[] | ArrayBufferLike
+export type Input1D<Element> = readonly Element[] | readonly ArrayBufferLike[] | ArrayBufferLike
+export type Input2D<Element> = readonly Input1D<Element>[] | ArrayBufferLike
+export type Input3D<Element> = readonly Input2D<Element>[] | ArrayBufferLike
+export type Input4D<Element> = readonly Input3D<Element>[] | ArrayBufferLike
 export type InputXD<Element = any, SizesSpec extends readonly any[] = any[]> = SizesSpec extends []
 	? Input0D<Element>
 	: SizesSpec extends [any]
