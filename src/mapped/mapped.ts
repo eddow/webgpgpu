@@ -10,10 +10,10 @@ import type { Buffable, InputXD, ValuedBuffable } from './buffable'
 import { BufferReader, type Writer, toArrayBuffer } from './io'
 
 export function isBuffable(buffable: any): buffable is Buffable {
-	return buffable instanceof GpGpuData
+	return buffable instanceof Mapped
 }
 
-export abstract class GpGpuData<
+export abstract class Mapped<
 	Inferences extends AnyInference,
 	Element,
 	SizesSpec extends SizeSpec<Inferences>[],
@@ -56,7 +56,7 @@ export abstract class GpGpuData<
 	}
 	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
 		if (this.size.length > 0) throw Error('Making array of nor-scalar nor array')
-		return new GpGpuArrayData<
+		return new MappedArray<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
@@ -75,12 +75,12 @@ export abstract class GpGpuData<
 	abstract readonly wgslSpecification: string
 }
 
-export class GpGpuArrayData<
+export class MappedArray<
 	Inferences extends AnyInference,
 	Element,
 	SizesSpec extends SizeSpec<Inferences>[],
 	ElementSizeSpec extends SizeSpec<Inferences>[],
-> extends GpGpuData<Inferences, Element, SizesSpec, ElementSizeSpec> {
+> extends Mapped<Inferences, Element, SizesSpec, ElementSizeSpec> {
 	write(buffer: ArrayBuffer): Writer<Element> {
 		return this.parent.write(buffer)
 	}
@@ -97,13 +97,13 @@ export class GpGpuArrayData<
 		return this.parent.elementSize
 	}
 	constructor(
-		protected parent: GpGpuData<Inferences, Element, any, any>,
+		protected parent: Mapped<Inferences, Element, any, any>,
 		size: SizesSpec
 	) {
 		super(size)
 	}
 	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
-		return new GpGpuArrayData<
+		return new MappedArray<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
@@ -118,7 +118,7 @@ export interface AtomicAccessor<Element> {
 	writeMany?(array: TypedArray, index: number, values: Element[]): void
 }
 
-export class GpGpuAtomicData<Buffer extends TypedArray, Element> extends GpGpuData<
+export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
 	AnyInference,
 	Element,
 	[],
@@ -133,7 +133,7 @@ export class GpGpuAtomicData<Buffer extends TypedArray, Element> extends GpGpuDa
 		super([])
 	}
 	transform<NewElement>(elementAccessor: AtomicAccessor<NewElement>) {
-		return new GpGpuAtomicData<Buffer, NewElement>(
+		return new MappedAtomic<Buffer, NewElement>(
 			this.bufferType,
 			this.atomicSize,
 			this.wgslSpecification,
@@ -160,4 +160,4 @@ export class GpGpuAtomicData<Buffer extends TypedArray, Element> extends GpGpuDa
 		return (index: number) => this.elementAccessor.read(typedArray, index * this.atomicSize)
 	}
 }
-export type GpGpuSingleton<Element> = GpGpuAtomicData<TypedArray, Element>
+export type GpGpuSingleton<Element> = MappedAtomic<TypedArray, Element>

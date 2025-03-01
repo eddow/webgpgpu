@@ -1,13 +1,13 @@
 import type { AnyInference } from '../inference'
 import type { Buffable } from './buffable'
-import { GpGpuData } from './ggData'
 import type { Writer } from './io'
+import { Mapped } from './mapped'
 // TODO: Type inference for Element
 export class Struct<
 	Inferences extends AnyInference,
 	// TODO It's possible to have one array as the last member if variable-sized, or many fixed-size arrays.
 	Value extends Record<string, Buffable<Inferences, any, []>>,
-> extends GpGpuData<Inferences, any, [], []> {
+> extends Mapped<Inferences, any, [], []> {
 	get elementSize() {
 		return [] as [] // :-D
 	}

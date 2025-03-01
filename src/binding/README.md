@@ -52,6 +52,12 @@ Define inferences that can therefore be used both in the wgsl code and as array 
 
 ## Custom bindings
 
+Creating a specific Bindigs class allows to define custom bindings. It can define new inferences, inputs and outputs
+
+### Produce inferences
+
 Inferences are `Record<string, number|undefined>` where a number is a specification and `undefined` a simple declaration.
 
-To add bindings, a class should extend `Bindings<NeededInferences>`. The `NeededInferences` inference type should be provided (or `{}`)
+To add bindings, a class should extend `Bindings<NeededInferences>`. The `AddedInferences` inference type should be provided (or `{}`)
+
+TODO

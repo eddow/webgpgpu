@@ -1,3 +1,5 @@
+![npm](https://img.shields.io/npm/v/webgpgpu.ts)
+
 # WebGpGpu
 
 This package provides WebGPU based GPU computing.
@@ -398,8 +400,30 @@ Note that a `log.error` will always have its associated exception throw.
 
 ## Ecosystem
 
-- [VS Code plugin for inline-wgsl coloring](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
+- Configured VSCode plugins:
+  - [karma test explorer](https://marketplace.visualstudio.com/items?itemName=lucono.karma-test-explorer)
+  - [mocha test explorer](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-mocha-test-adapter)
+- Other useful VSCode extensions:
+  - [inline-wgsl coloring](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
 - Linux: Do *not* use chromium, it will not support WebGPU - install chrome/firefox(untested)/...
+
+
+### Ubuntu
+
+```bash
+# 1. Add Google Repository
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | \
+sudo tee /etc/apt/sources.list.d/google-chrome.list
+
+# 2. Add Google Signing Key
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+
+# 3. Update and Install
+sudo apt update
+sudo apt install google-chrome-stable
+
+google-chrome
+```
 
 ## TODOs & limitations
 
@@ -409,9 +433,11 @@ It is supported in some browsers but poorly support automated testing.
 
 For node, this library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who is really fresh and does not yet allow a smooth ride for all cases (automated testing is possible in some specific circumstances)
 
-- Texture management (for now, only 0/1-D)
+- 2~3~4D arrays (for now, only 0/1-D for writing and reading is in development)
   - Code modification for array indexing (for now, only 0/1-D)
   - Code modification to support `f16` immediate values
 - structures
 - Chaining (output become input of next kernel without transfer in CPU memory)
   - Even more complex pipeline management?
+- UBO management and automatic structures
+- Automatic stride production

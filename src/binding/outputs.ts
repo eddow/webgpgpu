@@ -1,6 +1,6 @@
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import type { Buffable } from '../mapped/buffable'
-import { isBuffable } from '../mapped/ggData'
+import { isBuffable } from '../mapped/mapped'
 import { ParameterError, mapEntries } from '../types'
 import type { OutputType } from '../webgpgpu'
 import { Bindings, type WgslEntry } from './bindings'

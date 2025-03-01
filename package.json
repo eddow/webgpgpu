@@ -14,7 +14,13 @@
 		"benchmark": "tsx tests/benchmark.ts",
 		"tsx": "tsx tests/test.ts"
 	},
-	"keywords": ["webgpgpu", "gpu", "gpgpu", "webgpu", "typescript"],
+	"keywords": [
+		"webgpgpu",
+		"gpu",
+		"gpgpu",
+		"webgpu",
+		"typescript"
+	],
 	"main": "./lib/server.ts",
 	"types": "./lib/server.d.ts",
 	"exports": {

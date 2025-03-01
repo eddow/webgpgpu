@@ -1,6 +1,6 @@
 import { Float16Array } from '@petamoriken/float16'
 import type { TypedArray } from './arrays'
-import { type AtomicAccessor, GpGpuAtomicData, type GpGpuSingleton } from './ggData'
+import { type AtomicAccessor, type GpGpuSingleton, MappedAtomic } from './mapped'
 
 /* padding:
 Type	Intended Size	Actual Padded Size	Extra Padding?
@@ -49,7 +49,7 @@ const oneF32Type = <T>(
 	wgslSpecification: string,
 	elementAccessor: AtomicAccessor<T>
 ) =>
-	new GpGpuAtomicData<Float32Array, T>(
+	new MappedAtomic<Float32Array, T>(
 		Float32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'f'),
@@ -61,13 +61,13 @@ const typeTriplet = <T>(
 	elementAccessor: AtomicAccessor<T>
 ) => [
 	oneF32Type(elementSize, wgslSpecification, elementAccessor),
-	new GpGpuAtomicData<Uint32Array, T>(
+	new MappedAtomic<Uint32Array, T>(
 		Uint32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'u'),
 		elementAccessor
 	),
-	new GpGpuAtomicData<Int32Array, T>(
+	new MappedAtomic<Int32Array, T>(
 		Int32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'i'),
@@ -96,9 +96,9 @@ export const mat4x4f = oneF32Type<mat4x4>(16, 'mat4x4#', mat(4, 4))
 
 // #region f16
 // Only exist as vec#h shape
-export let vec2h: GpGpuAtomicData<TypedArray, vec2> = vec2f
-export let vec3h: GpGpuAtomicData<TypedArray, vec3> = vec3f
-export let vec4h: GpGpuAtomicData<TypedArray, vec4> = vec4f
+export let vec2h: MappedAtomic<TypedArray, vec2> = vec2f
+export let vec3h: MappedAtomic<TypedArray, vec3> = vec3f
+export let vec4h: MappedAtomic<TypedArray, vec4> = vec4f
 
 function structAccessor<T extends Record<string, number>>(alphabet: string): AtomicAccessor<T> {
 	const letters = alphabet.split('')
@@ -118,23 +118,23 @@ const xyzwAcc = structAccessor<{ x: number; y: number; z: number; w: number }>('
 const rgbAcc = structAccessor<{ r: number; g: number; b: number }>('rgb')
 const rgbaAcc = structAccessor<{ r: number; g: number; b: number; a: number }>('rgba')
 
-export let Vector2: GpGpuAtomicData<TypedArray, { x: number; y: number }> = vec2f.transform(xyAcc)
-export let Vector3: GpGpuAtomicData<TypedArray, { x: number; y: number; z: number }> =
+export let Vector2: MappedAtomic<TypedArray, { x: number; y: number }> = vec2f.transform(xyAcc)
+export let Vector3: MappedAtomic<TypedArray, { x: number; y: number; z: number }> =
 	vec3f.transform(xyzAcc)
-export let Vector4: GpGpuAtomicData<TypedArray, { x: number; y: number; z: number; w: number }> =
+export let Vector4: MappedAtomic<TypedArray, { x: number; y: number; z: number; w: number }> =
 	vec4f.transform(xyzwAcc)
-export let RGB: GpGpuAtomicData<TypedArray, { r: number; g: number; b: number }> =
+export let RGB: MappedAtomic<TypedArray, { r: number; g: number; b: number }> =
 	vec3f.transform(rgbAcc)
-export let RGBA: GpGpuAtomicData<TypedArray, { r: number; g: number; b: number; a: number }> =
+export let RGBA: MappedAtomic<TypedArray, { r: number; g: number; b: number; a: number }> =
 	vec4f.transform(rgbaAcc)
 let f16Activated = false
 export function activateF16(available: boolean) {
 	if (f16Activated) return
 	f16Activated = true
 	if (!available) return
-	vec2h = new GpGpuAtomicData(Float16Array, 2, 'vec2h', vec(2))
-	vec3h = new GpGpuAtomicData(Float16Array, 4, 'vec3h', vec(3))
-	vec4h = new GpGpuAtomicData(Float16Array, 4, 'vec4h', vec(4))
+	vec2h = new MappedAtomic(Float16Array, 2, 'vec2h', vec(2))
+	vec3h = new MappedAtomic(Float16Array, 4, 'vec3h', vec(3))
+	vec4h = new MappedAtomic(Float16Array, 4, 'vec4h', vec(4))
 	Vector2 = vec2h.transform(xyAcc)
 	Vector3 = vec3h.transform(xyzAcc)
 	Vector4 = vec4h.transform(xyzwAcc)
