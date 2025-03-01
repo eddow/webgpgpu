@@ -1,7 +1,7 @@
 import { inference } from './binding'
 import type { BindingType, Bindings, BoundTypes } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
-import { InferenceBindings } from './binding/inference'
+import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
 import { type CodeParts, WgslCodeGenerator } from './code'

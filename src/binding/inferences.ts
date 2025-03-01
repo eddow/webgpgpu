@@ -65,7 +65,7 @@ export class InferenceBindings<
 	}
 }
 
-export default function inference<
+export default function inferences<
 	Inferences extends AnyInference,
 	Input extends Record<
 		string,
