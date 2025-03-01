@@ -18,7 +18,7 @@ npm install --save webgpgpu
 ### Usage
 
 ```ts
-import createWebGpGpu, { f32 } from 'webgpgpu'
+import createWebGpGpu, { f32 } from 'webgpgpu.ts'
 
 async function main() {
 	const webGpGpu = await createWebGpGpu()
@@ -344,7 +344,7 @@ The `WebGPUOptions` are only available to the node.js clients.
 The library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who allows giving parameters when creating the GPU object. These parameters can be given to the default creation export.
 
 ```ts
-import createWebGpGpu from 'webgpgpu'
+import createWebGpGpu from 'webgpgpu.ts'
 
 async function main() {
 	const webGpGpu = createWebGpGpu({}, {}, 'enable-dawn-features=allow_unsafe_apis,dump_shaders,disable_symbol_renaming', ...)
