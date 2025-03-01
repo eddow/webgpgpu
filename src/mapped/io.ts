@@ -165,12 +165,12 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 	 * @returns
 	 */
 	at(...index: InputSpec): Element {
-		const { size } = this
+		const { size, offset } = this
 		if (index.length !== size.length)
 			throw new InferenceValidationError(
 				`Index length mismatch: taking ${index.length}-D index element out of ${size.length}-D buffer`
 			)
-		return this.read(bufferPosition(index, size))
+		return this.read(bufferPosition(index, size) + offset)
 	}
 	*keys(): IterableIterator<InputSpec> {
 		const { size } = this
@@ -188,7 +188,7 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 	 * @returns Generator<[InputSpec, Element]>
 	 */
 	*entries(): Generator<[InputSpec, Element]> {
-		let pos = 0
+		let pos = this.offset
 		for (const index of this.keys()) yield [index as InputSpec, this.read(pos++)]
 	}
 	// TODO: Cache these
@@ -204,8 +204,8 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 		}) as InputSpec
 	}
 	*values() {
-		const { length } = this
-		for (let pos = 0; pos < length; ++pos) yield this.read(pos)
+		const { length, offset } = this
+		for (let pos = offset; pos < length; ++pos) yield this.read(pos)
 	}
 	flat(): Element[] {
 		return [...this.values()]

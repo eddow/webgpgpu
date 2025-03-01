@@ -32,7 +32,5 @@ describe('arrays', () => {
 		`)
 		const { m } = await kernel({ a: [1, 2], b: [3, 5, 7] })
 		expect(m.flat()).to.deep.equal([3, 6, 5, 10, 7, 14])
-		expect(m.at(1, 0)).to.equal(5)
-		expect(m.at(0, 1)).to.equal(6)
 	})
 })

@@ -24,17 +24,15 @@ export type CreatedInferences<Input> = {} & UnionToIntersection<
 		[Name in keyof Input]: ExpandKeys<Name & string, Input[Name]>
 	}[keyof Input]
 >
+
+export type Inference1 = Inferred
+export type Inference2 = readonly [Inferred, Inferred]
+export type Inference3 = readonly [Inferred, Inferred, Inferred]
+export type Inference4 = readonly [Inferred, Inferred, Inferred, Inferred]
+export type Inference = Inference1 | Inference2 | Inference3 | Inference4
+
 export type AnyInference<Key extends string = string> = { [K in Key]: Inferred }
-export function infer<
-	Inferences extends AnyInference,
-	Input extends Record<
-		string,
-		| Inferred
-		| readonly [Inferred, Inferred]
-		| readonly [Inferred, Inferred, Inferred]
-		| readonly [Inferred, Inferred, Inferred, Inferred]
-	>, // Allow any tuple length
->(
+export function infer<Inferences extends AnyInference, Input extends Record<string, Inference>>(
 	inferences: Inferences,
 	input: Input,
 	reason?: string,
