@@ -12,7 +12,7 @@ versions:
 ### Installation
 
 ```bash
-npm install --save webgpgpu
+npm install --save webgpgpu.ts
 ```
 
 ### Usage
@@ -120,7 +120,7 @@ output[thread.x] = a[thread.x] * b;
 
 > Note: The kernel function retrieves the *whole* generated code on `toString()`
 
-### define & use
+### define & import
 
 Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `initialization`. The former is added outside the function, the latter inside the main function, before the main code
 
@@ -190,15 +190,22 @@ const kernel = webGpGpu
 const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
 ```
 
-### infer
+### infer & specifyInference
 
-Allows to create/fix an inference (cf. [Size inference](#size-inference) section).
+`infer` allows to create an inference (cf. [Size inference](#size-inference) section).
 
 ```ts
-webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
+webGpGpu
+	.infer({ myTableSize: [undefined, undefined] })
+	.input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
 ```
 
 With this code, the variable `myTableSize` will be a `vec2u` available in the wgsl code that will be fixed (here, when a `myTable` of a certain size will be given as argument)
+
+To fix (assert) an existing inference, `specifyInference` can be used.
+```ts
+webGpGpu.specifyInference({ 'myTableSize.x': 10 })
+```
 
 ## Kernel
 
@@ -233,6 +240,10 @@ In all array accesses in TS, the multi-dimensional indexes are given *most-impor
   - `value([[1, 2], [3, 4], [5, 6]]).at(2, 1) === 6`
   - `value([[1, 2], [3, 4], [5, 6]]).slice(0) ~ [1, 2]`
 
+The given values also act as JS arrays. The `operator[](index: number)` is hacked in and the array interface will be forwarded.
+
+> Note: There is no array creation so to speak while not specifically asked for, it all end up being an access to the underlying `ArrayBuffer`.
+
 ## Types
 
 The main types from wgsl are available with their wgsl name (`f32`, `vec2f`, etc.). Note: These are *values* who specify a wgsl *type* - it is not a typescript type. These  types (like `Input1D<[number, number]>`) are produced and used automatically (here, from a `vec2f.array(x)`).
@@ -245,7 +256,7 @@ f32.array(3).array(4)
 f32.array(4, 3)	// take care .array(X).array(Y) -> .array(Y, X)
 ```
 
-Arguments (simple, arrays of any dimension) can always be passed as corresponding `ArrayBuffer`. So, `mat3x2f.array(5).value(Float32Array.from([...]).buffer)` is doing the job! (even if array sizes are still validated)
+Arguments (simple, arrays of any dimension) can always be passed as corresponding `ArrayBuffer`. So, `mat3x2f.array(5).value(Float32Array.from([...]))` is doing the job! (even if array sizes are still validated)
 
 Types also specify how to read/write elements from/to an `ArrayBuffer`.
  
@@ -285,15 +296,17 @@ Ways to give the value happen the same as for the [inputs](#inputs).
 
 ## Size inference
 
-One inference exists in all computation: `threads`, but others can be declared and used.
+One inference exists in all computation: `threads: vec3u`, but others can be declared and used.
 
-Inferences come in all shades of `u32` (`u32`, `vec2u`, `vec3u` & `vec4u`) - one is provides (`threads`: `vec3u`) though others can be created. When sizes are specified, an inference can be used - the WebGpGpu engine remembers an inferring status (what is known what is not), deduce from given arrays and assert sizes.
+When sizes are specified - bound as commons or given as inputs, an inference can be used - the WebGpGpu engine remembers an inferring status (what is known what is not), deduce from given arrays and assert sizes.
 
 In the shader code, inferences can be used directly (they are declared in their `u32` shade) and the values will be provided as uniforms.
 
 Inferences are meant to replace `arrayLength` and other mechanism. If really a random-size table has to be given and its size retrieved, this can be used:
 ```ts
-	webGpGpu.infer({ myTableSize: [undefined, undefined] }).input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
+webGpGpu
+	.infer({ myTableSize: [undefined, undefined] })
+	.input({ myTable: f32.array('myTableSize.x', 'myTableSize.y') })
 ```
 and `myTableSize` will be a provided `vec2u`.
 
@@ -301,7 +314,7 @@ and `myTableSize` will be a provided `vec2u`.
 
 `.infer({ [inferenceName]: inferedValues})` where the values is one inferred value or a 2-3-4-length array of such. Inferred values can be directly given as numbers if their value is known, or let `undefined` in order to have it inferred later.
 
-`.infer` can be called with an already-declared
+`.infer` can be called with an already-declared inference to force some values (the `undefined` values are ignored, but the dimension has to be the same as the previous declaration).
 
 ### Inference defaulting
 
@@ -358,19 +371,19 @@ If you manage to have your own adapter/device, want to share a device, ...
 `WebGpGpu` exposes :
 ```ts
 class WebGpGpu {
-	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): WebGpGpu
+	static createRoot(device: GPUDevice, options?: { dispose?: () => void }): RootWebGpGpu
 	static createRoot(
-		root: GPUAdapter,
-		options?: { dispose?: () => void; deviceDescriptor?: GPUDeviceDescriptor }
-	): Promise<WebGpGpu>
+		adapter: GPUAdapter,
+		options?: { dispose?: (device: GPUDevice) => void; deviceDescriptor?: GPUDeviceDescriptor }
+	): Promise<RootWebGpGpu>
 	static createRoot(
-		root: GPU,
+		gpu: GPU,
 		options?: {
-			dispose?: () => void
+			dispose?: (device: GPUDevice) => void
 			deviceDescriptor?: GPUDeviceDescriptor
 			adapterOptions?: GPURequestAdapterOptions
 		}
-	): Promise<WebGpGpu>
+	): Promise<RootWebGpGpu>
 
 	get device(): GPUDevice
 	dispose(): void
@@ -437,6 +450,7 @@ For node, this library uses [node-webgpu](https://github.com/dawn-gpu/node-webgp
   - Code modification for array indexing (for now, only 0/1-D)
   - Code modification to support `f16` immediate values
 - structures
+
 - Chaining (output become input of next kernel without transfer in CPU memory)
   - Even more complex pipeline management?
 - UBO management and automatic structures

@@ -86,18 +86,18 @@ export class WebGpGpu<
 	/**
 	 * This is the order the bindings are processed through at run time
 	 * 1 inputs - usually fix the values of inferences at run-time from parameters
-	 * 2 inferences - defaults values to `1`
+	 * 2 inferences - defaults values to `1` and actually provide the inferred values to the GPU
 	 */
 	static bindingsOrder: BindingType<any>[] = [InputBindings, InferenceBindings]
 	// #region Creation
 
-	static createRoot(root: GPUDevice, options?: { dispose?: () => void }): RootWebGpGpu
+	static createRoot(device: GPUDevice, options?: { dispose?: () => void }): RootWebGpGpu
 	static createRoot(
-		root: GPUAdapter,
+		adapter: GPUAdapter,
 		options?: { dispose?: (device: GPUDevice) => void; deviceDescriptor?: GPUDeviceDescriptor }
 	): Promise<RootWebGpGpu>
 	static createRoot(
-		root: GPU,
+		gpu: GPU,
 		options?: {
 			dispose?: (device: GPUDevice) => void
 			deviceDescriptor?: GPUDeviceDescriptor
@@ -105,7 +105,7 @@ export class WebGpGpu<
 		}
 	): Promise<RootWebGpGpu>
 	static createRoot(
-		root: GPU | GPUAdapter | GPUDevice,
+		from: GPU | GPUAdapter | GPUDevice,
 		{
 			dispose,
 			adapterOptions,
@@ -141,9 +141,9 @@ export class WebGpGpu<
 				})
 			)
 		}
-		if (root instanceof GPUDevice) return create(root)
+		if (from instanceof GPUDevice) return create(from)
 		const adapter =
-			root instanceof GPUAdapter ? Promise.resolve(root) : root.requestAdapter(adapterOptions)
+			from instanceof GPUAdapter ? Promise.resolve(from) : from.requestAdapter(adapterOptions)
 		return adapter
 			.then((adapter) => {
 				if (!adapter) throw new Error('Adapter not created')
@@ -342,6 +342,12 @@ export class WebGpGpu<
 		return this.bind(new InferenceBindings(input))
 	}
 
+	/**
+	 * Specify some inferences explicitly
+	 * @param values Values to specify
+	 * @param reason Reason for specifying those values - Mainly used for debugging purposes
+	 * @returns
+	 */
 	specifyInference(values: Partial<Inferences>, reason = '.specifyInference() explicit call') {
 		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
 			inferences: specifyInferences({ ...this.inferences }, values, reason, this.inferenceReasons),
