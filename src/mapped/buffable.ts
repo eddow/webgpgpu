@@ -8,7 +8,7 @@ export type Input1D<Element> = Element[] | ArrayBufferLike[] | ArrayBufferLike
 export type Input2D<Element> = Input1D<Element>[] | ArrayBufferLike
 export type Input3D<Element> = Input2D<Element>[] | ArrayBufferLike
 export type Input4D<Element> = Input3D<Element>[] | ArrayBufferLike
-export type InputXD<Element = any, SizesSpec extends any[] = any[]> = SizesSpec extends []
+export type InputXD<Element = any, SizesSpec extends readonly any[] = any[]> = SizesSpec extends []
 	? Input0D<Element>
 	: SizesSpec extends [any]
 		? Input1D<Element>
@@ -24,8 +24,8 @@ export type AnyInput = Input0D<any> | Input1D<any> | Input2D<any> | Input3D<any>
 export type ValuedBuffable<
 	Inferences extends AnyInference = AnyInference,
 	Element = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > = {
 	buffable: Buffable<Inferences, Element, SizesSpec, ElementSizeSpec>
 	value: InputXD<Element, SizesSpec>
@@ -37,8 +37,8 @@ export type ValuedBuffable<
 export interface Buffable<
 	Inferences extends AnyInference = any,
 	Element = any,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > {
 	readonly size: SizesSpec
 	readonly elementSize: ElementSizeSpec

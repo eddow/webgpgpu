@@ -1,7 +1,7 @@
 import { Float16Array } from '@petamoriken/float16'
 import { InferenceValidationError } from '../types'
 
-export type NumericSizesSpec<SizesSpec extends any[]> = {
+export type NumericSizesSpec<SizesSpec extends readonly any[]> = {
 	[K in keyof SizesSpec]: number
 }
 

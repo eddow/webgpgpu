@@ -112,7 +112,7 @@ export function toArrayBuffer<
 	return rv ?? new bufferType(0)*/
 }
 
-function bufferPosition(index: number[], size: number[]): number {
+function bufferPosition(index: readonly number[], size: readonly number[]): number {
 	let pos = 0
 	//for (let i = size.length - 1; i >= 0; i--) {
 	for (let i = 0; i < size.length; i++) {
@@ -123,7 +123,7 @@ function bufferPosition(index: number[], size: number[]): number {
 	return pos
 }
 
-function nextXdIndex(index: number[], size: number[]): boolean {
+function nextXdIndex(index: number[], size: readonly number[]): boolean {
 	for (let i = index.length - 1; i >= 0; i--) {
 		index[i]++
 		if (index[i] < size[i]) return true
@@ -132,25 +132,26 @@ function nextXdIndex(index: number[], size: number[]): boolean {
 	return false
 }
 
-function dot(a: number[], b: number[]): number {
+function dot(a: readonly number[], b: readonly number[]): number {
 	let sum = 0
 	const length = Math.min(a.length, b.length)
 	for (let i = 0; i < length; i++) sum += a[i] * b[i]
 	return sum
 }
 
-function prod(a: number[], product = 1): number {
+function prod(a: readonly number[], product = 1): number {
 	return a.reduce((a, b) => a * b, product)
 }
 
-type IndexableReturn<Element, InputSpec extends number[]> = InputSpec extends [number]
+type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec extends [number]
 	? Element
 	: InputSpec extends [number, ...infer Rest extends number[]]
 		? BufferReader<Element, Rest>
 		: never
-export class BufferReader<Element = any, InputSpec extends number[] = number[]> extends Indexable<
-	IndexableReturn<Element, InputSpec>
-> {
+export class BufferReader<
+	Element = any,
+	InputSpec extends readonly number[] = number[],
+> extends Indexable<IndexableReturn<Element, InputSpec>> {
 	constructor(
 		private readonly read: (index: number) => Element,
 		public readonly buffer: ArrayBuffer,
@@ -179,12 +180,13 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 			return
 		}
 		const index: number[] = size.map(() => 0)
-		do yield index as InputSpec
-		while (nextXdIndex(index, size))
+		do {
+			const copy = [...index] as const
+			yield copy as InputSpec
+		} while (nextXdIndex(index, size))
 	}
 	/**
 	 * Retrieves the [index, value] pairs, where `index` is the index array and `value` is the value at that index
-	 * Index is *not* cloned, so its content will be modified along browsing and should not be stored as-is
 	 * @returns Generator<[InputSpec, Element]>
 	 */
 	*entries(): Generator<[InputSpec, Element]> {
@@ -198,10 +200,12 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 	get stride(): InputSpec {
 		const { size } = this
 		let remaining = this.length
-		return size.map((s) => {
-			remaining /= s
-			return remaining
-		}) as InputSpec
+		return [
+			...size.map((s) => {
+				remaining /= s
+				return remaining
+			}),
+		] as const as InputSpec
 	}
 	*values() {
 		const { length, offset } = this
@@ -237,11 +241,14 @@ export class BufferReader<Element = any, InputSpec extends number[] = number[]> 
 	}
 }
 
-type SubSpec<Spec> = Spec extends [number, ...infer Rest extends number[]]
+type SubSpec<Spec> = Spec extends readonly [number, ...infer Rest extends number[]]
 	? Rest extends []
 		? never
 		: Rest | SubSpec<Rest>
 	: number[]
-type SubtractLengths<A extends any[], B extends any[]> = A extends [...B, ...infer Rest]
+type SubtractLengths<A extends readonly any[], B extends readonly any[]> = A extends [
+	...B,
+	...infer Rest,
+]
 	? Rest
 	: never

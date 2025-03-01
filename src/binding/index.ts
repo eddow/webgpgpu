@@ -1,6 +1,6 @@
 export * from './bindings'
 import commons from './commons'
-import inference from './inference'
+import inferences from './inference'
 import inputs from './inputs'
 import outputs from './outputs'
-export { inference, inputs, commons, outputs }
+export { inferences, inputs, commons, outputs }
