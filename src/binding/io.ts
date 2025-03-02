@@ -1,4 +1,4 @@
-import type { Buffable } from '../mapped/buffable'
+import type { Buffable } from 'src/buffable/buffable'
 import { ParameterError } from '../types'
 import type { GPUUnboundGroupLayoutEntry } from './bindings'
 // TODO: dynamically create UBOs with values of fixed size (when `#define` is usable: code parsing)

@@ -1,6 +1,6 @@
 export * from './webgpgpu'
 export * from './types'
-export * from './mapped'
+export * from './buffable'
 export * from './binding'
 export * from './inference'
 export * from './code'

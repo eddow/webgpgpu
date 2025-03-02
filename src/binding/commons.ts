@@ -1,6 +1,12 @@
+import {
+	type AnyInput,
+	type Buffable,
+	type InputXD,
+	type ValuedBuffable,
+	isBuffable,
+} from '../buffable'
 import { mapEntries } from '../hacks'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { type Buffable, type InputXD, type ValuedBuffable, isBuffable } from '../mapped'
 import { ParameterError } from '../types'
 import { Bindings, type GPUUnboundGroupEntry, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
@@ -15,7 +21,7 @@ export class CommonBindings<
 	CommonSpecs extends Record<string, ValuedBuffable<Inferences>>,
 > extends Bindings<SubInferences<Inferences, CommonSpecs>> {
 	public readonly wgslEntries: Record<string, WgslEntry<SubInferences<Inferences, CommonSpecs>>>
-	commonSpecs: { name: string; buffable: Buffable<Inferences>; value: InputXD }[]
+	commonSpecs: { name: string; buffable: Buffable<Inferences>; value: AnyInput }[]
 	private precomputedEntries?: GPUUnboundGroupEntry[]
 	constructor(commonSpecs: CommonSpecs) {
 		super()

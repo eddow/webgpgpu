@@ -2,12 +2,10 @@ import { Indexable } from '../hacks'
 import { type AnyInference, type SizeSpec, assertSize } from '../inference'
 import { log } from '../log'
 import { InferenceValidationError, ParameterError } from '../types'
-import type { InputXD } from './buffable'
+import type { InputXD } from './to-sort'
 
-export interface Writer<Element> {
-	write(index: number, value: Element): void
-	writeMany?(index: number, values: Element[]): void
-}
+export type Writer<Element> = (index: number, value: Element) => void
+export type Reader<Element> = (index: number) => Element
 
 function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
@@ -18,12 +16,12 @@ function assertElementSize(given: any, expected: number) {
 export function toArrayBuffer<
 	Inferences extends AnyInference,
 	Element,
-	SizesSpec extends SizeSpec<Inferences>[],
+	SizesSpec extends readonly SizeSpec<Inferences>[],
 >(
 	bytesPerElement: number,
 	data: InputXD<Element, SizesSpec>,
 	size: SizesSpec,
-	writer: (buffer: ArrayBuffer) => Writer<Element>,
+	writer: (buffer: ArrayBuffer) => (index: number, value: Element) => void,
 	inferences: Inferences,
 	reason: string,
 	reasons: Record<string, string>
@@ -38,7 +36,7 @@ export function toArrayBuffer<
 			return data
 		}
 		const buffer = new ArrayBuffer(bytesPerElement)
-		const { write } = writer(buffer)
+		const write = writer(buffer)
 		write(0, data as Element)
 		return buffer
 	}
@@ -56,13 +54,9 @@ export function toArrayBuffer<
 		if (!Array.isArray(data)) throw new ParameterError('Input is not an array nor a typed array')
 		assertSize([data.length], size, inferences, reason, reasons)
 		const buffer = new ArrayBuffer(bytesPerElement * data.length)
-		const { write, writeMany } = writer(buffer)
-		// We assert all the elements have the same type (no mixed number/ArrayBuffer)
-		if (writeMany && typeof data[0] === 'number') writeMany(0, data)
-		else {
-			let dst = 0
-			for (const element of data as Element[]) write(dst++, element)
-		}
+		const write = writer(buffer)
+		let dst = 0
+		for (const element of data as Element[]) write(dst++, element)
 		return buffer
 	}
 	// #endregion 1D
@@ -153,7 +147,7 @@ export class BufferReader<
 	InputSpec extends readonly number[] = number[],
 > extends Indexable<IndexableReturn<Element, InputSpec>> {
 	constructor(
-		private readonly read: (index: number) => Element,
+		private readonly read: Reader<Element>,
 		public readonly buffer: ArrayBuffer,
 		public readonly size: InputSpec,
 		public readonly offset: number = 0

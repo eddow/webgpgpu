@@ -1,16 +1,10 @@
+import { type Buffable, isBuffable } from '../buffable/buffable'
 import { mapEntries } from '../hacks'
-import { type AnyInference, type DeducedInference, type SizeSpec, resolvedSize } from '../inference'
-import type { Buffable } from '../mapped/buffable'
-import { isBuffable } from '../mapped/mapped'
+import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import type { InputType } from '../webgpgpu'
 import { Bindings, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
-
-type SubInferences<
-	Inferences extends AnyInference,
-	InputSpecs extends Record<string, Buffable>,
-> = Inferences & DeducedInference<InputSpecs[keyof InputSpecs]>
 
 export class InputBindings<
 	Inferences extends AnyInference,

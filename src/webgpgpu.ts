@@ -4,17 +4,17 @@ import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
-import { type CodeParts, WgslCodeGenerator } from './code'
-import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
-import { kernelScope } from './kernel'
-import { type Log, log } from './log'
 import {
 	type AnyInput,
 	type Buffable,
 	type BufferReader,
 	type ValuedBuffable,
 	activateF16,
-} from './mapped'
+} from './buffable'
+import { type CodeParts, WgslCodeGenerator } from './code'
+import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
+import { kernelScope } from './kernel'
+import { type Log, log } from './log'
 import { ParameterError, WebGpGpuError } from './types'
 import { explicitWorkSize } from './workgroup'
 

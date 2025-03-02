@@ -1,5 +1,5 @@
 export * from './atomics'
 export * from './struct'
-export * from './buffable'
+export * from './to-sort'
 export type { BufferReader } from './io'
-export { isBuffable } from './mapped'
+export * from './buffable'

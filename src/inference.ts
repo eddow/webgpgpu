@@ -1,4 +1,4 @@
-import type { Buffable } from './mapped/buffable'
+import type { Buffable } from './buffable'
 import { InferenceValidationError, ParameterError } from './types'
 
 export type Inferred = number | undefined
@@ -85,7 +85,7 @@ export type SizeSpec<Inferences extends AnyInference = AnyInference> = number | 
 
 export function assertSize<Inferences extends AnyInference>(
 	given: number[],
-	expected: SizeSpec<Inferences>[],
+	expected: readonly SizeSpec<Inferences>[],
 	inferences: Inferences,
 	reason: string,
 	reasons: Record<string, string>
@@ -110,13 +110,13 @@ export function assertSize<Inferences extends AnyInference>(
 	return specifyInferences(inferences, specified as Partial<Inferences>, reason, reasons)
 }
 
-type MapNumbers<TArray extends any[]> = {
+type MapNumbers<TArray extends readonly any[]> = {
 	[K in keyof TArray]: number
 }
 
 export function resolvedSize<
 	Inferences extends AnyInference,
-	SizesSpec extends SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 >(size: SizesSpec, inferences: Inferences): MapNumbers<SizesSpec> {
 	return size.map((s) => {
 		const rv = typeof s === 'number' ? s : (inferences[s] as number)

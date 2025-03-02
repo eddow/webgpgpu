@@ -6,21 +6,29 @@ import {
 	type SizeSpec,
 	resolvedSize,
 } from '../inference'
-import type { NumericSizesSpec, TypedArray, TypedArrayConstructor } from './arrays'
-import type { Buffable, InputXD, ValuedBuffable } from './buffable'
-import { BufferReader, type Writer, toArrayBuffer } from './io'
+import { BufferReader, type Reader, type Writer, toArrayBuffer } from './io'
+import type { InputXD, NumericSizesSpec, TypedArray, TypedArrayConstructor } from './to-sort'
 
-export function isBuffable(buffable: any): buffable is Buffable {
-	return buffable instanceof Mapped
+export type ValuedBuffable<
+	Inferences extends AnyInference = AnyInference,
+	Element = any,
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+> = {
+	buffable: Buffable<Inferences, Element, SizesSpec, ElementSizeSpec>
+	value: InputXD<Element, SizesSpec>
 }
 
-export abstract class Mapped<
-	Inferences extends AnyInference,
-	Element,
-	SizesSpec extends SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[],
-> implements Buffable<Inferences, Element, SizesSpec>
-{
+export function isBuffable(buffable: any): buffable is Buffable {
+	return buffable instanceof Buffable
+}
+
+export abstract class Buffable<
+	Inferences extends AnyInference = any,
+	Element = any,
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+> {
 	constructor(public readonly size: SizesSpec) {}
 	abstract readonly elementSize: ElementSizeSpec
 	elementByteSize(inferences: Inferences): number {
@@ -46,7 +54,7 @@ export abstract class Mapped<
 		)
 	}
 
-	abstract reader(buffer: ArrayBuffer): (index: number) => Element
+	abstract reader(buffer: ArrayBuffer): Reader<Element>
 	readArrayBuffer(
 		buffer: ArrayBuffer,
 		inferences: Inferences
@@ -57,9 +65,9 @@ export abstract class Mapped<
 			resolvedSize<Inferences, SizesSpec>(this.size, inferences)
 		)
 	}
-	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
+	array<const SubSizesSpec extends readonly SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
 		if (this.size.length > 0) throw Error('Making array of nor-scalar nor array')
-		return new MappedArray<
+		return new BuffableArray<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
@@ -78,16 +86,16 @@ export abstract class Mapped<
 	abstract readonly wgslSpecification: string
 }
 
-export class MappedArray<
+export class BuffableArray<
 	Inferences extends AnyInference,
 	Element,
-	SizesSpec extends SizeSpec<Inferences>[],
-	ElementSizeSpec extends SizeSpec<Inferences>[],
-> extends Mapped<Inferences, Element, SizesSpec, ElementSizeSpec> {
+	SizesSpec extends readonly SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[],
+> extends Buffable<Inferences, Element, SizesSpec, ElementSizeSpec> {
 	writer(buffer: ArrayBuffer): Writer<Element> {
 		return this.parent.writer(buffer)
 	}
-	reader(buffer: ArrayBuffer): (index: number) => Element {
+	reader(buffer: ArrayBuffer) {
 		return this.parent.reader(buffer)
 	}
 	get bytesPerAtomic() {
@@ -100,13 +108,13 @@ export class MappedArray<
 		return this.parent.elementSize
 	}
 	constructor(
-		protected parent: Mapped<Inferences, Element, any, any>,
+		protected parent: Buffable<Inferences, Element, any, any>,
 		size: SizesSpec
 	) {
 		super(size)
 	}
-	array<const SubSizesSpec extends SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
-		return new MappedArray<
+	array<const SubSizesSpec extends readonly SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
+		return new BuffableArray<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
@@ -118,10 +126,9 @@ export class MappedArray<
 export interface AtomicAccessor<Element> {
 	read(array: TypedArray, index: number): Element
 	write(array: TypedArray, index: number, value: Element): void
-	writeMany?(array: TypedArray, index: number, values: Element[]): void
 }
 
-export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
+export class BuffableAtomic<Buffer extends TypedArray, Element> extends Buffable<
 	AnyInference,
 	Element,
 	[],
@@ -136,7 +143,7 @@ export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
 		super([])
 	}
 	transform<NewElement>(elementAccessor: AtomicAccessor<NewElement>) {
-		return new MappedAtomic<Buffer, NewElement>(
+		return new BuffableAtomic<Buffer, NewElement>(
 			this.bufferType,
 			this.atomicSize,
 			this.wgslSpecification,
@@ -149,18 +156,13 @@ export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
 	get elementSize() {
 		return [] as [] // :-D
 	}
-	writer(buffer: ArrayBuffer) {
+	writer(buffer: ArrayBuffer): Writer<Element> {
 		const typedArray = new this.bufferType(buffer)
-		const { write, writeMany } = this.elementAccessor
-		return {
-			write: (index, value) => write(typedArray, index * this.atomicSize, value),
-			writeMany:
-				writeMany && ((index, values) => writeMany(typedArray, index * this.atomicSize, values)),
-		} as Writer<Element>
+		const { write } = this.elementAccessor
+		return (index, value) => write(typedArray, index * this.atomicSize, value)
 	}
 	reader(buffer: ArrayBuffer) {
 		const typedArray = new this.bufferType(buffer)
 		return (index: number) => this.elementAccessor.read(typedArray, index * this.atomicSize)
 	}
 }
-export type GpGpuSingleton<Element> = MappedAtomic<TypedArray, Element>

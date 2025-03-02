@@ -1,6 +1,6 @@
 import { Float16Array } from '@petamoriken/float16'
-import type { TypedArray } from './arrays'
-import { type AtomicAccessor, type GpGpuSingleton, MappedAtomic } from './mapped'
+import { type AtomicAccessor, BuffableAtomic } from './buffable'
+import type { TypedArray } from './to-sort'
 
 /* padding:
 Type	Intended Size	Actual Padded Size	Extra Padding?
@@ -49,7 +49,7 @@ const oneF32Type = <T>(
 	wgslSpecification: string,
 	elementAccessor: AtomicAccessor<T>
 ) =>
-	new MappedAtomic<Float32Array, T>(
+	new BuffableAtomic<Float32Array, T>(
 		Float32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'f'),
@@ -61,13 +61,13 @@ const typeTriplet = <T>(
 	elementAccessor: AtomicAccessor<T>
 ) => [
 	oneF32Type(elementSize, wgslSpecification, elementAccessor),
-	new MappedAtomic<Uint32Array, T>(
+	new BuffableAtomic<Uint32Array, T>(
 		Uint32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'u'),
 		elementAccessor
 	),
-	new MappedAtomic<Int32Array, T>(
+	new BuffableAtomic<Int32Array, T>(
 		Int32Array,
 		elementSize,
 		wgslSpecification.replace('#', 'i'),
@@ -78,7 +78,6 @@ const typeTriplet = <T>(
 export const [f32, u32, i32] = typeTriplet<number>(1, '#32', {
 	read: (typedArray, index) => typedArray.at(index)!,
 	write: (typedArray, index, value) => typedArray.set([value], index),
-	writeMany: (typedArray, index, values) => typedArray.set(values, index),
 })
 
 export const [vec2f, vec2u, vec2i] = typeTriplet<vec2>(2, 'vec2#', vec(2))
@@ -96,9 +95,9 @@ export const mat4x4f = oneF32Type<mat4x4>(16, 'mat4x4#', mat(4, 4))
 
 // #region f16
 // Only exist as vec#h shape
-export let vec2h: MappedAtomic<TypedArray, vec2> = vec2f
-export let vec3h: MappedAtomic<TypedArray, vec3> = vec3f
-export let vec4h: MappedAtomic<TypedArray, vec4> = vec4f
+export let vec2h: BuffableAtomic<TypedArray, vec2> = vec2f
+export let vec3h: BuffableAtomic<TypedArray, vec3> = vec3f
+export let vec4h: BuffableAtomic<TypedArray, vec4> = vec4f
 
 function structAccessor<T extends Record<string, number>>(alphabet: string): AtomicAccessor<T> {
 	const letters = alphabet.split('')
@@ -118,23 +117,23 @@ const xyzwAcc = structAccessor<{ x: number; y: number; z: number; w: number }>('
 const rgbAcc = structAccessor<{ r: number; g: number; b: number }>('rgb')
 const rgbaAcc = structAccessor<{ r: number; g: number; b: number; a: number }>('rgba')
 
-export let Vector2: MappedAtomic<TypedArray, { x: number; y: number }> = vec2f.transform(xyAcc)
-export let Vector3: MappedAtomic<TypedArray, { x: number; y: number; z: number }> =
+export let Vector2: BuffableAtomic<TypedArray, { x: number; y: number }> = vec2f.transform(xyAcc)
+export let Vector3: BuffableAtomic<TypedArray, { x: number; y: number; z: number }> =
 	vec3f.transform(xyzAcc)
-export let Vector4: MappedAtomic<TypedArray, { x: number; y: number; z: number; w: number }> =
+export let Vector4: BuffableAtomic<TypedArray, { x: number; y: number; z: number; w: number }> =
 	vec4f.transform(xyzwAcc)
-export let RGB: MappedAtomic<TypedArray, { r: number; g: number; b: number }> =
+export let RGB: BuffableAtomic<TypedArray, { r: number; g: number; b: number }> =
 	vec3f.transform(rgbAcc)
-export let RGBA: MappedAtomic<TypedArray, { r: number; g: number; b: number; a: number }> =
+export let RGBA: BuffableAtomic<TypedArray, { r: number; g: number; b: number; a: number }> =
 	vec4f.transform(rgbaAcc)
 let f16Activated = false
 export function activateF16(available: boolean) {
 	if (f16Activated) return
 	f16Activated = true
 	if (!available) return
-	vec2h = new MappedAtomic(Float16Array, 2, 'vec2h', vec(2))
-	vec3h = new MappedAtomic(Float16Array, 4, 'vec3h', vec(3))
-	vec4h = new MappedAtomic(Float16Array, 4, 'vec4h', vec(4))
+	vec2h = new BuffableAtomic(Float16Array, 2, 'vec2h', vec(2))
+	vec3h = new BuffableAtomic(Float16Array, 4, 'vec3h', vec(3))
+	vec4h = new BuffableAtomic(Float16Array, 4, 'vec4h', vec(4))
 	Vector2 = vec2h.transform(xyAcc)
 	Vector3 = vec3h.transform(xyzAcc)
 	Vector4 = vec4h.transform(xyzwAcc)

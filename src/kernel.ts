@@ -1,7 +1,7 @@
 import type { BindingType, Bindings } from './binding'
+import type { AnyInput, BufferReader } from './buffable'
 import { type AnyInference, extractInference, specifyInferences } from './inference'
 import { log } from './log'
-import type { AnyInput, BufferReader } from './mapped'
 import { CompilationError } from './types'
 import { workGroupCount, workgroupSize } from './workgroup'
 
