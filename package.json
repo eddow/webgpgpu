@@ -12,7 +12,7 @@
 		"prepack": "npm run lint && npm run build",
 		"pack:list": "npm pack --dry-run",
 		"benchmark": "tsx tests/benchmark.ts",
-		"tsx": "tsx tests/test.ts"
+		"sandbox": "tsx tests/sandbox.ts"
 	},
 	"keywords": ["webgpgpu", "gpu", "gpgpu", "webgpu", "typescript"],
 	"main": "./lib/server.ts",

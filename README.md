@@ -29,7 +29,9 @@ async function main() {
 			data: f32.array('threads.x')
 		})
 		.output({ produced: f32.array('threads.x') })
-		.kernel('produced[thread.x] = myUniform * data[thread.x];')
+		.kernel(/*wgsl*/`
+	produced[thread.x] = myUniform * data[thread.x];
+		`)
 
 	const { produced } = await kernel({
 		myUniform: 2,
@@ -58,12 +60,12 @@ The point of the library is to automatize the parallelization and all the config
 For those who tried a bit, all the bindings, buffer writing/reading, and other things that are necessary to write a GPU program, are hidden from the user.
 
 With real pieces of :
-- TypeScript, and the whole is highly typed.
+- TypeScript, as the whole is highly typed.
 - Sizes assertion and even inference.
 - Optimizations
   - buffer re-usage
   - workgroup-size calculation
-  - `TypedArray` optimization js-side (only `set()` and `subarray()`)
+  - `ArrayBuffer` optimization js-side (no superfluous read/writes, ...)
   - etc.
 - Compatibility:
   - browser: Many browsers still require some manipulation as WebGPU is not yet completely standardized
@@ -312,9 +314,7 @@ and `myTableSize` will be a provided `vec2u`.
 
 ### Inference declarations and value forcing
 
-`.infer({ [inferenceName]: inferedValues})` where the values is one inferred value or a 2-3-4-length array of such. Inferred values can be directly given as numbers if their value is known, or let `undefined` in order to have it inferred later.
-
-`.infer` can be called with an already-declared inference to force some values (the `undefined` values are ignored, but the dimension has to be the same as the previous declaration).
+cf. [infer & specifyInference](#infer--specifyinference)
 
 ### Inference defaulting
 
@@ -417,11 +417,11 @@ Note that a `log.error` will always have its associated exception throw.
   - [karma test explorer](https://marketplace.visualstudio.com/items?itemName=lucono.karma-test-explorer)
   - [mocha test explorer](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-mocha-test-adapter)
 - Other useful VSCode extensions:
-  - [inline-wgsl coloring](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
-- Linux: Do *not* use chromium, it will not support WebGPU - install chrome/firefox(untested)/...
-
+  - [inline-wgsl syntax highlighting](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
 
 ### Ubuntu
+
+Do *not* use chromium, it will not support WebGPU - install chrome/firefox(untested)/...
 
 ```bash
 # 1. Add Google Repository

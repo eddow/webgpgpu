@@ -14,12 +14,3 @@ export class CompilationError extends WebGpGpuError {
 		super('Compilation error')
 	}
 }
-
-export function mapEntries<From, To, Keys extends PropertyKey>(
-	obj: { [key in Keys]: From },
-	fn: (value: From, key: PropertyKey) => To
-): { [key in Keys]: To } {
-	return Object.fromEntries(
-		Object.entries(obj).map(([key, value]: [PropertyKey, unknown]) => [key, fn(value as From, key)])
-	) as { [key in Keys]: To }
-}

@@ -105,7 +105,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 				)
 			return entries
 		})
-
+		// Expect all callInfer usage are solved
 		const customBindGroup = device.createBindGroup({
 			label: 'custom-bind-group',
 			layout: bindGroupLayout,

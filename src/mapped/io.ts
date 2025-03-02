@@ -197,6 +197,9 @@ export class BufferReader<
 	get flatLength(): number {
 		return prod(this.size)
 	}
+	get length(): number {
+		return this.size[0]
+	}
 	get stride(): InputSpec {
 		const { size } = this
 		let remaining = this.flatLength

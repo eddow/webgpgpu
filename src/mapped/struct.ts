@@ -11,10 +11,10 @@ export class Struct<
 	get elementSize() {
 		return [] as [] // :-D
 	}
-	write(buffer: ArrayBuffer): Writer<any> {
+	writer(buffer: ArrayBuffer): Writer<any> {
 		throw new Error('Method not implemented: Struct.write')
 	}
-	read(buffer: ArrayBuffer): (index: number) => any {
+	reader(buffer: ArrayBuffer): (index: number) => any {
 		throw new Error('Method not implemented: Struct.read')
 	}
 	get bytesPerAtomic(): number {

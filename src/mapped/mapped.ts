@@ -1,3 +1,4 @@
+import { mapEntries } from '../hacks'
 import {
 	type AnyInference,
 	type InferencesList,
@@ -25,31 +26,33 @@ export abstract class Mapped<
 	elementByteSize(inferences: Inferences): number {
 		return resolvedSize(this.elementSize, inferences).reduce((a, b) => a * b, this.bytesPerAtomic)
 	}
-	abstract write(buffer: ArrayBuffer): Writer<Element>
+	abstract writer(buffer: ArrayBuffer): Writer<Element>
 	toArrayBuffer(
 		data: InputXD<Element, SizesSpec>,
 		inferences: Inferences,
-		reason: string,
-		reasons: Record<string, string>
+		reason = 'hardcoded',
+		reasons: Record<string, string> | string = 'hardcoded'
 	): ArrayBuffer {
+		if (typeof reasons === 'string')
+			reasons = mapEntries(inferences, (i) => (i === undefined ? undefined : (reasons as string)))
 		return toArrayBuffer<Inferences, Element, SizesSpec>(
 			this.elementByteSize(inferences),
 			data,
 			this.size,
-			(buffer) => this.write(buffer),
+			(buffer) => this.writer(buffer),
 			inferences,
 			reason,
 			reasons
 		)
 	}
 
-	abstract read(buffer: ArrayBuffer): (index: number) => Element
+	abstract reader(buffer: ArrayBuffer): (index: number) => Element
 	readArrayBuffer(
 		buffer: ArrayBuffer,
 		inferences: Inferences
 	): BufferReader<Element, NumericSizesSpec<SizesSpec>> {
 		return new BufferReader<Element, NumericSizesSpec<SizesSpec>>(
-			this.read(buffer),
+			this.reader(buffer),
 			buffer,
 			resolvedSize<Inferences, SizesSpec>(this.size, inferences)
 		)
@@ -81,11 +84,11 @@ export class MappedArray<
 	SizesSpec extends SizeSpec<Inferences>[],
 	ElementSizeSpec extends SizeSpec<Inferences>[],
 > extends Mapped<Inferences, Element, SizesSpec, ElementSizeSpec> {
-	write(buffer: ArrayBuffer): Writer<Element> {
-		return this.parent.write(buffer)
+	writer(buffer: ArrayBuffer): Writer<Element> {
+		return this.parent.writer(buffer)
 	}
-	read(buffer: ArrayBuffer): (index: number) => Element {
-		return this.parent.read(buffer)
+	reader(buffer: ArrayBuffer): (index: number) => Element {
+		return this.parent.reader(buffer)
 	}
 	get bytesPerAtomic() {
 		return this.parent.bytesPerAtomic
@@ -146,7 +149,7 @@ export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
 	get elementSize() {
 		return [] as [] // :-D
 	}
-	write(buffer: ArrayBuffer) {
+	writer(buffer: ArrayBuffer) {
 		const typedArray = new this.bufferType(buffer)
 		const { write, writeMany } = this.elementAccessor
 		return {
@@ -155,7 +158,7 @@ export class MappedAtomic<Buffer extends TypedArray, Element> extends Mapped<
 				writeMany && ((index, values) => writeMany(typedArray, index * this.atomicSize, values)),
 		} as Writer<Element>
 	}
-	read(buffer: ArrayBuffer) {
+	reader(buffer: ArrayBuffer) {
 		const typedArray = new this.bufferType(buffer)
 		return (index: number) => this.elementAccessor.read(typedArray, index * this.atomicSize)
 	}

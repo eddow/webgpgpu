@@ -1,14 +1,6 @@
 import type { Input1D, mat2x3, mat3x2, vec2, vec3 } from 'webgpgpu'
 
-type NumbersInArrays =
-	| number
-	| readonly number[]
-	| readonly number[][]
-	| readonly number[][][]
-	| readonly number[][][][]
-	| readonly number[][][][][]
-	| readonly number[][][][][][]
-type Mul<A, B> = { a: Input1D<A>; b: Input1D<B>; r: NumbersInArrays }
+type Mul<A, B> = { a: Input1D<A>; b: Input1D<B>; r: any[] }
 export const multiplication: {
 	f32: Mul<number, number>[]
 	vec2f: Mul<vec2, vec2>[]

@@ -1,6 +1,7 @@
+import { mapEntries } from '../hacks'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { type Buffable, type InputXD, type ValuedBuffable, isBuffable } from '../mapped'
-import { ParameterError, mapEntries } from '../types'
+import { ParameterError } from '../types'
 import { Bindings, type GPUUnboundGroupEntry, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry } from './io'
 

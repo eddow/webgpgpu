@@ -32,6 +32,7 @@ export default function (config) {
 
 		atomic_save: false,
 		customLaunchers: {
+			// Unresolved: headless never seems to provide the GPU - so this is unusable.
 			HeadlessChrome: {
 				base: 'ChromeHeadless',
 				flags: [

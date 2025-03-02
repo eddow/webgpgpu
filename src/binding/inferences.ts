@@ -1,3 +1,4 @@
+import { mapEntries } from '../hacks'
 import {
 	type AnyInference,
 	type CreatedInferences,
@@ -5,7 +6,6 @@ import {
 	extractInference,
 	infer,
 } from '../inference'
-import { mapEntries } from '../types'
 import { Bindings, type WgslEntry } from './bindings'
 
 // TODO: Type-check no interference in inference (no common key)

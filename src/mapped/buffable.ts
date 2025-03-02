@@ -3,11 +3,10 @@ import type { NumericSizesSpec } from './arrays'
 import type { BufferReader } from './io'
 
 export type Input0D<Element> = Element | ArrayBufferLike
-// Here, no Input0D<Element>[], as direct entries and array buffers should not be mixed up in an entry
-export type Input1D<Element> = readonly Element[] | readonly ArrayBufferLike[] | ArrayBufferLike
-export type Input2D<Element> = readonly Input1D<Element>[] | ArrayBufferLike
-export type Input3D<Element> = readonly Input2D<Element>[] | ArrayBufferLike
-export type Input4D<Element> = readonly Input3D<Element>[] | ArrayBufferLike
+export type Input1D<Element> = ArrayLike<Input0D<Element>> | ArrayBufferLike
+export type Input2D<Element> = ArrayLike<Input1D<Element>> | ArrayBufferLike
+export type Input3D<Element> = ArrayLike<Input2D<Element>> | ArrayBufferLike
+export type Input4D<Element> = ArrayLike<Input3D<Element>> | ArrayBufferLike
 export type InputXD<Element = any, SizesSpec extends readonly any[] = any[]> = SizesSpec extends []
 	? Input0D<Element>
 	: SizesSpec extends [any]
@@ -45,8 +44,8 @@ export interface Buffable<
 	toArrayBuffer(
 		data: InputXD<Element, SizesSpec>,
 		inferences: Inferences,
-		reason: string,
-		reasons: Record<string, string>
+		reason?: string,
+		reasons?: Record<string, string>
 	): ArrayBuffer
 	value(
 		v: InputXD<Element, SizesSpec>
