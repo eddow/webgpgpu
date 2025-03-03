@@ -7,6 +7,18 @@ import type { InputXD } from './to-sort'
 export type Writer<Element> = (index: number, value: Element) => void
 export type Reader<Element> = (index: number) => Element
 
+type SubSpec<Spec> = Spec extends readonly [number, ...infer Rest extends number[]]
+	? Rest extends []
+		? never
+		: Rest | SubSpec<Rest>
+	: number[]
+type SubtractLengths<A extends readonly any[], B extends readonly any[]> = A extends [
+	...B,
+	...infer Rest,
+]
+	? Rest
+	: never
+
 function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
 		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
@@ -144,13 +156,13 @@ export function toArrayBuffer<
 	writeInputData(buffer, 0, data, sizes, write)
 	return buffer
 }
+const customInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
 
 type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec extends [number]
 	? Element
 	: InputSpec extends [number, ...infer Rest extends number[]]
 		? BufferReader<Element, Rest>
 		: never
-// TODO: Array.from(bufferReader)
 // TODO: should have all the info even for children browsing cached & given when constructing sub-buffer as {me, subs} (no more array slice)
 export class BufferReader<
 	Element = any,
@@ -239,26 +251,20 @@ export class BufferReader<
 			this.offset + dot(sSpec, stride)
 		)
 	}
-	*sections() {
-		// TODO: Implement
-	}
 	getAtIndex(index: number): any {
 		// @ts-expect-error We know InputSpec but only programmatically
 		return this.size.length === 1 ? this.at(index) : this.section(index)
 	}
+	// TODO: node displaying a BufferReader throws [Array: Inspection interrupted prematurely. Maximum call stack size exceeded.]
+	toString(): string {
+		return 'BufferReader'
+	}
+	get [Symbol.toStringTag]() {
+		return 'BufferReader'
+	}
+
+	[customInspectSymbol](/*depth, inspectOptions, inspect*/) {
+		return 'BufferReader'
+	}
 	// TODO: Implement Array<...>
 }
-
-type SubSpec<Spec> = Spec extends readonly [number, ...infer Rest extends number[]]
-	? Rest extends []
-		? never
-		: Rest | SubSpec<Rest>
-	: number[]
-type SubtractLengths<A extends readonly any[], B extends readonly any[]> = A extends [
-	...B,
-	...infer Rest,
-]
-	? Rest
-	: never
-
-const a = [].map

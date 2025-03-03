@@ -32,6 +32,9 @@ export class Struct<
 		// TODO Struct.paddedDescriptor
 		return this.descriptor
 	}
+	get base() {
+		return this
+	}
 	with<NewValue extends Record<string, Buffable<Inferences, any, any, []>>>(
 		newValue: NewValue,
 		newName?: string

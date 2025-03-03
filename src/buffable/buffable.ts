@@ -38,7 +38,7 @@ export abstract class Buffable<
 	toArrayBuffer(
 		data: InputXD<Element, SizesSpec>,
 		inferences: Inferences,
-		reason = 'hardcoded',
+		reason = 'given input',
 		reasons: Record<string, string> | string = 'hardcoded'
 	): ArrayBuffer {
 		if (typeof reasons === 'string')
@@ -84,6 +84,7 @@ export abstract class Buffable<
 	}
 	abstract readonly bytesPerAtomic: number
 	abstract readonly wgslSpecification: string
+	abstract get base(): Buffable<Inferences, Element, [], ElementSizeSpec>
 }
 
 export class BuffableArray<
@@ -101,11 +102,15 @@ export class BuffableArray<
 	get bytesPerAtomic() {
 		return this.parent.bytesPerAtomic
 	}
+	// TODO: show array here?
 	get wgslSpecification() {
 		return this.parent.wgslSpecification
 	}
 	get elementSize() {
 		return this.parent.elementSize
+	}
+	get base() {
+		return this.parent.base
 	}
 	constructor(
 		protected parent: Buffable<Inferences, Element, any, any>,
@@ -155,6 +160,9 @@ export class BuffableAtomic<Buffer extends TypedArray, Element> extends Buffable
 	}
 	get elementSize() {
 		return [] as [] // :-D
+	}
+	get base() {
+		return this
 	}
 	writer(buffer: ArrayBuffer): Writer<Element> {
 		const typedArray = new this.bufferType(buffer)

@@ -45,6 +45,7 @@ export function inputGroupEntry(
 	size: number[],
 	data: ArrayBuffer
 ): GPUBindingResource {
+	// TODO: Manage UBOs automatically and replace in code `value` by `UBO#.value`
 	switch (size.length) {
 		case 0: {
 			const buffer = device.createBuffer({
@@ -55,7 +56,8 @@ export function inputGroupEntry(
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }
 		}
-		case 1: {
+		default: {
+			// TODO: Indicate size if inferred + allocate UBO space depending on device limitations
 			const buffer = device.createBuffer({
 				label: name,
 				size: data.byteLength,
@@ -64,11 +66,6 @@ export function inputGroupEntry(
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }
 		}
-		/* TODO: 2~3~4D
-		case 2:
-		case 3:*/
-		default:
-			throw new Error(`Not implemented (IGE dimension ${size.length})`)
 	}
 }
 
