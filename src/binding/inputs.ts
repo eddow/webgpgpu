@@ -4,7 +4,7 @@ import { type AnyInference, type DeducedInference, resolvedSize } from '../infer
 import { ParameterError } from '../types'
 import type { InputType } from '../webgpgpu'
 import { Bindings, type WgslEntry } from './bindings'
-import { inputGroupEntry, layoutGroupEntry } from './io'
+import { inputGroupEntry, layoutGroupEntry, wgslEntries } from './io'
 
 export class InputBindings<
 	Inferences extends AnyInference,
@@ -15,9 +15,7 @@ export class InputBindings<
 	constructor(inputSpecs: InputSpecs) {
 		super()
 		// TODO default values
-		this.wgslEntries = mapEntries(inputSpecs, ({ size, elementSize }) => ({
-			size: [...size, ...elementSize],
-		}))
+		this.wgslEntries = wgslEntries(inputSpecs)
 		this.inputSpecs = Object.entries(inputSpecs).map(([name, buffable]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 			return {
@@ -46,7 +44,7 @@ export class InputBindings<
 			const resource = inputGroupEntry(
 				device,
 				name,
-				resolvedSize(buffable.size, inferences),
+				resolvedSize(buffable.sizes, inferences),
 				arrayBuffer
 			)
 			return { resource }

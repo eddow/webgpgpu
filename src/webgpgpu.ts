@@ -1,5 +1,5 @@
 import { inference } from './binding'
-import type { BindingType, Bindings, BoundTypes } from './binding/bindings'
+import type { BindingType, Bindings, BoundTypes, WgslEntry } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
@@ -127,7 +127,7 @@ export class WebGpGpu<
 					inferenceReasons: {},
 					definitions: [],
 					workGroupSize: null,
-					usedNames: new Set(['thread']),
+					usedNames: { thread: { sizes: [] } },
 					groups: [],
 				},
 				{
@@ -180,7 +180,7 @@ export class WebGpGpu<
 	public readonly inferred: Record<string, 1 | 2 | 3 | 4> //var name => dimension
 	public readonly inferenceReasons: Record<string, string>
 	private readonly workGroupSize: [number, number, number] | null
-	private readonly usedNames: Set<string>
+	private readonly usedNames: Record<string, WgslEntry<Inferences>>
 	private readonly rootInfo: RootInfo
 	private readonly groups: Bindings<Inferences>[]
 	/**
@@ -205,7 +205,7 @@ export class WebGpGpu<
 			inferred: Record<string, 1 | 2 | 3 | 4>
 			inferenceReasons: Record<string, string>
 			workGroupSize: [number, number, number] | null
-			usedNames: Iterable<string>
+			usedNames: Record<string, WgslEntry<Inferences>>
 			groups: Bindings<Inferences>[]
 		}>,
 		rootInfo?: RootInfo
@@ -215,15 +215,15 @@ export class WebGpGpu<
 		this.inferred = inferred ?? parent!.inferred
 		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
 		this.workGroupSize = workGroupSize !== undefined ? workGroupSize : parent!.workGroupSize
-		this.usedNames = usedNames ? new Set(usedNames) : parent!.usedNames
+		this.usedNames = usedNames ?? parent!.usedNames
 		this.rootInfo = rootInfo ?? parent!.rootInfo
 		this.groups = groups ?? parent!.groups
 	}
-	private checkNameConflicts(...names: string[]) {
-		const conflicts = names.filter((name) => this.usedNames.has(name))
+	private checkNameConflicts(names: Record<string, WgslEntry<Inferences>>) {
+		const conflicts = Object.keys(names).filter((name) => name in this.usedNames)
 		if (conflicts.length)
 			throw new ParameterError(`Parameter name conflict: ${conflicts.join(', ')}`)
-		return new Set([...this.usedNames, ...names])
+		return { ...this.usedNames, ...names }
 	}
 
 	// #endregion Creation
@@ -322,7 +322,7 @@ export class WebGpGpu<
 			Outputs & BoundTypes<BG>['outputs']
 		>(this, {
 			groups: [...(this.groups as any[]), group as any],
-			usedNames: this.checkNameConflicts(...Object.keys(group.wgslEntries)),
+			usedNames: this.checkNameConflicts(group.wgslEntries),
 			inferences,
 			inferenceReasons,
 		})
@@ -383,6 +383,7 @@ export class WebGpGpu<
 			computations,
 			groups,
 			inferenceReasons,
+			usedNames,
 		} = this
 		const { kernel, code, kernelInferences } = guarded(() =>
 			kernelScope<Inferences, Inputs, Outputs>(
@@ -394,7 +395,8 @@ export class WebGpGpu<
 				declarations,
 				computations,
 				groups,
-				WebGpGpu.bindingsOrder
+				WebGpGpu.bindingsOrder,
+				usedNames
 			)
 		)
 		//

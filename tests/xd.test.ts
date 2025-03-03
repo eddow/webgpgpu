@@ -11,6 +11,7 @@ import createWebGpGpu, {
 	mat3x2f,
 	type mat3x3,
 	mat3x3f,
+	type mat4x3,
 	mat4x3f,
 	resolvedSize,
 	u32,
@@ -23,7 +24,6 @@ import createWebGpGpu, {
 	type vec4,
 	vec4f,
 } from 'webgpgpu'
-import type { mat4x3 } from '../lib/client'
 
 let webGpGpu: RootWebGpGpu
 
@@ -116,9 +116,9 @@ describe('xd-arrays', () => {
 					.output({ m: buffable })
 					.kernel(/*wgsl*/ `
 
-	let stride = vec3u(threads.y*threads.z, threads.z, 1);
-	let index = dot(thread.xyz, stride);
-	m[index] = a[index]*mul;
+		let stride = vec3u(threads.y*threads.z, threads.z, 1);
+		let index = dot(thread.xyz, stride);
+		m[index] = a[index]*mul;
 		`)
 				const { m } = await kernel({ a: value, mul })
 				expect(m).to.deepArrayEqual(cpuMul(value as any, mul) as any[])
@@ -145,7 +145,7 @@ describe('xd-arrays', () => {
 				// `toArrayBuffer` has to occur first in order to infer size
 				const arrayBuffer = buffable.toArrayBuffer(value as any, inferences)
 				expect(arrayBuffer.byteLength).to.equal(
-					resolvedSize(buffable.size, inferences).reduce(
+					resolvedSize(buffable.sizes, inferences).reduce(
 						// x * y * ...
 						(a, c) => a * c,
 						// This part takes padding into account.

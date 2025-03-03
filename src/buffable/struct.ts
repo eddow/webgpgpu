@@ -7,7 +7,7 @@ export class Struct<
 	// TODO It's possible to have one array as the last member if variable-sized, or many fixed-size arrays.
 	Value extends Record<string, Buffable<Inferences, any, []>>,
 > extends Buffable<Inferences, any, [], []> {
-	get elementSize() {
+	get elementSizes() {
 		return [] as [] // :-D
 	}
 	writer(buffer: ArrayBuffer): Writer<any> {

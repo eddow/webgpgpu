@@ -1,3 +1,4 @@
+import type { Buffable } from 'src/buffable'
 import type { AnyInference, SizeSpec } from '../inference'
 import type { BindingEntryDescription } from './io'
 
@@ -33,7 +34,7 @@ export type BindingType<Inferences extends AnyInference> = {
 }
 
 export interface WgslEntry<Inferences extends AnyInference = any> {
-	size: SizeSpec<Inferences>[]
+	sizes: SizeSpec<Inferences>[]
 }
 
 export abstract class Bindings<Inferences extends AnyInference> {

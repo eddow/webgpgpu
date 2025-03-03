@@ -9,7 +9,7 @@ import { mapEntries } from '../hacks'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import { Bindings, type GPUUnboundGroupEntry, type WgslEntry } from './bindings'
-import { inputGroupEntry, layoutGroupEntry } from './io'
+import { inputGroupEntry, layoutGroupEntry, wgslEntries } from './io'
 
 type SubInferences<
 	Inferences extends AnyInference,
@@ -25,8 +25,9 @@ export class CommonBindings<
 	private precomputedEntries?: GPUUnboundGroupEntry[]
 	constructor(commonSpecs: CommonSpecs) {
 		super()
-		this.wgslEntries = mapEntries(commonSpecs, ({ buffable: { size, elementSize } }) => ({
-			size: [...size, ...elementSize],
+		this.wgslEntries = wgslEntries(mapEntries(commonSpecs, ({ buffable }) => buffable))
+		this.wgslEntries = mapEntries(commonSpecs, ({ buffable: { sizes, elementSizes } }) => ({
+			sizes: [...sizes, ...elementSizes],
 		}))
 		this.commonSpecs = Object.entries(commonSpecs).map(([name, { buffable, value }]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
@@ -44,7 +45,7 @@ export class CommonBindings<
 			const resource = inputGroupEntry(
 				device,
 				name,
-				resolvedSize(buffable.size, inferences),
+				resolvedSize(buffable.sizes, inferences),
 				typeArray
 			)
 			return { resource }

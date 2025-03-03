@@ -25,7 +25,7 @@ export class InferenceBindings<
 	constructor(private inferred: Input) {
 		super()
 		this.wgslEntries = mapEntries(inferred, () => ({
-			size: [],
+			sizes: [],
 		}))
 		this.addedInferences = infer({}, inferred)
 	}

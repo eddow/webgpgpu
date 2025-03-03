@@ -1,6 +1,6 @@
-import type { BindingType, Bindings } from './binding'
+import type { BindingType, Bindings, WgslEntry } from './binding'
 import type { AnyInput, BufferReader } from './buffable'
-import { type AnyInference, extractInference, specifyInferences } from './inference'
+import { type AnyInference, type SizeSpec, extractInference, specifyInferences } from './inference'
 import { log } from './log'
 import { CompilationError } from './types'
 import { workGroupCount, workgroupSize } from './workgroup'
@@ -18,7 +18,8 @@ export function kernelScope<
 	declarations: string[],
 	computations: string[],
 	groups: Bindings<Inferences>[],
-	bindingsOrder: BindingType<Inferences>[]
+	bindingsOrder: BindingType<Inferences>[],
+	usedNames: Record<string, WgslEntry<Inferences>>
 ) {
 	const kernelInferences = specifyInferences(
 		{ ...inferences },
@@ -48,14 +49,46 @@ export function kernelScope<
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
+	function computeStrides(sizes: readonly SizeSpec<Inferences>[]) {
+		let stride = { k: 1, vars: [] as (keyof Inferences)[] }
+		return `${sizes
+			.slice(1)
+			.reverse()
+			.map((ss) => {
+				const val = typeof ss === 'string' ? kernelInferences[ss] : (ss as number)
+				stride =
+					val === undefined
+						? { k: stride.k, vars: [...stride.vars, ss as keyof Inferences] }
+						: { k: stride.k * val, vars: stride.vars }
+				return !stride.vars.length
+					? `${stride.k}`
+					: stride.vars.join('*') + (stride.k === 1 ? '' : `*${stride.k}`)
+			})
+			.reverse()
+			.join(', ')}, 1`
+	}
+	const stridesCalc = Object.entries(usedNames)
+		.map(([name, { sizes }]) => ({ name, sizes }))
+		.filter(({ sizes }) => sizes.length >= 2)
+	const strides = {
+		declarations: stridesCalc.map(
+			({ name, sizes }) => `var<private> ${name}Stride: vec${sizes.length}u;`
+		),
+		values: stridesCalc.map(
+			({ name, sizes }) => `${name}Stride = vec${sizes.length}u(${computeStrides(sizes)});`
+		),
+	}
+
 	const code = `
 ${bindingsDeclarations.join('\n')}
 ${declarations.join('\n')}
+${strides.declarations.join('\n')}
 
 @compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
-		${computations.join('\n')}
+		${strides.values.join('\n\t\t')}
+		${computations.join('\n\t\t')}
 		${compute}
 	}
 }

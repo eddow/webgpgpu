@@ -29,10 +29,10 @@ export abstract class Buffable<
 	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > {
-	constructor(public readonly size: SizesSpec) {}
-	abstract readonly elementSize: ElementSizeSpec
+	constructor(public readonly sizes: SizesSpec) {}
+	abstract readonly elementSizes: ElementSizeSpec
 	elementByteSize(inferences: Inferences): number {
-		return resolvedSize(this.elementSize, inferences).reduce((a, b) => a * b, this.bytesPerAtomic)
+		return resolvedSize(this.elementSizes, inferences).reduce((a, b) => a * b, this.bytesPerAtomic)
 	}
 	abstract writer(buffer: ArrayBuffer): Writer<Element>
 	toArrayBuffer(
@@ -46,7 +46,7 @@ export abstract class Buffable<
 		return toArrayBuffer<Inferences, Element, SizesSpec>(
 			this.elementByteSize(inferences),
 			data,
-			this.size,
+			this.sizes,
 			(buffer) => this.writer(buffer),
 			inferences,
 			reason,
@@ -62,17 +62,17 @@ export abstract class Buffable<
 		return new BufferReader<Element, NumericSizesSpec<SizesSpec>>(
 			this.reader(buffer),
 			buffer,
-			resolvedSize<Inferences, SizesSpec>(this.size, inferences)
+			resolvedSize<Inferences, SizesSpec>(this.sizes, inferences)
 		)
 	}
 	array<const SubSizesSpec extends readonly SizeSpec<Inferences>[]>(...size: SubSizesSpec) {
-		if (this.size.length > 0) throw Error('Making array of nor-scalar nor array')
+		if (this.sizes.length > 0) throw Error('Making array of nor-scalar nor array')
 		return new BuffableArray<
 			Inferences & Record<InferencesList<SubSizesSpec>, Inferred>,
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
 			ElementSizeSpec
-		>(this, [...size, ...this.size])
+		>(this, [...size, ...this.sizes])
 	}
 	value(
 		v: InputXD<Element, SizesSpec>
@@ -106,8 +106,8 @@ export class BuffableArray<
 	get wgslSpecification() {
 		return this.parent.wgslSpecification
 	}
-	get elementSize() {
-		return this.parent.elementSize
+	get elementSizes() {
+		return this.parent.elementSizes
 	}
 	get base() {
 		return this.parent.base
@@ -124,7 +124,7 @@ export class BuffableArray<
 			Element,
 			[...SubSizesSpec, ...SizesSpec],
 			ElementSizeSpec
-		>(this.parent, [...size, ...this.size])
+		>(this.parent, [...size, ...this.sizes])
 	}
 }
 
@@ -158,7 +158,7 @@ export class BuffableAtomic<Buffer extends TypedArray, Element> extends Buffable
 	get bytesPerAtomic() {
 		return this.atomicSize * this.bufferType.BYTES_PER_ELEMENT
 	}
-	get elementSize() {
+	get elementSizes() {
 		return [] as [] // :-D
 	}
 	get base() {

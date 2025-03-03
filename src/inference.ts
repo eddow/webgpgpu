@@ -192,6 +192,6 @@ export type InferencesList<SSs extends readonly any[]> = SSs extends readonly [
 		: StringOnly<First>
 	: never
 export type DeducedInference<OneBuff extends Buffable> = Record<
-	InferencesList<OneBuff['size']>,
+	InferencesList<OneBuff['sizes']>,
 	Inferred
 >

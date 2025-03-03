@@ -233,30 +233,13 @@ Inputs are given as an object `{name: value}`. Values can be either an `ArrayBuf
 
 ### Outputs
 
-In all array accesses in TS, the multi-dimensional indexes are given *most-important first*.
-- `f32.array(3).value([1, 2, 3])`
-- `f32.array(2, 3) -> f32.array(3).array(2)` 
-  - `value([[1, 2, 3], [4, 5, 6]]).at(1, 2) === 6`
-  - `value([[1, 2, 3], [4, 5, 6]]).slice(0) ~ [1, 2, 3]`
-- `f32.array(3, 2) -> f32.array(2).array(3)`
-  - `value([[1, 2], [3, 4], [5, 6]]).at(2, 1) === 6`
-  - `value([[1, 2], [3, 4], [5, 6]]).slice(0) ~ [1, 2]`
-
-The given values also act as JS arrays. The `operator[](index: number)` is hacked in and the array interface will be forwarded.
+The given values is a dynamic `ArrayBuffer`-reader that act as JS arrays. The `operator[](index: number)` is hacked in and the array interface will be forwarded.
 
 > Note: There is no array creation so to speak while not specifically asked for, it all end up being an access to the underlying `ArrayBuffer`.
 
 ## Types
 
 The main types from wgsl are available with their wgsl name (`f32`, `vec2f`, etc.). Note: These are *values* who specify a wgsl *type* - it is not a typescript type. These  types (like `Input1D<[number, number]>`) are produced and used automatically (here, from a `vec2f.array(x)`).
-
-Types can be array-ed. Ex:
-```ts
-f32.array(3)
-f32.array(3).array(4)
-//or
-f32.array(4, 3)	// take care .array(X).array(Y) -> .array(Y, X)
-```
 
 Arguments (simple, arrays of any dimension) can always be passed as corresponding `ArrayBuffer`. So, `mat3x2f.array(5).value(Float32Array.from([...]))` is doing the job! (even if array sizes are still validated)
 
@@ -286,7 +269,33 @@ These types object offer (if needed) these functions. The functions changing the
 
 #### array
 
-Declares an `array of` something. Ex: `f32.array(3, 4)`
+Declares an `array of` something. Ex:
+```ts
+f32.array(3)
+f32.array(3).array(4)
+//or
+f32.array(4, 3)	// take care .array(X).array(Y) -> .array(Y, X)
+```
+
+In all array accesses in TS, the multi-dimensional indexes are given *most-important first*.
+- `f32.array(3).value([1, 2, 3])`
+- `f32.array(2, 3) -> f32.array(3).array(2)` 
+  - `value([[1, 2, 3], [4, 5, 6]]).at(1, 2) === 6`
+  - `value([[1, 2, 3], [4, 5, 6]]).slice(0) ~ [1, 2, 3]`
+- `f32.array(3, 2) -> f32.array(2).array(3)`
+  - `value([[1, 2], [3, 4], [5, 6]]).at(2, 1) === 6`
+  - `value([[1, 2], [3, 4], [5, 6]]).slice(0) ~ [1, 2]`
+
+In WGSL, a "stride" is computed and accessible in the whole code (as `var<private>` for now - 0.0.7) named after the wgsl name of the value (input/output/...) post-fixed with `Stride`
+
+eg: 
+```ts
+input({ myTable: f32.array('threads.x', 'threads.y') }).kernel(...)
+```
+can be indexed in the wgsl code with:
+```rust
+let entry = myTable[dot(thread.xy, myTableStride)];
+```
 
 #### value
 
@@ -454,9 +463,8 @@ For instance, for now, a complete mocha testing run is impossible: some async fi
 - Structures and automatic organization for size optimization
 - UBO creation: for now, a single `f32` as input *is* an UBO. We need UBO (and their types) built automatically 
   - CODE PARSING! replace `myUniform` by `UBO0.myUniform`
-- Automatic array strides computations -> vec# in uniforms
+- Automatic array strides computations : now var<private> -> uniform ?
   - Code parsing: allow some operators for like `myArray[<myVec2Index>]` -> `myArray[dot(myVec2Index, myArrayStride)]`
-  - Use composed names (`...Stride`) so that users can give an argument `anArray` and add an `anArrayStride` argument to their function - or have wggpu.ts add arguments itself?
 - Arrays position optimization:
   - When possible, use fixed-size arrays (if size is completely inferred at layout time)
   - If such happen, have stride object given as const, not uniform

@@ -1,6 +1,6 @@
 import type { Buffable } from 'src/buffable/buffable'
 import { ParameterError } from '../types'
-import type { GPUUnboundGroupLayoutEntry } from './bindings'
+import type { GPUUnboundGroupLayoutEntry, WgslEntry } from './bindings'
 // TODO: dynamically create UBOs with values of fixed size (when `#define` is usable: code parsing)
 export interface BindingEntryDescription {
 	declaration: string
@@ -12,7 +12,7 @@ export function layoutGroupEntry(
 	readOnly: boolean
 ): BindingEntryDescription {
 	// TODO: If size is already inferred, write it here
-	switch (buffable.size.length) {
+	switch (buffable.sizes.length) {
 		case 0: {
 			if (!readOnly)
 				throw new ParameterError('Uniforms can only be read-only (cannot be used as input)')
@@ -107,4 +107,15 @@ export function outputGroupEntry(
 		}
 	}
 	return { resource: { buffer: outputBuffer }, encoder, read, name }
+}
+
+export function wgslEntries(buf: Record<string, Buffable>) {
+	const entries: Record<string, WgslEntry> = {}
+	for (const key in buf) {
+		const { sizes, elementSizes } = buf[key]
+		const bufEntry = { sizes: [...sizes, ...elementSizes] }
+		entries[key] = bufEntry
+		if (bufEntry.sizes.length >= 2) entries[`${key}Stride`] = { sizes: [] }
+	}
+	return entries
 }

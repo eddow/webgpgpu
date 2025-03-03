@@ -4,7 +4,7 @@ import { type AnyInference, type DeducedInference, resolvedSize } from '../infer
 import { ParameterError } from '../types'
 import type { OutputType } from '../webgpgpu'
 import { Bindings, type WgslEntry } from './bindings'
-import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry } from './io'
+import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry, wgslEntries } from './io'
 
 type Outputs<Specs extends Record<string, Buffable>> = { [K in keyof Specs]: OutputType<Specs[K]> }
 type SubInferences<
@@ -26,9 +26,7 @@ export class OutputBindings<
 	constructor(outputSpecs: OutputSpecs) {
 		super()
 		// TODO allow input/output?
-		this.wgslEntries = mapEntries(outputSpecs, ({ size, elementSize }) => ({
-			size: [...size, ...elementSize],
-		}))
+		this.wgslEntries = wgslEntries(outputSpecs)
 		this.outputSpecs = Object.entries(outputSpecs).map(([name, buffable]) => {
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for output \`${name}\``)
 			return {
@@ -47,7 +45,7 @@ export class OutputBindings<
 			outputGroupEntry(
 				device,
 				name,
-				resolvedSize(buffable.size, inferences),
+				resolvedSize(buffable.sizes, inferences),
 				buffable.elementByteSize(inferences)
 			)
 		)
