@@ -440,18 +440,32 @@ google-chrome
 
 ## TODOs & limitations
 
+### Limitations
+
 The main limitation is WebGPU support.
 
 It is supported in some browsers but poorly support automated testing.
 
 For node, this library uses [node-webgpu](https://github.com/dawn-gpu/node-webgpu) who is really fresh and does not yet allow a smooth ride for all cases (automated testing is possible in some specific circumstances)
+For instance, for now, a complete mocha testing run is impossible: some async fixture system:error or something else breaks - but tests are usable few by few
 
-- 2~3~4D arrays (for now, only 0/1-D for writing and reading is in development)
-  - Code modification for array indexing (for now, only 0/1-D)
-  - Code modification to support `f16` immediate values
-- structures
+### Roadmap
 
-- Chaining (output become input of next kernel without transfer in CPU memory)
-  - Even more complex pipeline management?
-- UBO management and automatic structures
-- Automatic stride production
+- Structures and automatic organization for size optimization
+- UBO creation: for now, a single `f32` as input *is* an UBO. We need UBO (and their types) built automatically 
+  - CODE PARSING! replace `myUniform` by `UBO0.myUniform`
+- Automatic array strides computations -> vec# in uniforms
+  - Code parsing: allow some operators for like `myArray[<myVec2Index>]` -> `myArray[dot(myVec2Index, myArrayStride)]`
+  - Use composed names (`...Stride`) so that users can give an argument `anArray` and add an `anArrayStride` argument to their function - or have wggpu.ts add arguments itself?
+- Arrays position optimization:
+  - When possible, use fixed-size arrays (if size is completely inferred at layout time)
+  - If such happen, have stride object given as const, not uniform
+  - Check GPU limitations to have input arrays with fixed-size small enough given directly in the UBOs
+
+#### Parallel
+
+- Size assertion/inference when ArrayBuffers are provided directly as X-D inputs (X > 1) 
+- Make BufferReader more ArrayLike (iterator, array prototype forward, ...)
+- Code parsing: `f16` replacement: for immediate values:
+  - `###h` -> `###f` (with `###` being a valid number)
+  - `vec2h`, `vec3h`, `vec4h` -> `vec2f`, `vec3f`, `vec4f`: for now it happens in the JS declarations, so the generated code - but not if used directly in the code

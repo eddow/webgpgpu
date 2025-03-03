@@ -17,7 +17,8 @@ chai.Assertion.addMethod('deepArrayEqual', function (expected: Array<any>) {
 		'expected #{this} to not have the same content as #{exp}',
 		expected,
 		'length' in actual
-			? Array.from(actual) // Convert for better error messages
+			? // Correct me after BufferReader is fixed
+				`(length: ${actual.length}` // Convert for better error messages
 			: actual
 	)
 })

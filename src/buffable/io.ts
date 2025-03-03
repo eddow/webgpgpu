@@ -11,100 +11,6 @@ function assertElementSize(given: any, expected: number) {
 	if (given !== expected)
 		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
 }
-// TODO: Optionally give an ArrayBuffer & position
-// Poorly typed but for internal use only
-export function toArrayBuffer<
-	Inferences extends AnyInference,
-	Element,
-	SizesSpec extends readonly SizeSpec<Inferences>[],
->(
-	bytesPerElement: number,
-	data: InputXD<Element, SizesSpec>,
-	size: SizesSpec,
-	writer: (buffer: ArrayBuffer) => (index: number, value: Element) => void,
-	inferences: Inferences,
-	reason: string,
-	reasons: Record<string, string>
-): ArrayBuffer {
-	/*if (data instanceof ArrayBuffer && 'elementSize' in data && data.elementSize !== elementSize)
-		assertElementSize(data.elementSize, elementSize)*/
-
-	// #region 0D
-	if (size.length === 0) {
-		if (data instanceof ArrayBuffer) {
-			assertElementSize(data.byteLength, bytesPerElement)
-			return data
-		}
-		const buffer = new ArrayBuffer(bytesPerElement)
-		const write = writer(buffer)
-		write(0, data as Element)
-		return buffer
-	}
-	// #endregion 0D
-	// #region 1D
-	if (size.length === 1) {
-		if (data instanceof ArrayBuffer) {
-			if (data.byteLength % bytesPerElement !== 0)
-				throw new InferenceValidationError(
-					`Size mismatch in dimension 1: ${data.byteLength} is not a multiple of ${bytesPerElement} (bytes)`
-				)
-			assertSize([data.byteLength / bytesPerElement], size, inferences, reason, reasons)
-			return data
-		}
-		if (!Array.isArray(data)) throw new ParameterError('Input is not an array nor a typed array')
-		assertSize([data.length], size, inferences, reason, reasons)
-		const buffer = new ArrayBuffer(bytesPerElement * data.length)
-		const write = writer(buffer)
-		let dst = 0
-		for (const element of data as Element[]) write(dst++, element)
-		return buffer
-	}
-	// #endregion 1D
-	// #region 2~3-D
-	throw `Not implemented (dimension ${size.length})`
-	/*
-	if (data instanceof ArrayBuffer) {
-		// TODO: multidimensional inferring
-		if (!isTypedArrayXD(data))
-			throw new InferenceValidationError(
-				`When giving a ${size.length}-D typed array as input, the input must have given dimension. Use \`dimensionedArray\``
-			)
-		if (data.size.length !== size.length)
-			throw new InferenceValidationError(
-				`Dimensions mismatch: Typed array of dimension ${data.size.length} is used in a ${size.length}D context`
-			)
-		assertSize(data.size, size, inferences, reason, reasons)
-		return data as Buffer
-	}
-	if (!Array.isArray(data))
-		throw new InferenceValidationError('Input is not an array nor a typed array')
-	assertSize([data.length], [size[size.length - 1]], inferences, reason, reasons)
-	let rv: Buffer | undefined
-	let itemSize: number | undefined
-	let dst = 0
-	for (const element of data) {
-		const subBuffer = elementsToTypedArray(
-			specification,
-			inferences,
-			element,
-			size.slice(1),
-			reason && `[Slice of] ${reason}`,
-			reasons
-		)
-		if (!rv) {
-			itemSize = subBuffer.length
-			// TODO: multidimensional inferring
-			rv = new bufferType(resolvedSize(size, inferences).reduce((a, b) => a * b, 1))
-		} else if (subBuffer.length !== itemSize)
-			throw new InferenceValidationError(
-				`Size mismatch in dimension ${size.length}: Buffer length ${subBuffer.length} was expected to be ${itemSize}`
-			)
-		rv.set(subBuffer, dst)
-		dst += itemSize
-	}
-	if (!rv) log.warn('Size 0 buffer created')
-	return rv ?? new bufferType(0)*/
-}
 
 function bufferPosition(index: readonly number[], size: readonly number[]): number {
 	let pos = 0
@@ -137,11 +43,115 @@ function prod(a: readonly number[], product = 1): number {
 	return a.reduce((a, b) => a * b, product)
 }
 
+/* TODO: more complex/"asynchronous" inference
+Here: Checking the first element if multi-dimensional - throw if ArrayBuffer is given and not all inferred
+*/
+function inferSizes<
+	Inferences extends AnyInference,
+	Element,
+	SizesSpec extends readonly SizeSpec<Inferences>[],
+>(
+	bytesPerElement: number,
+	data: InputXD<Element, SizesSpec>,
+	size: SizesSpec,
+	inferences: Inferences,
+	reason: string,
+	reasons: Record<string, string>
+) {
+	let rv: number[] = []
+	switch (size.length) {
+		case 0:
+			return []
+		case 1:
+			if (data instanceof ArrayBuffer) {
+				if (data.byteLength % bytesPerElement !== 0)
+					throw new InferenceValidationError(
+						`Size mismatch in dimension 1: ${data.byteLength} is not a multiple of ${bytesPerElement} (bytes)`
+					)
+				rv = [data.byteLength / bytesPerElement]
+			} else if (Array.isArray(data)) {
+				rv = [data.length]
+			}
+			assertSize(rv, size, inferences, reason, reasons)
+			break
+		default:
+			if (data instanceof ArrayBuffer) {
+				const unknown = size.filter((v) => typeof v === 'string' && inferences[v] === undefined)
+				if (unknown.length)
+					throw new InferenceValidationError(
+						`Cannot infer size of a raw ArrayBuffer. Unknown inferences: ${unknown.join(', ')}`
+					)
+			} else if (Array.isArray(data)) {
+				assertSize([data.length], size.slice(0, 1), inferences, reason, reasons)
+				// TODO: case when data.length === 0
+				rv = [
+					data.length,
+					...inferSizes(bytesPerElement, data[0], size.slice(1), inferences, reason, reasons),
+				]
+			}
+			break
+	}
+	return rv
+}
+
+function writeInputData<Element, SizesSpec extends readonly number[]>(
+	target: ArrayBuffer,
+	offset: number,
+	data: InputXD<Element, any>,
+	sizes: SizesSpec,
+	write: (index: number, value: Element) => void
+) {
+	if (data instanceof ArrayBuffer) {
+		// TODO: validate size
+		// TODO: optimize with BigUint64Array on 8-bytes alignment &c
+		new Uint8Array(target).set(new Uint8Array(data), offset)
+	} else if (!sizes.length) {
+		write(offset, data as Element)
+	} else if (Array.isArray(data)) {
+		if (data.length !== sizes[0])
+			// This is not an inference error because it was inferred with a parent input - so, the whole input is inconsistent
+			throw new ParameterError(
+				`Size mismatch: ${data.length} elements were expected, got ${sizes[0]} elements`
+			)
+		const subSizes = sizes.slice(1)
+		const stride = prod(subSizes, 1)
+		for (const element of data) {
+			writeInputData(target, offset, element, subSizes, write)
+			offset += stride
+		}
+	} else {
+		throw new ParameterError('Invalid input')
+	}
+}
+
+// Poorly typed but for internal use only
+export function toArrayBuffer<
+	Inferences extends AnyInference,
+	Element,
+	SizesSpec extends readonly SizeSpec<Inferences>[],
+>(
+	bytesPerElement: number,
+	data: InputXD<Element, SizesSpec>,
+	sizesSpec: SizesSpec,
+	writer: (buffer: ArrayBuffer) => (index: number, value: Element) => void,
+	inferences: Inferences,
+	reason: string,
+	reasons: Record<string, string>
+): ArrayBuffer {
+	const sizes = inferSizes(bytesPerElement, data, sizesSpec, inferences, reason, reasons)
+	const buffer = new ArrayBuffer(prod(sizes, bytesPerElement))
+	const write = writer(buffer)
+	writeInputData(buffer, 0, data, sizes, write)
+	return buffer
+}
+
 type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec extends [number]
 	? Element
 	: InputSpec extends [number, ...infer Rest extends number[]]
 		? BufferReader<Element, Rest>
 		: never
+// TODO: Array.from(bufferReader)
+// TODO: should have all the info even for children browsing cached & given when constructing sub-buffer as {me, subs} (no more array slice)
 export class BufferReader<
 	Element = any,
 	InputSpec extends readonly number[] = number[],
