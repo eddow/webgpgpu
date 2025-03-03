@@ -5,3 +5,6 @@
 biome.*
 rollup.*
 karma.*
+# hacks for the tests - no need to publish
+/chai-ext.d.ts
+/tsconfig.json

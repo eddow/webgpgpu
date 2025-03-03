@@ -115,8 +115,18 @@ function writeInputData<Element, SizesSpec extends readonly number[]>(
 ) {
 	if (data instanceof ArrayBuffer) {
 		// TODO: validate size
-		// TODO: optimize with BigUint64Array on 8-bytes alignment &c
-		new Uint8Array(target).set(new Uint8Array(data), offset)
+		const round = [3, 2, 1].find((i) => (offset & ((1 << i) - 1)) === 0)
+		if (!round) new Uint8Array(target).set(new Uint8Array(data), offset)
+		else {
+			const typedArray = [undefined, Uint16Array, Uint32Array, BigUint64Array][round]!
+
+			const from = data.byteLength & ~((1 << round) - 1)
+			if (from > 0)
+				//@ts-expect-error typedArray = typedArray, explain this...
+				new typedArray(target, offset, from >> round).set(new typedArray(data, 0, from >> round))
+			const remaining = data.byteLength & ((1 << round) - 1)
+			if (remaining) new Uint8Array(target, from + offset).set(new Uint8Array(data, from))
+		}
 	} else if (!sizes.length) {
 		write(offset, data as Element)
 	} else if (Array.isArray(data)) {

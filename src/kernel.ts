@@ -16,7 +16,7 @@ export function kernelScope<
 	inferences: Inferences,
 	workGroupSize: [number, number, number] | null,
 	declarations: string[],
-	initializations: string[],
+	computations: string[],
 	groups: Bindings<Inferences>[],
 	bindingsOrder: BindingType<Inferences>[]
 ) {
@@ -55,7 +55,7 @@ ${declarations.join('\n')}
 @compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
-		${initializations.join('\n')}
+		${computations.join('\n')}
 		${compute}
 	}
 }
@@ -131,7 +131,6 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		device.queue.submit([commandEncoder.finish()])
 
 		const reads = await Promise.all(orderedGroups.map((bindings) => bindings.read(inputs)))
-		// TODO add `inferred` in the result
 		return reads.reduce(
 			(acc, read) => ({
 				...acc,

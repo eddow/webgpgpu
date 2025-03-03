@@ -380,7 +380,7 @@ export class WebGpGpu<
 			inferences,
 			workGroupSize,
 			declarations,
-			initializations,
+			computations,
 			groups,
 			inferenceReasons,
 		} = this
@@ -392,7 +392,7 @@ export class WebGpGpu<
 				inferences,
 				workGroupSize,
 				declarations,
-				initializations,
+				computations,
 				groups,
 				WebGpGpu.bindingsOrder
 			)

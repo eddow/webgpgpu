@@ -124,7 +124,7 @@ output[thread.x] = a[thread.x] * b;
 
 ### define & import
 
-Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `initialization`. The former is added outside the function, the latter inside the main function, before the main code
+Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `computation`. The former is added outside the function, the latter inside the main function, before the main code
 
 - direct definition
 ```ts
@@ -469,3 +469,4 @@ For instance, for now, a complete mocha testing run is impossible: some async fi
 - Code parsing: `f16` replacement: for immediate values:
   - `###h` -> `###f` (with `###` being a valid number)
   - `vec2h`, `vec3h`, `vec4h` -> `vec2f`, `vec3f`, `vec4f`: for now it happens in the JS declarations, so the generated code - but not if used directly in the code
+- Some wizardry à la gpu.js (js-> wgsl) ?

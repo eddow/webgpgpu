@@ -1,6 +1,6 @@
 export interface CodeParts {
 	declaration?: string
-	initialization?: string
+	computation?: string
 }
 export abstract class WgslCodeGenerator {
 	protected abstract getImport(name: PropertyKey): CodeParts
@@ -15,7 +15,7 @@ export abstract class WgslCodeGenerator {
 	protected get declarations() {
 		return this.allEntries.map(({ declaration }) => declaration).filter(Boolean) as string[]
 	}
-	protected get initializations() {
-		return this.allEntries.map(({ initialization }) => initialization).filter(Boolean) as string[]
+	protected get computations() {
+		return this.allEntries.map(({ computation }) => computation).filter(Boolean) as string[]
 	}
 }
