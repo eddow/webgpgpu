@@ -1,6 +1,14 @@
 import type { BindingType, Bindings, WgslEntry } from './binding'
 import type { AnyInput, BufferReader } from './buffable'
-import { type AnyInference, type SizeSpec, extractInference, specifyInferences } from './inference'
+import { elements } from './hacks'
+import {
+	type AnyInference,
+	type SizeSpec,
+	computeStride,
+	extractInference,
+	specifyInferences,
+	wgslStrideCalculus,
+} from './inference'
 import { log } from './log'
 import { CompilationError } from './types'
 import { workGroupCount, workgroupSize } from './workgroup'
@@ -49,45 +57,36 @@ export function kernelScope<
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
-	function computeStrides(sizes: readonly SizeSpec<Inferences>[]) {
-		let stride = { k: 1, vars: [] as (keyof Inferences)[] }
-		return `${sizes
-			.slice(1)
-			.reverse()
-			.map((ss) => {
-				const val = typeof ss === 'string' ? kernelInferences[ss] : (ss as number)
-				stride =
-					val === undefined
-						? { k: stride.k, vars: [...stride.vars, ss as keyof Inferences] }
-						: { k: stride.k * val, vars: stride.vars }
-				return !stride.vars.length
-					? `${stride.k}`
-					: stride.vars.join('*') + (stride.k === 1 ? '' : `*${stride.k}`)
-			})
-			.reverse()
-			.join(', ')}, 1`
-	}
-	const stridesCalc = Object.entries(usedNames)
-		.map(([name, { sizes }]) => ({ name, sizes }))
-		.filter(({ sizes }) => sizes.length >= 2)
-	const strides = {
-		declarations: stridesCalc.map(
-			({ name, sizes }) => `var<private> ${name}Stride: vec${sizes.length}u;`
-		),
-		values: stridesCalc.map(
-			({ name, sizes }) => `${name}Stride = vec${sizes.length}u(${computeStrides(sizes)});`
-		),
-	}
+	// TODO: Make a const out of a stride if possible
+	// TODO: test
+	const strides = Object.entries(usedNames)
+		.filter(([_, { sizes }]) => sizes.length >= 2)
+		.map(([name, { sizes }]) => {
+			const strides = computeStride(kernelInferences, sizes)
+			return (
+				strides.every((stride) => stride.vars.length === 0)
+					? {
+							declaration: `const ${name}Stride = vec${sizes.length}u(${elements(strides, 'k').join(', ')});`,
+						}
+					: {
+							declaration: `var<private> ${name}Stride: vec${sizes.length}u;`,
+							calculus: `${name}Stride = vec${sizes.length}u(${strides.map(wgslStrideCalculus).join(', ')});`,
+						}
+			) as {
+				declaration: string
+				calculus?: string
+			}
+		})
 
 	const code = `
 ${bindingsDeclarations.join('\n')}
 ${declarations.join('\n')}
-${strides.declarations.join('\n')}
+${elements(strides, 'declaration').join('\n')}
 
-@compute @workgroup_size(${kernelWorkGroupSize.join(',') || '1'})
+@compute @workgroup_size(${kernelWorkGroupSize.join(', ') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
-		${strides.values.join('\n\t\t')}
+		${elements(strides, 'calculus').join('\n\t\t')}
 		${computations.join('\n\t\t')}
 		${compute}
 	}

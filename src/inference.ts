@@ -1,6 +1,8 @@
 import type { Buffable } from './buffable'
 import { InferenceValidationError, ParameterError } from './types'
 
+// #region types
+
 export type Inferred = number | undefined
 // Redo the [required] for debug
 type ExpandKeys<Name extends string, Value> = Value extends Inferred
@@ -32,6 +34,23 @@ export type Inference4 = readonly [Inferred, Inferred, Inferred, Inferred]
 export type Inference = Inference1 | Inference2 | Inference3 | Inference4
 
 export type AnyInference<Key extends string = string> = { [K in Key]: Inferred }
+
+export type StringOnly<ST> = ST extends string ? ST : never
+export type InferencesList<SSs extends readonly any[]> = SSs extends readonly [
+	infer First,
+	...infer Rest, // ✅ Remove extends constraint
+]
+	? Rest extends readonly SizeSpec<AnyInference>[] // ✅ Apply constraint after inference
+		? StringOnly<First> | InferencesList<Rest> // Collect strings
+		: StringOnly<First>
+	: never
+export type DeducedInference<OneBuff extends Buffable> = Record<
+	InferencesList<OneBuff['sizes']>,
+	Inferred
+>
+
+// #endregion
+
 export function infer<Inferences extends AnyInference, Input extends Record<string, Inference>>(
 	inferences: Inferences,
 	input: Input,
@@ -182,16 +201,30 @@ export function extractInference<Inferences extends AnyInference>(
 	})
 }
 
-export type StringOnly<ST> = ST extends string ? ST : never
-export type InferencesList<SSs extends readonly any[]> = SSs extends readonly [
-	infer First,
-	...infer Rest, // ✅ Remove extends constraint
-]
-	? Rest extends readonly SizeSpec<AnyInference>[] // ✅ Apply constraint after inference
-		? StringOnly<First> | InferencesList<Rest> // Collect strings
-		: StringOnly<First>
-	: never
-export type DeducedInference<OneBuff extends Buffable> = Record<
-	InferencesList<OneBuff['sizes']>,
-	Inferred
->
+export type Stride<Inferences extends AnyInference> = {
+	k: number
+	vars: (keyof Inferences)[]
+}
+
+export function computeStride<Inferences extends AnyInference>(
+	inferences: Inferences,
+	sizes: readonly SizeSpec<Inferences>[]
+) {
+	let stride = { k: 1, vars: [] as (keyof Inferences)[] }
+	return [...sizes]
+		.reverse()
+		.map((ss) => {
+			const val = typeof ss === 'string' ? inferences[ss] : (ss as number)
+			const rv = stride
+			stride =
+				val === undefined
+					? { k: stride.k, vars: [...stride.vars, ss as keyof Inferences] }
+					: { k: stride.k * val, vars: stride.vars }
+			return rv
+		})
+		.reverse() as Stride<Inferences>[]
+}
+export const wgslStrideCalculus = (stride: Stride<any>) =>
+	!stride.vars.length
+		? `${stride.k}`
+		: stride.vars.join('*') + (stride.k === 1 ? '' : `*${stride.k}`)

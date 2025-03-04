@@ -279,6 +279,7 @@ export class WebGpGpu<
 	 * @returns Chainable
 	 */
 	input<Specs extends Record<string, Buffable<Inferences>>>(inputs: Specs) {
+		// TODO: Could make a type error if a name is already existing
 		return this.bind(new InputBindings<Inferences, Specs>(inputs))
 	}
 	/**

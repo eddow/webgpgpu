@@ -257,19 +257,44 @@ describe('diverse', () => {
 		// TODO: Do something with the error ... Throw ? Catch it first
 		const length = 0x400000
 		const kernel = webGpGpu.output({ output: u32.array('threads.x') }).kernel(/*wgsl*/ `
-let modX = thread.x % 453;
-output[thread.x] = modX * modX;
+		let modX = thread.x % 453;
+		output[thread.x] = modX * modX;
 `)
 		const { output } = await kernel({}, { 'threads.x': length })
 		expect(output).to.exist
 		const array = output.flat()
 		expect(array.length).to.equal(length)
 	})
-	it('works fully', async () => {
+	it('expand workGroupSize', async () => {
 		const kernel = webGpGpu
 			.input({ a: vec2f.array('threads.x'), b: vec2f.array('threads.x') })
 			.output({ output: vec2f.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+b[thread.x];')
 		expect(kernel.toString()).to.match(/@compute @workgroup_size\(\d{2,},/)
+	})
+	it('strides', async () => {
+		const kernel = webGpGpu
+			.common({ b: f32.array('threads.y').value([4, 5]) })
+			.input({ a: f32.array('threads.x') })
+			.output({
+				outputA: f32.array('threads.x', 'threads.y'),
+				outputB: f32.array('threads.y', 'threads.x'),
+			})
+			.kernel(/*wgsl*/ `
+		outputA[dot(thread.xy, outputAStride)] = a[thread.x]+b[thread.y];
+		outputB[dot(thread.yx, outputBStride)] = a[thread.x]+b[thread.y];
+		`)
+		expect(kernel.toString()).to.match(/const outputAStride = vec2u\(/)
+		expect(kernel.toString()).to.match(/var<private> outputBStride: vec2u;/)
+		const { outputA, outputB } = await kernel({ a: [1, 2, 3] })
+		expect(outputA).to.deepArrayEqual([
+			[5, 6],
+			[6, 7],
+			[7, 8],
+		])
+		expect(outputB).to.deepArrayEqual([
+			[5, 6, 7],
+			[6, 7, 8],
+		])
 	})
 })

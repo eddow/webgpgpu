@@ -1,3 +1,5 @@
+// #region Indexable
+
 function prop2index(propKey: PropertyKey, ignore?: boolean): number {
 	return ignore || typeof propKey === 'symbol' ? Number.NaN : Number(propKey)
 }
@@ -56,3 +58,19 @@ export function mapEntries<From, To, Keys extends PropertyKey>(
 			.filter(([_, value]) => typeof value !== 'undefined')
 	) as { [key in Keys]: To }
 }
+
+// #endregion
+// #region shortcuts
+
+export function defined<T>(v: T | undefined): v is T {
+	return v !== undefined
+}
+
+export function elements<Key extends PropertyKey, Item extends { [k in Key]?: unknown }>(
+	items: Iterable<Item>,
+	k: Key
+): Exclude<Item[Key], undefined>[] {
+	return Array.from(items, (item) => item[k]).filter(defined) as Exclude<Item[Key], undefined>[]
+}
+
+// #endregion
