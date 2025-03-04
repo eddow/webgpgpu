@@ -1,7 +1,7 @@
-import { type AnyInput, type IBuffable, type ValuedBuffable, isBuffable } from '../buffable'
+import { type IBuffable, type ValuedBuffable, isBuffable } from '../buffable'
 import { mapEntries } from '../hacks'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { ParameterError } from '../types'
+import { type AnyInput, ParameterError } from '../types'
 import { Bindings, type GPUUnboundGroupEntry, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry, wgslEntries } from './io'
 
@@ -46,7 +46,7 @@ export class CommonBindings<
 		})
 		return commonSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}
-	entries() {
+	entries(inputs: {}, inferences: Inferences) {
 		return this.precomputedEntries!
 	}
 }

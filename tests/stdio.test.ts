@@ -150,7 +150,8 @@ describe('inputs', () => {
 	it('two arguments', async () => {
 		const kernel = webGpGpu
 			.workGroup(3)
-			.input({ a: f32.array(3), b: f32 })
+			.input({ a: f32.array(3) })
+			.input({ b: f32 })
 			.bind(outputs({ output: f32.array('threads.x') }))
 			.kernel('output[thread.x] = a[thread.x] * b;')
 		const { output } = await kernel(
@@ -234,6 +235,21 @@ describe('infers size', () => {
 		const { output } = await kernel({ a: [1, 2, 3] })
 		expect(output.flat()).to.deepArrayEqual([3, 4, 5])
 	})
+	it('infers twice', async () => {
+		const kernel = webGpGpu
+			.bind(inference({ custom: [undefined, undefined] }))
+			.input({
+				a: f32.array('threads.x'),
+			})
+			.output({ output: f32.array('threads.x') })
+			.kernel('output[thread.x] = a[thread.x] * 2.0;')
+		async function test(a: number[], o: number[]) {
+			const { output } = await kernel({ a })
+			expect(output.flat()).to.deepArrayEqual(o)
+		}
+		await test([1, 2], [2, 4])
+		await test([1, 2, 3], [2, 4, 6])
+	})
 })
 describe('diverse', () => {
 	it('defines', async () => {
@@ -297,5 +313,13 @@ describe('diverse', () => {
 			[6, 7, 8],
 		])
 	})
-	// TODO: test call twice with different infers
+	it('concurs', async () => {
+		const kernel = webGpGpu
+			.input({ a: f32.array('threads.x') })
+			.output({ output: f32.array('threads.x') })
+			.kernel('output[thread.x] = a[thread.x] * 2.0;')
+		const [r1, r2] = await Promise.all([kernel({ a: [1, 2] }), kernel({ a: [3, 4] })])
+		expect(r1.output).to.deepArrayEqual([2, 4])
+		expect(r2.output).to.deepArrayEqual([6, 8])
+	})
 })

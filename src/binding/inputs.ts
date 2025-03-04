@@ -1,7 +1,6 @@
 import { type IBuffable, isBuffable } from '../buffable/buffable'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { ParameterError } from '../types'
-import type { InputType } from '../webgpgpu'
+import { type InputType, ParameterError } from '../types'
 import { Bindings, type WgslEntry } from './bindings'
 import { inputGroupEntry, layoutGroupEntry, wgslEntries } from './io'
 
@@ -28,8 +27,8 @@ export class InputBindings<
 		return this.inputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}
 	entries(
-		inferences: Inferences,
 		inputs: { [K in keyof InputSpecs]: InputType<InputSpecs[K]> },
+		inferences: Inferences,
 		reasons: Record<string, string>
 	) {
 		const { device, inputSpecs } = this

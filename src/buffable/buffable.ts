@@ -6,8 +6,8 @@ import {
 	type SizeSpec,
 	resolvedSize,
 } from '../inference'
+import type { InputXD, NumericSizesSpec, TypedArray, TypedArrayConstructor } from '../types'
 import { BufferReader, type IBufferReader, type Reader, type Writer, toArrayBuffer } from './io'
-import type { InputXD, NumericSizesSpec, TypedArray, TypedArrayConstructor } from './to-sort'
 
 export type ValuedBuffable<
 	Inferences extends AnyInference = AnyInference,

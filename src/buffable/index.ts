@@ -1,5 +1,4 @@
 export * from './atomics'
 export * from './struct'
-export * from './to-sort'
 export type { BufferReader } from './io'
 export * from './buffable'

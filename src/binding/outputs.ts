@@ -1,7 +1,6 @@
 import { type IBuffable, isBuffable } from '../buffable/buffable'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
-import { ParameterError } from '../types'
-import type { OutputType } from '../webgpgpu'
+import { type OutputType, ParameterError } from '../types'
 import { Bindings, type WgslEntry } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry, wgslEntries } from './io'
 
@@ -38,7 +37,7 @@ export class OutputBindings<
 		return this.outputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, false))
 	}
 	private readonly callInfo = new WeakMap<{}, OutputDescription<Inferences>>()
-	entries(inferences: Inferences, inputs: {}) {
+	entries(inputs: {}, inferences: Inferences) {
 		const { device, outputSpecs } = this
 		const entries = outputSpecs.map(({ name, buffable }) =>
 			outputGroupEntry(
@@ -58,6 +57,7 @@ export class OutputBindings<
 	}
 	async read(inputs: {}): Promise<Outputs<OutputSpecs>> {
 		const { entries, inferences } = this.callInfo.get(inputs)!
+		this.callInfo.delete(inputs)
 		const buffers = await Promise.all(entries.map(({ read }) => read()))
 		return Object.fromEntries(
 			this.outputSpecs.map(({ name, buffable }, i) => [

@@ -1,5 +1,5 @@
 import type { BindingType, Bindings, WgslEntry } from './binding'
-import type { AnyInput, BufferReader } from './buffable'
+import type { BufferReader } from './buffable'
 import { elements } from './hacks'
 import {
 	type AnyInference,
@@ -9,7 +9,7 @@ import {
 	wgslStrideCalculus,
 } from './inference'
 import { log } from './log'
-import { CompilationError } from './types'
+import { type AnyInput, CompilationError } from './types'
 import { workGroupCount, workgroupSize } from './workgroup'
 
 export function makeKernel<
@@ -18,7 +18,6 @@ export function makeKernel<
 	Outputs extends Record<string, BufferReader>,
 >(
 	compute: string,
-	kernelDefaults: Partial<Record<keyof Inferences, number>>,
 	device: GPUDevice,
 	inferences: Inferences,
 	workGroupSize: [number, number, number] | null,
@@ -27,12 +26,9 @@ export function makeKernel<
 	initializations: string[],
 	groups: Bindings<Inferences>[],
 	bindingsOrder: BindingType<Inferences>[],
-	usedNames: Record<string, WgslEntry<Inferences>>
+	wgslNames: Record<string, WgslEntry<Inferences>>
 ) {
-	const kernelInferences = specifyInferences(
-		{ ...inferences },
-		kernelDefaults as Partial<Inferences>
-	)
+	const kernelInferences = { ...inferences }
 	// Extract `threads` *with* its `undefined` values for design-time workgroupSize optimization
 	const kernelWorkGroupSize =
 		workGroupSize || workgroupSize(extractInference(kernelInferences, 'threads', 3), device)
@@ -57,7 +53,7 @@ export function makeKernel<
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
-	const strides = Object.entries(usedNames)
+	const strides = Object.entries(wgslNames)
 		.filter(([_, { sizes }]) => sizes.length >= 2)
 		.map(([name, { sizes }]) => {
 			const strides = computeStride(kernelInferences, sizes)
@@ -105,7 +101,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	async function kernel(
 		device: GPUDevice,
 		inputs: Inputs,
-		defaultInfers: Partial<Record<keyof Inferences, number>>,
+		infers: Partial<Record<keyof Inferences, number>>,
 		inferenceReasons: Record<string, string>
 	): Promise<Outputs> {
 		const messages = (await shaderModuleCompilationInfo).messages
@@ -122,15 +118,16 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 
 			if (hasError) throw new CompilationError(messages)
 		}
-		// Inference can be done here as non-compulsory inference are not compelling
+		const callReasons = { ...inferenceReasons }
 		const callInfer = specifyInferences(
 			{ ...kernelInferences },
-			defaultInfers as Partial<Inferences>
+			infers as Partial<Inferences>,
+			'Kernel explicit inference',
+			callReasons
 		) as Inferences
-		const callReasons = { ...inferenceReasons }
 		// First a flat-map
 		const customEntries = orderedGroups.flatMap((group) => {
-			const entries = group.entries(callInfer, inputs, callReasons)
+			const entries = group.entries(inputs, callInfer, callReasons)
 			if (entries.length !== group.statics.layoutEntries.length)
 				throw Error(
 					`BindingGroup entries count (${entries.length}) don't match layout entries length (${group.statics.layoutEntries.length})`

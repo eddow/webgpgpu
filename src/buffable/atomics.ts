@@ -1,6 +1,6 @@
 import { Float16Array } from '@petamoriken/float16'
+import type { TypedArray } from '../types'
 import { type AtomicAccessor, BuffableAtomic } from './buffable'
-import type { TypedArray } from './to-sort'
 
 /* padding:
 Type	Intended Size	Actual Padded Size	Extra Padding?

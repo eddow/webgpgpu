@@ -15,14 +15,12 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 		this.entries.push(info)
 	}
 }
-
-type EmptyIfUndefined<T> = T extends undefined ? {} : T
 export type GPUUnboundGroupEntry = Omit<GPUBindGroupEntry, 'binding'>
 export type GPUUnboundGroupLayoutEntry = Omit<GPUBindGroupLayoutEntry, 'binding'>
 
 export type BoundTypes<BG> = BG extends Bindings<any>
 	? {
-			inputs: EmptyIfUndefined<Parameters<BG['entries']>[1]>
+			inputs: Parameters<BG['entries']>[0]
 			outputs: Awaited<ReturnType<BG['read']>>
 			inferences: BG['addedInferences']
 		}
@@ -77,8 +75,8 @@ export abstract class Bindings<Inferences extends AnyInference> {
 		return []
 	}
 	entries(
-		inferences: AnyInference,
 		inputs: {},
+		inferences: AnyInference,
 		reasons: Record<string, string>
 	): GPUUnboundGroupEntry[] {
 		return []

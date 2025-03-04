@@ -1,3 +1,7 @@
+TODO:
+- no more defaults
+- batch
+
 ![npm](https://img.shields.io/npm/v/webgpgpu.ts)
 
 # WebGpGpu
@@ -290,12 +294,14 @@ In WGSL, a "stride" is computed and accessible in the whole code (as `var<privat
 
 eg: 
 ```ts
-input({ myTable: f32.array('threads.x', 'threads.y') }).kernel(...)
+input({ myTable: f32.array('threads.y', 'threads.x') }).kernel(...)
 ```
 can be indexed in the wgsl code with:
 ```rust
-let entry = myTable[dot(thread.xy, myTableStride)];
+let entry = myTable[dot(thread.yx, myTableStride)];
 ```
+
+> Note: It is advised to keep threads.x as the last (right-most, least-significant) index of the array.
 
 #### value
 

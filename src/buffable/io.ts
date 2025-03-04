@@ -1,9 +1,7 @@
 import { Indexable } from '../hacks'
 import { type AnyInference, type SizeSpec, assertSize } from '../inference'
 import { log } from '../log'
-import { InferenceValidationError, ParameterError } from '../types'
-import type { InputXD } from './to-sort'
-
+import { InferenceValidationError, type InputXD, ParameterError } from '../types'
 export type Writer<Element> = (index: number, value: Element) => void
 export type Reader<Element> = (index: number) => Element
 

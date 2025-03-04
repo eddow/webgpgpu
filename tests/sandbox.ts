@@ -14,34 +14,25 @@ const rv = Array.from(br)
 console.log(rv)
 */
 
-import { call } from 'mocha'
-import { _ } from '../lib/outputs-BYoh-eu2'
-
-abstract class Callable<Args extends any[], Rv> {
-	apply(_thisArg: any, args: Args): Rv {
-		return this.call(_thisArg, ...args)
-	}
-	abstract call(_: any, ...args: Args): Rv
+function Callable<Args extends any[], Rv>(fct: (this: any, ...args: Args) => Rv) {
+	class Callable {}
+	Object.setPrototypeOf(
+		Callable.prototype,
+		new Proxy(Callable.prototype, {
+			apply(target, thisArg, argArray) {
+				//debugger
+			},
+		})
+	)
+	return Callable as typeof Callable & ((...args: Args) => Rv)
 }
-Object.setPrototypeOf(
-	Callable.prototype,
-	new Proxy(Callable.prototype, {
-		apply(target, thisArg, argArray) {
-			return target.call(thisArg, ...argArray)
-		},
-	})
-)
 
-type ICallable<Args extends any[], Rv> = Callable<Args, Rv> & ((...args: Args) => Rv)
-
-class MyCallable extends ICallable<[string], string> {
+const C = Callable((a: string) => `Hello ${a}`)
+class MyCallable extends C implements InstanceType<typeof C> {
 	constructor(public b: string) {
 		super()
-	}
-	call(_, a: string) {
-		return `Bonjour ${a} ${this.b}`
 	}
 }
 
 const c = new MyCallable('Dugenou')
-console.log(c('Benjamin'))
+//console.log(c('Benjamin'))

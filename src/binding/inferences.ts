@@ -9,7 +9,6 @@ import {
 import { Bindings, type WgslEntry } from './bindings'
 
 // TODO: Type-check no interference in inference (no common key)
-// TODO: manage constants
 export class InferenceBindings<
 	Inferences extends AnyInference,
 	Input extends Record<
@@ -36,7 +35,8 @@ export class InferenceBindings<
 			dimension: (Array.isArray(value) ? value.length : 1) as 1 | 2 | 3 | 4,
 		}))
 	}
-	init() {
+	init(inferences: Inferences, reasons: Record<string, string>) {
+		// TODO: manage constants
 		function typeName(dimension: 1 | 2 | 3 | 4) {
 			const type = [undefined, 'u32', 'vec2u', 'vec3u', 'vec4u'][dimension]
 			if (type === undefined) throw new Error(`Invalid inferred dimension ${dimension}`)
@@ -50,7 +50,7 @@ export class InferenceBindings<
 			},
 		}))
 	}
-	entries(inferences: AnyInference) {
+	entries(inputs: {}, inferences: AnyInference) {
 		const { device } = this
 		return this.dimensioned.map(({ name, dimension }) => {
 			const buffer = device.createBuffer({
