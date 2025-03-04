@@ -171,15 +171,34 @@ const customInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
 type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec extends [number]
 	? Element
 	: InputSpec extends [number, ...infer Rest extends number[]]
-		? BufferReader<Element, Rest>
-		: never
+		? IBufferReader<Element, Rest>
+		: IBufferReader<Element, number[]> | Element
 // TODO: should have all the info even for children browsing cached & given when constructing sub-buffer as {me, subs} (no more array slice)
-export class BufferReader<
-	Element = any,
-	InputSpec extends readonly number[] = number[],
-> extends Indexable<IndexableReturn<Element, InputSpec>> {
+export interface IBufferReader<Element, InputSpec extends readonly number[]> {
+	/**
+	 * Retrieve an element by its index
+	 * @param index The index of the element to retrieve
+	 * @returns
+	 */
+	at(...index: InputSpec): Element
+	keys(): IterableIterator<InputSpec>
+	values(): IterableIterator<Element>
+	entries(): Generator<[InputSpec, Element]>
+	length: number
+	stride: InputSpec
+	flatLength: number
+	flat(): Element[]
+	section<SSpec extends SubSpec<InputSpec>>(
+		...sSpec: SSpec
+	): IBufferReader<Element, SubtractLengths<InputSpec, SSpec>>
+	[key: number]: IndexableReturn<Element, InputSpec>
+}
+export class BufferReader<Element = any, InputSpec extends readonly number[] = number[]>
+	extends Indexable<IndexableReturn<Element, InputSpec>>
+	implements IBufferReader<Element, InputSpec>
+{
 	constructor(
-		private readonly read: Reader<Element>,
+		protected readonly read: Reader<Element>,
 		public readonly buffer: ArrayBuffer,
 		public readonly size: InputSpec,
 		public readonly offset: number = 0
@@ -252,7 +271,7 @@ export class BufferReader<
 	 */
 	section<SSpec extends SubSpec<InputSpec>>(
 		...sSpec: SSpec
-	): BufferReader<Element, SubtractLengths<InputSpec, SSpec>> {
+	): IBufferReader<Element, SubtractLengths<InputSpec, SSpec>> {
 		const { stride, buffer, size } = this
 		return new BufferReader(
 			this.read,
@@ -273,8 +292,8 @@ export class BufferReader<
 		return 'BufferReader'
 	}
 
-	[customInspectSymbol](/*depth, inspectOptions, inspect*/) {
-		return 'BufferReader'
-	}
+	//[customInspectSymbol](/*depth, inspectOptions, inspect*/) {
+	//	return 'BufferReader'
+	//}
 	// TODO: Implement Array<...>
 }

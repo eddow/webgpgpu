@@ -6,7 +6,7 @@ import {
 	type SizeSpec,
 	resolvedSize,
 } from '../inference'
-import { BufferReader, type Reader, type Writer, toArrayBuffer } from './io'
+import { BufferReader, type IBufferReader, type Reader, type Writer, toArrayBuffer } from './io'
 import type { InputXD, NumericSizesSpec, TypedArray, TypedArrayConstructor } from './to-sort'
 
 export type ValuedBuffable<
@@ -15,7 +15,7 @@ export type ValuedBuffable<
 	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > = {
-	buffable: Buffable<Inferences, Element, SizesSpec, ElementSizeSpec>
+	buffable: IBuffable<Inferences, Element, SizesSpec, ElementSizeSpec>
 	value: InputXD<Element, SizesSpec>
 }
 
@@ -23,12 +23,42 @@ export function isBuffable(buffable: any): buffable is Buffable {
 	return buffable instanceof Buffable
 }
 
-export abstract class Buffable<
+export interface IBuffable<
 	Inferences extends AnyInference = any,
 	Element = any,
 	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
 > {
+	readonly elementSizes: ElementSizeSpec
+	bytesPerAtomic: number
+	wgslSpecification: string
+	base: IBuffable<Inferences, Element, [], ElementSizeSpec>
+	sizes: SizesSpec
+	elementByteSize(inferences: Inferences): number
+	toArrayBuffer(
+		data: InputXD<Element, SizesSpec>,
+		inferences: Inferences,
+		reason?: string,
+		reasons?: Record<string, string>
+	): ArrayBuffer
+	readArrayBuffer(
+		buffer: ArrayBuffer,
+		inferences: Inferences
+	): IBufferReader<Element, NumericSizesSpec<SizesSpec>>
+	array<const SubSizesSpec extends readonly SizeSpec<Inferences>[]>(
+		...size: SubSizesSpec
+	): IBuffable<Inferences, Element, [...SubSizesSpec, ...SizesSpec], ElementSizeSpec>
+	value(
+		v: InputXD<Element, SizesSpec>
+	): ValuedBuffable<Inferences, Element, SizesSpec, ElementSizeSpec>
+}
+export abstract class Buffable<
+	Inferences extends AnyInference = any,
+	Element = any,
+	SizesSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+	ElementSizeSpec extends readonly SizeSpec<Inferences>[] = SizeSpec<Inferences>[],
+> implements IBuffable<Inferences, Element, SizesSpec, ElementSizeSpec>
+{
 	constructor(public readonly sizes: SizesSpec) {}
 	abstract readonly elementSizes: ElementSizeSpec
 	elementByteSize(inferences: Inferences): number {
@@ -58,7 +88,7 @@ export abstract class Buffable<
 	readArrayBuffer(
 		buffer: ArrayBuffer,
 		inferences: Inferences
-	): BufferReader<Element, NumericSizesSpec<SizesSpec>> {
+	): IBufferReader<Element, NumericSizesSpec<SizesSpec>> {
 		return new BufferReader<Element, NumericSizesSpec<SizesSpec>>(
 			this.reader(buffer),
 			buffer,

@@ -9,6 +9,7 @@ import {
 import { Bindings, type WgslEntry } from './bindings'
 
 // TODO: Type-check no interference in inference (no common key)
+// TODO: manage constants
 export class InferenceBindings<
 	Inferences extends AnyInference,
 	Input extends Record<

@@ -1,15 +1,14 @@
-import { type Buffable, isBuffable } from '../buffable/buffable'
-import { mapEntries } from '../hacks'
+import { type IBuffable, isBuffable } from '../buffable/buffable'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import type { OutputType } from '../webgpgpu'
 import { Bindings, type WgslEntry } from './bindings'
 import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry, wgslEntries } from './io'
 
-type Outputs<Specs extends Record<string, Buffable>> = { [K in keyof Specs]: OutputType<Specs[K]> }
+type Outputs<Specs extends Record<string, IBuffable>> = { [K in keyof Specs]: OutputType<Specs[K]> }
 type SubInferences<
 	Inferences extends AnyInference,
-	OutputSpecs extends Record<string, Buffable>,
+	OutputSpecs extends Record<string, IBuffable>,
 > = Inferences & DeducedInference<OutputSpecs[keyof OutputSpecs]>
 
 type OutputDescription<Inferences extends AnyInference> = {
@@ -19,10 +18,10 @@ type OutputDescription<Inferences extends AnyInference> = {
 
 export class OutputBindings<
 	Inferences extends AnyInference,
-	OutputSpecs extends Record<string, Buffable>,
+	OutputSpecs extends Record<string, IBuffable>,
 > extends Bindings<SubInferences<Inferences, OutputSpecs>> {
 	public readonly wgslEntries: Record<string, WgslEntry>
-	private readonly outputSpecs: { name: string; buffable: Buffable<Inferences> }[]
+	private readonly outputSpecs: { name: string; buffable: IBuffable<Inferences> }[]
 	constructor(outputSpecs: OutputSpecs) {
 		super()
 		// TODO allow input/output?
@@ -31,7 +30,7 @@ export class OutputBindings<
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for output \`${name}\``)
 			return {
 				name,
-				buffable: buffable as Buffable<Inferences>,
+				buffable: buffable as IBuffable<Inferences>,
 			}
 		})
 	}
@@ -71,7 +70,7 @@ export class OutputBindings<
 
 export default function outputs<
 	Inferences extends AnyInference,
-	OutputSpecs extends Record<string, Buffable<Inferences>>,
+	OutputSpecs extends Record<string, IBuffable<Inferences>>,
 >(outputSpecs: OutputSpecs) {
 	return new OutputBindings<Inferences, OutputSpecs>(outputSpecs)
 }

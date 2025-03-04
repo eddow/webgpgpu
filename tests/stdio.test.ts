@@ -31,7 +31,7 @@ describe('overall', () => {
 			/@group\(\d+\) @binding\(\d+\) var<uniform> threads : vec3u;/
 		)
 		expect(kernel.toString()).to.match(
-			/@compute @workgroup_size\(42,1,1\)\s*fn main\(@builtin\(global_invocation_id\) thread : vec3u\) {\s*if\(all\(thread < threads\)\) {\s*}\s*}/
+			/@compute @workgroup_size\(42, 1, 1\)\s*fn main\(@builtin\(global_invocation_id\) thread : vec3u\) {\s*if\(all\(thread < threads\)\) {\s*}\s*}/
 			/*new RegExp(`
 @compute @workgroup_size(42,1,1)
 fn main(@builtin(global_invocation_id) thread : vec3u) {
@@ -173,7 +173,7 @@ describe('infers size', () => {
 				})
 			)
 			.kernel('')
-		expect(kernel.toString()).to.match(/@workgroup_size\(4,8,/)
+		expect(kernel.toString()).to.match(/@workgroup_size\(4, 8,/)
 	})
 	it('custom', async () => {
 		const kernel = webGpGpu
@@ -297,4 +297,5 @@ describe('diverse', () => {
 			[6, 7, 8],
 		])
 	})
+	// TODO: test call twice with different infers
 })

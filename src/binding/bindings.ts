@@ -1,4 +1,3 @@
-import type { Buffable } from 'src/buffable'
 import type { AnyInference, SizeSpec } from '../inference'
 import type { BindingEntryDescription } from './io'
 

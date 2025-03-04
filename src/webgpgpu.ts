@@ -6,20 +6,21 @@ import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
 import {
 	type AnyInput,
-	type Buffable,
 	type BufferReader,
+	type IBuffable,
 	type ValuedBuffable,
 	activateF16,
 } from './buffable'
-import { type CodeParts, WgslCodeGenerator } from './code'
+import { type CodeParts, WgslCodeGenerator, preprocess } from './code'
+import { mapEntries } from './hacks'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
-import { kernelScope } from './kernel'
+import { makeKernel } from './kernel'
 import { type Log, log } from './log'
 import { ParameterError, WebGpGpuError } from './types'
 import { explicitWorkSize } from './workgroup'
 
-export type InputType<T extends Buffable> = Parameters<T['value']>[0]
-export type OutputType<T extends Buffable> = ReturnType<T['readArrayBuffer']>
+export type InputType<T extends IBuffable> = Parameters<T['value']>[0]
+export type OutputType<T extends IBuffable> = ReturnType<T['readArrayBuffer']>
 
 /**
  * Contains the information shared in a WebGpGpu tree (root and descendants) and referencing the device
@@ -253,12 +254,18 @@ export class WebGpGpu<
 		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
 			importUsage: [...this.importUsage, ...newImports],
 		})
-	}
+	} //
 
 	/**
 	 * Definitions of standard imports - these can directly be edited by setting/deleting keys
 	 */
 	public static readonly imports: Record<PropertyKey, CodeParts> = Object.create(null)
+	public static defineImports(imports: Record<PropertyKey, CodeParts | string>) {
+		Object.assign(
+			WebGpGpu.imports,
+			mapEntries(imports, (i) => (typeof i === 'string' ? preprocess(i) : i))
+		)
+	}
 	protected getImport(name: PropertyKey): CodeParts {
 		return WebGpGpu.imports[name]
 	}
@@ -278,7 +285,7 @@ export class WebGpGpu<
 	 * @param inputs
 	 * @returns Chainable
 	 */
-	input<Specs extends Record<string, Buffable<Inferences>>>(inputs: Specs) {
+	input<Specs extends Record<string, IBuffable<Inferences>>>(inputs: Specs) {
 		// TODO: Could make a type error if a name is already existing
 		return this.bind(new InputBindings<Inferences, Specs>(inputs))
 	}
@@ -287,7 +294,7 @@ export class WebGpGpu<
 	 * @param inputs
 	 * @returns Chainable
 	 */
-	output<Specs extends Record<string, Buffable<Inferences>>>(
+	output<Specs extends Record<string, IBuffable<Inferences>>>(
 		outputs: Specs
 	): WebGpGpu<Inferences, Inputs, Outputs & { [K in keyof Specs]: OutputType<Specs[K]> }> {
 		return this.bind(new OutputBindings<Inferences, Specs>(outputs))
@@ -360,12 +367,12 @@ export class WebGpGpu<
 	/**
 	 *
 	 * @param compute Create a kernel
-	 * @param kernelDefaults Default values to the inferences
+	 * @param defaults Default values to the inferences
 	 * @returns
 	 */
 	kernel(
-		compute: string,
-		kernelDefaults: Partial<Record<keyof Inferences, number>> = {}
+		compute = '',
+		defaults: Partial<Record<keyof Inferences, number>> = {}
 	): Kernel<Inferences, Inputs, Outputs> {
 		function guarded<T>(fct: () => T) {
 			try {
@@ -382,19 +389,21 @@ export class WebGpGpu<
 			workGroupSize,
 			declarations,
 			computations,
+			initializations,
 			groups,
 			inferenceReasons,
 			usedNames,
 		} = this
 		const { kernel, code, kernelInferences } = guarded(() =>
-			kernelScope<Inferences, Inputs, Outputs>(
+			makeKernel<Inferences, Inputs, Outputs>(
 				compute,
-				kernelDefaults,
+				defaults,
 				device,
 				inferences,
 				workGroupSize,
 				declarations,
 				computations,
+				initializations,
 				groups,
 				WebGpGpu.bindingsOrder,
 				usedNames

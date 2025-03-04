@@ -1,5 +1,13 @@
+/* TODO code: something much more powerful with: input/output definitions, "usage" and a preprocessor with:
+#import "..."
+#init
+#compute
+#input someVar: f32[threads.x, 10]
+#output someOtherVar: someOtherType
+//*/
 export interface CodeParts {
 	declaration?: string
+	initialization?: string
 	computation?: string
 }
 export abstract class WgslCodeGenerator {
@@ -16,6 +24,16 @@ export abstract class WgslCodeGenerator {
 		return this.allEntries.map(({ declaration }) => declaration).filter(Boolean) as string[]
 	}
 	protected get computations() {
-		return this.allEntries.map(({ computation }) => computation).filter(Boolean) as string[]
+		return this.allEntries
+			.map(({ computation }) => computation)
+			.filter(Boolean)
+			.reverse() as string[]
 	}
+	protected get initializations() {
+		return this.allEntries.map(({ initialization }) => initialization).filter(Boolean) as string[]
+	}
+}
+
+export function preprocess(code: string): CodeParts {
+	return { declaration: code }
 }

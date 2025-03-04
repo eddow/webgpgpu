@@ -1,5 +1,4 @@
-import { type Buffable, isBuffable } from '../buffable/buffable'
-import { mapEntries } from '../hacks'
+import { type IBuffable, isBuffable } from '../buffable/buffable'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { ParameterError } from '../types'
 import type { InputType } from '../webgpgpu'
@@ -8,10 +7,10 @@ import { inputGroupEntry, layoutGroupEntry, wgslEntries } from './io'
 
 export class InputBindings<
 	Inferences extends AnyInference,
-	InputSpecs extends Record<string, Buffable>,
+	InputSpecs extends Record<string, IBuffable>,
 > extends Bindings<Inferences & DeducedInference<InputSpecs[keyof InputSpecs]>> {
 	public readonly wgslEntries: Record<string, WgslEntry>
-	private readonly inputSpecs: { name: string; buffable: Buffable<AnyInference> }[]
+	private readonly inputSpecs: { name: string; buffable: IBuffable<AnyInference> }[]
 	constructor(inputSpecs: InputSpecs) {
 		super()
 		// TODO default values
@@ -20,7 +19,7 @@ export class InputBindings<
 			if (!isBuffable(buffable)) throw new ParameterError(`Bad value for input \`${name}\``)
 			return {
 				name,
-				buffable: buffable as Buffable<AnyInference>,
+				buffable: buffable as IBuffable<AnyInference>,
 			}
 		})
 	}
@@ -54,7 +53,7 @@ export class InputBindings<
 
 export default function inputs<
 	Inferences extends AnyInference,
-	InputSpecs extends Record<string, Buffable<Inferences>>,
+	InputSpecs extends Record<string, IBuffable<Inferences>>,
 >(inputSpecs: InputSpecs) {
 	return new InputBindings<Inferences, InputSpecs>(inputSpecs)
 }

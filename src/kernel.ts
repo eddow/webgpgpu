@@ -3,7 +3,6 @@ import type { AnyInput, BufferReader } from './buffable'
 import { elements } from './hacks'
 import {
 	type AnyInference,
-	type SizeSpec,
 	computeStride,
 	extractInference,
 	specifyInferences,
@@ -13,7 +12,7 @@ import { log } from './log'
 import { CompilationError } from './types'
 import { workGroupCount, workgroupSize } from './workgroup'
 
-export function kernelScope<
+export function makeKernel<
 	Inferences extends AnyInference,
 	Inputs extends Record<string, AnyInput>,
 	Outputs extends Record<string, BufferReader>,
@@ -25,6 +24,7 @@ export function kernelScope<
 	workGroupSize: [number, number, number] | null,
 	declarations: string[],
 	computations: string[],
+	initializations: string[],
 	groups: Bindings<Inferences>[],
 	bindingsOrder: BindingType<Inferences>[],
 	usedNames: Record<string, WgslEntry<Inferences>>
@@ -57,8 +57,6 @@ export function kernelScope<
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
 
-	// TODO: Make a const out of a stride if possible
-	// TODO: test
 	const strides = Object.entries(usedNames)
 		.filter(([_, { sizes }]) => sizes.length >= 2)
 		.map(([name, { sizes }]) => {
@@ -87,8 +85,9 @@ ${elements(strides, 'declaration').join('\n')}
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
 		${elements(strides, 'calculus').join('\n\t\t')}
-		${computations.join('\n\t\t')}
+		${initializations.join('\n\t\t')}
 		${compute}
+		${computations.join('\n\t\t')}
 	}
 }
 `
@@ -128,9 +127,10 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			{ ...kernelInferences },
 			defaultInfers as Partial<Inferences>
 		) as Inferences
+		const callReasons = { ...inferenceReasons }
 		// First a flat-map
 		const customEntries = orderedGroups.flatMap((group) => {
-			const entries = group.entries(callInfer, inputs, inferenceReasons)
+			const entries = group.entries(callInfer, inputs, callReasons)
 			if (entries.length !== group.statics.layoutEntries.length)
 				throw Error(
 					`BindingGroup entries count (${entries.length}) don't match layout entries length (${group.statics.layoutEntries.length})`

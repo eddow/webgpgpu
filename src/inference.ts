@@ -1,4 +1,4 @@
-import type { Buffable } from './buffable'
+import type { IBuffable } from './buffable'
 import { InferenceValidationError, ParameterError } from './types'
 
 // #region types
@@ -44,7 +44,7 @@ export type InferencesList<SSs extends readonly any[]> = SSs extends readonly [
 		? StringOnly<First> | InferencesList<Rest> // Collect strings
 		: StringOnly<First>
 	: never
-export type DeducedInference<OneBuff extends Buffable> = Record<
+export type DeducedInference<OneBuff extends IBuffable> = Record<
 	InferencesList<OneBuff['sizes']>,
 	Inferred
 >
