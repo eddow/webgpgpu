@@ -4,16 +4,10 @@ import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
-import { type BufferReader, type IBuffable, type ValuedBuffable, activateF16 } from './buffable'
+import { type IBuffable, type IBufferReader, type ValuedBuffable, activateF16 } from './buffable'
 import { type CodeParts, WgslCodeGenerator, preprocess } from './code'
 import { mapEntries } from './hacks'
-import {
-	type AnyInference,
-	type CreatedInferences,
-	type Inferred,
-	infer3D,
-	specifyInferences,
-} from './inference'
+import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
 import { makeKernel } from './kernel'
 import { type Log, log } from './log'
 import {
@@ -47,7 +41,7 @@ interface RootInfo {
 export class WebGpGpu<
 		Inferences extends AnyInference,
 		Inputs extends Record<string, AnyInput>,
-		Outputs extends Record<string, BufferReader>,
+		Outputs extends Record<string, IBufferReader>,
 	>
 	extends WgslCodeGenerator
 	implements IWebGpGpu<Inferences, Inputs, Outputs>

@@ -1,5 +1,5 @@
 import type { Bindings, BoundTypes } from './binding'
-import type { BufferReader, IBuffable, ValuedBuffable } from './buffable'
+import type { IBuffable, IBufferReader, ValuedBuffable } from './buffable'
 import type { CodeParts } from './code'
 import { mapEntries } from './hacks'
 import {
@@ -14,10 +14,7 @@ import { type AnyInput, type IWebGpGpu, type InputType, type Kernel, WebGpGpuErr
 import type { RootWebGpGpu, WebGpGpu } from './webgpgpu'
 
 export class BatchError extends WebGpGpuError {
-	name = 'InferenceValidationError'
-	constructor(message: string) {
-		super(`Batch error: ${message}`)
-	}
+	name = 'BatchError'
 }
 
 export type RootGGBatch = GGBatch<
@@ -35,10 +32,16 @@ export function tick(): Promise<void> {
 	return new Promise<void>((res) => setTimeout(res))
 }
 
+export type BatchKernel<
+	Inferences extends AnyInference,
+	Inputs extends Record<string, AnyInput>,
+	Outputs extends Record<string, IBufferReader>,
+> = Kernel<Inferences, Inputs, Outputs> & { executed: Promise<number> }
+
 export class GGBatch<
 	Inferences extends AnyInference,
 	Inputs extends Record<string, AnyInput>,
-	Outputs extends Record<string, BufferReader>,
+	Outputs extends Record<string, IBufferReader>,
 > implements IWebGpGpu<Inferences, Inputs, Outputs>
 {
 	static createRoot(webgpgpu: RootWebGpGpu): RootGGBatch {
@@ -147,15 +150,35 @@ export class GGBatch<
 		)
 	}
 
-	batch(compute?: string) {
-		const kernel = this.webgpgpu.kernel(compute)
+	/**
+	 * Batcher
+	 * @param constants Constants to pass to the kernel
+	 */
+	batch(
+		constants?: Record<string, number>
+	): (start?: Promise<void>) => BatchKernel<Inferences, Inputs, Outputs>
+	/**
+	 * Batcher
+	 * @param compute WGSL code to compile
+	 * @param constants Constants to pass to the kernel
+	 */
+	batch(
+		compute?: string,
+		constants?: Record<string, GPUPipelineConstantValue>
+	): (start?: Promise<void>) => BatchKernel<Inferences, Inputs, Outputs>
+
+	batch(
+		compute?: string | Record<string, GPUPipelineConstantValue>,
+		constants?: Record<string, GPUPipelineConstantValue>
+	) {
+		const kernel = this.webgpgpu.kernel(compute as string, constants)
 		return (start: Promise<void> = tick()) => {
 			const batchInputs = mapEntries(this.inputs, () => [] as ArrayBuffer[])
 			const waiting: ((output: Outputs) => void)[] = []
 			const inferred = { ...kernel.inferred } as Inferences
 			const reasons = { ...this.webgpgpu.inferenceReasons }
 			let consumed = false
-			start.then(async () => {
+			const executed = start.then(async () => {
 				consumed = true
 				if (waiting.length === 0) {
 					log.warn('Empty batch consumed.')
@@ -164,6 +187,7 @@ export class GGBatch<
 				const outputs = await kernel(batchInputs, inferred)
 				for (let i = 0; i < waiting.length; ++i)
 					waiting[i](mapEntries(outputs, (output: any[]) => output[i]) as Outputs)
+				return waiting.length
 			})
 			return Object.assign(
 				(inputs: Inputs, infers: Partial<Record<keyof Inferences, number>> = {}) => {
@@ -192,6 +216,7 @@ export class GGBatch<
 						return kernel.toString()
 					},
 					inferred,
+					executed,
 				}
 			)
 		}

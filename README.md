@@ -189,7 +189,7 @@ const kernel = webGpGpu
 	.common({ a: f32.array('threads.x').value([1, 2, 3]) })
 	.output({ output: f32.array('threads.x') })
 	.kernel('output[thread.x] = a[thread.x] + b[thread.x];')
-const { output } = await kernel({b: [4, 5, 6]})	// output ~= [5, 7, 9]
+const { output } = await kernel({ b: [4, 5, 6] })	// output ~= [5, 7, 9]
 ```
 
 ### infer & specifyInference
@@ -423,11 +423,50 @@ WebGpGpu.log: {
 `warn` and `error` can be set separately to redirect the whole library logs. (mainly for compilation messages) or extreme cases as "uploaded size(0) array", ...
 Note that a `log.error` will always have its associated exception throw.
 
+## Batches
+
+Batches are a further abstraction of parallelism. A batch is a kernel function that won't execute directly but stack the inputs so that all calls to the kernel are done in parallel.
+
+### TS-side
+
+```ts
+const webGpGpu = await createWebGpGpu()
+const ggBatch = GGBatch.createRoot(webGpGpu)
+const batch = ggBatch
+	.input({ ... })
+	.output({ ... })
+	.batch('...')
+```
+```ts
+	const kernel = batch()
+	useKernel(kernel)	// no await here!
+	const executed = await kernel.executed	// Number of parallel executions that occurred
+```
+
+The returned `batch` is a function that creates a batch. It takes a `Promise<void>` (default: tick -> `setTimeout`) and returns a `kernel` function.
+
+
+### WGSL-side
+
+Inputs and outputs (not commons) have one more dimension, the first one, who is `thread.z`
+Calls to this kernel function will stack the inputs on `threads.z` axis and call the kernel when the given promise is resolved. Single values become 1-D arrays, 1-D arrays become 2-D arrays, ...
+
+```ts
+	ggBatch
+	.input({ a: f32.array('threads.x'), k: f32 })
+	.common({ b: f32.array('threads.y').value(...) })
+	.output({ output: f32.array('threads.x') })
+	.batch(/*wgsl*/`
+	output[dot(thread.zx, outputStride)] = something(a[dot(thread.zx, aStride)], b[thread.y], k[thread.z]);
+	`)
+```
+
 ## Exceptions
 
 - `CompilationError` Has the exact messages in the `cause` (they are also logged)
 - `ArraySizeValidationError` Occurs when arguments size are not fitting
 - `ParameterError` Mainly for parameter names conflicts &c.
+- `BatchError` Thrown when there was an error during batch execution
 
 ## Ecosystem
 
@@ -479,7 +518,7 @@ For instance, for now, a complete mocha testing run is impossible: some async fi
   - If such happen, have stride object given as const, not uniform
   - Check GPU limitations to have input arrays with fixed-size small enough given directly in the UBOs
 
-#### Parallel
+#### In parallel
 
 - Size assertion/inference when ArrayBuffers are provided directly as X-D inputs (X > 1) 
 - Make BufferReader more ArrayLike (iterator, array prototype forward, ...)

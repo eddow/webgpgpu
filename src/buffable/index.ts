@@ -1,4 +1,4 @@
 export * from './atomics'
 export * from './struct'
-export type { BufferReader } from './io'
+export type { IBufferReader } from './io'
 export * from './buffable'

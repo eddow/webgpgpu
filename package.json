@@ -1,6 +1,6 @@
 {
 	"name": "webgpgpu.ts",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"scripts": {
 		"test": "mocha",
 		"test:karma": "karma start ./karma.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",

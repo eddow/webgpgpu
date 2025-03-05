@@ -1,5 +1,5 @@
 import type { BindingType, Bindings, WgslEntry } from './binding'
-import type { BufferReader } from './buffable'
+import type { IBufferReader } from './buffable'
 import { elements } from './hacks'
 import {
 	type AnyInference,
@@ -15,7 +15,7 @@ import { workGroupCount, workgroupSize } from './workgroup'
 export function makeKernel<
 	Inferences extends AnyInference,
 	Inputs extends Record<string, AnyInput>,
-	Outputs extends Record<string, BufferReader>,
+	Outputs extends Record<string, IBufferReader>,
 >(
 	compute: string,
 	constants: Record<string, GPUPipelineConstantValue> | undefined,

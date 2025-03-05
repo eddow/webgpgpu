@@ -1,6 +1,6 @@
 import type { Float16Array } from '@petamoriken/float16'
 import type { Bindings, BoundTypes } from './binding'
-import type { BufferReader, IBuffable, ValuedBuffable } from './buffable'
+import type { IBuffable, IBufferReader, ValuedBuffable } from './buffable'
 import type { CodeParts } from './code'
 import type { AnyInference, CreatedInferences, Inferred } from './inference'
 
@@ -64,7 +64,7 @@ export type OutputType<T extends IBuffable> = ReturnType<T['readArrayBuffer']>
 export interface Kernel<
 	Inferences extends AnyInference,
 	Inputs extends Record<string, AnyInput>,
-	Outputs extends Record<string, BufferReader>,
+	Outputs extends Record<string, IBufferReader>,
 > {
 	(inputs: Inputs, defaultInfers?: Partial<Record<keyof Inferences, number>>): Promise<Outputs>
 	inferred: Inferences
@@ -107,7 +107,7 @@ export type MixedWebGpGpu<TypesDef extends { inputs: any; outputs: any; inferenc
 export interface IWebGpGpu<
 	Inferences extends AnyInference,
 	Inputs extends Record<string, AnyInput>,
-	Outputs extends Record<string, BufferReader>,
+	Outputs extends Record<string, IBufferReader>,
 > {
 	// Instance properties
 	readonly inferences: Inferences

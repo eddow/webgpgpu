@@ -193,7 +193,7 @@ type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec e
 		? IBufferReader<Element, Rest>
 		: IBufferReader<Element, number[]> | Element
 // TODO: should have all the info even for children browsing cached & given when constructing sub-buffer as {me, subs} (no more array slice)
-export interface IBufferReader<Element, InputSpec extends readonly number[]> {
+export interface IBufferReader<Element = any, InputSpec extends readonly number[] = number[]> {
 	/**
 	 * Retrieve an element by its index
 	 * @param index The index of the element to retrieve
