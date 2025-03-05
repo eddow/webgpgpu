@@ -17,6 +17,7 @@ import {
 	type OutputType,
 	ParameterError,
 	WebGpGpuError,
+	WebGpuNotSupportedError,
 } from './types'
 import { explicitWorkSize } from './workgroup'
 
@@ -109,11 +110,11 @@ export class WebGpGpu<
 			from instanceof GPUAdapter ? Promise.resolve(from) : from.requestAdapter(adapterOptions)
 		return adapter
 			.then((adapter) => {
-				if (!adapter) throw new Error('Adapter not created')
+				if (!adapter) throw new WebGpuNotSupportedError('Adapter not created')
 				return adapter.requestDevice(deviceDescriptor)
 			})
 			.then((device) => {
-				if (!device) throw new Error('Device not created')
+				if (!device) throw new WebGpuNotSupportedError('Device not created')
 				return create(device)
 			})
 	}

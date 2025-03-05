@@ -463,10 +463,12 @@ Calls to this kernel function will stack the inputs on `threads.z` axis and call
 
 ## Exceptions
 
+- `WebGpuNotSupportedError` Only as a rejection for `createWebGpGpu`
 - `CompilationError` Has the exact messages in the `cause` (they are also logged)
 - `ArraySizeValidationError` Occurs when arguments size are not fitting
 - `ParameterError` Mainly for parameter names conflicts &c.
 - `BatchError` Thrown when there was an error during batch execution
+- `CircularImportError` - TODO: finish and document imports
 
 ## Ecosystem
 

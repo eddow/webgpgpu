@@ -32,6 +32,9 @@ export type TypedArrayConstructor<ArrayBufferLike> = {
 export type TypedArray = Float32Array | Float16Array | Uint32Array | Int32Array
 
 export class WebGpGpuError extends Error {}
+export class WebGpuNotSupportedError extends WebGpGpuError {
+	name = 'WebGpuNotSupportedError'
+}
 
 export class InferenceValidationError extends WebGpGpuError {
 	name = 'InferenceValidationError'
