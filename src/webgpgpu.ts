@@ -329,12 +329,27 @@ export class WebGpGpu<
 	// #endregion Chainable
 
 	/**
-	 *
-	 * @param compute Create a kernel
-	 * @param defaults Default values to the inferences
-	 * @returns
+	 * Kreate
+	 * @param constants Constants to pass to the kernel
 	 */
-	kernel(compute = ''): Kernel<Inferences, Inputs, Outputs> {
+	kernel(constants?: Record<string, number>): Kernel<Inferences, Inputs, Outputs>
+	/**
+	 * Kreate
+	 * @param compute WGSL code to compile
+	 * @param constants Constants to pass to the kernel
+	 */
+	kernel(
+		compute?: string,
+		constants?: Record<string, GPUPipelineConstantValue>
+	): Kernel<Inferences, Inputs, Outputs>
+	kernel(
+		compute: string | Record<string, number> = '',
+		constants?: Record<string, GPUPipelineConstantValue>
+	): Kernel<Inferences, Inputs, Outputs> {
+		if (typeof compute === 'object') {
+			constants = compute
+			compute = ''
+		}
 		function guarded<T>(fct: () => T) {
 			try {
 				return fct()
@@ -358,6 +373,7 @@ export class WebGpGpu<
 		const { kernel, code, kernelInferences } = guarded(() =>
 			makeKernel<Inferences, Inputs, Outputs>(
 				compute,
+				constants,
 				device,
 				inferences,
 				workGroupSize,

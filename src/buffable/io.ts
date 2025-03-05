@@ -73,7 +73,7 @@ function inferSizes<
 		case 0:
 			return []
 		case 1:
-			if (data instanceof ArrayBuffer) {
+			if (data && typeof data === 'object' && 'byteLength' in data) {
 				if (data.byteLength % bytesPerElement !== 0)
 					throw new InferenceValidationError(
 						`Size mismatch in dimension 1: ${data.byteLength} is not a multiple of ${bytesPerElement} (bytes)`
@@ -106,24 +106,45 @@ function inferSizes<
 
 function writeInputData<Element, SizesSpec extends readonly number[]>(
 	target: ArrayBuffer,
+	bytesPerElement: number,
 	offset: number,
 	data: InputXD<Element, any>,
 	sizes: SizesSpec,
 	write: (index: number, value: Element) => void
 ) {
 	if (data instanceof ArrayBuffer) {
+		data = {
+			buffer: data,
+			byteOffset: 0,
+			byteLength: data.byteLength,
+		}
+	}
+	if (typeof data === 'object' && data && 'buffer' in data) {
+		// offset & length of the input
+		const { buffer, byteOffset, byteLength } = data as ArrayBufferView
+		offset *= bytesPerElement
 		// TODO: validate size
-		const round = [3, 2, 1].find((i) => (offset & ((1 << i) - 1)) === 0)
-		if (!round) new Uint8Array(target).set(new Uint8Array(data), offset)
+		const round = [3, 2, 1].find((i) => ((offset | byteOffset) & ((1 << i) - 1)) === 0)
+		if (!round) new Uint8Array(target).set(new Uint8Array(buffer, byteOffset, byteLength), offset)
 		else {
-			const typedArray = [undefined, Uint16Array, Uint32Array, BigUint64Array][round]!
+			// offset in bytes, length in `elements`
+			const typedArray = [undefined, Uint16Array, Uint32Array, BigUint64Array][round] as new (
+				buffer: ArrayBuffer,
+				offset: number,
+				length: number
+			) => Uint16Array | Uint32Array | BigUint64Array
 
 			const from = data.byteLength & ~((1 << round) - 1)
 			if (from > 0)
-				//@ts-expect-error typedArray = typedArray, explain this...
-				new typedArray(target, offset, from >> round).set(new typedArray(data, 0, from >> round))
+				new typedArray(target, offset, from >> round).set(
+					//@ts-expect-error typedArray = typedArray, explain this...
+					new typedArray(buffer, byteOffset, from >> round)
+				)
 			const remaining = data.byteLength & ((1 << round) - 1)
-			if (remaining) new Uint8Array(target, from + offset).set(new Uint8Array(data, from))
+			if (remaining)
+				new Uint8Array(target, from + offset).set(
+					new Uint8Array(buffer, byteOffset + from, remaining)
+				)
 		}
 	} else if (!sizes.length) {
 		write(offset, data as Element)
@@ -136,7 +157,7 @@ function writeInputData<Element, SizesSpec extends readonly number[]>(
 		const subSizes = sizes.slice(1)
 		const stride = prod(subSizes, 1)
 		for (const element of data) {
-			writeInputData(target, offset, element, subSizes, write)
+			writeInputData(target, bytesPerElement, offset, element, subSizes, write)
 			offset += stride
 		}
 	} else {
@@ -161,7 +182,7 @@ export function toArrayBuffer<
 	const sizes = inferSizes(bytesPerElement, data, sizesSpec, inferences, reason, reasons)
 	const buffer = new ArrayBuffer(prod(sizes, bytesPerElement))
 	const write = writer(buffer)
-	writeInputData(buffer, 0, data, sizes, write)
+	writeInputData(buffer, bytesPerElement, 0, data, sizes, write)
 	return buffer
 }
 const customInspectSymbol = Symbol.for('nodejs.util.inspect.custom')

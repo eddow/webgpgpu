@@ -1,10 +1,6 @@
-TODO:
-- no more defaults
-- batch
-
 ![npm](https://img.shields.io/npm/v/webgpgpu.ts)
 
-# WebGpGpu
+# WebGpGpu.ts
 
 This package provides WebGPU based GPU computing.
 
@@ -225,9 +221,26 @@ const kernel = webGpGpu
 const { output } = await kernel({ a: [1, 2, 3], b: [4, 5, 6] }) // output ~= [5, 7, 9]
 ```
 
+### Building
+
+The kernel is created from optionally:
+- A kernel main code (the body of the main function).
+This is not compulsory as much code can have been given through `import` and `define`
+- A list of constant values
+The wgsl code can define:
+```rust
+override myConstant: f32 = 1.0;
+```
+These values (only single numbers) can be overridden as second (or only) parameter of the kernel method.
+
+```ts
+const kernel = webGpGpu...
+	.kernel({ myConstant: 2 })
+```
+
 ### Calling
 
-The kernel can take as a second argument an object containing defaults for the inferences. These values *will not* be forced/asserted and might not be used. See [Size inference](#size-inference) section.
+The kernel can take as a second argument an object containing inferences. These values *will* be forced/asserted and used. See [Size inference](#size-inference) section.
 
 ### Inputs
 
@@ -331,11 +344,9 @@ and `myTableSize` will be a provided `vec2u`.
 
 cf. [infer & specifyInference](#infer--specifyinference)
 
-### Inference defaulting
+### Inference late-fixing
 
-If inferences cannot be retrieved from an array size, they can be defaulted to a number (or will default to `1`) when defining or calling the kernel.
-
-Note: This defaulting system doesn't assert anything and will perhaps not even be taken into account if the value was already inferred. To force a value, use `.infer`.
+Inferences can be asserted before kernel creation using [`specifyInference`](#infer--specifyinference) or when calling the kernel by providing a second argument.
 
 Generate the N first squares:
 ```ts
@@ -343,14 +354,6 @@ const kernel = webGpGpu
 	.output({output: f32.array('threads.x')})
 	.kernel('output[thread.x] = thread.x*thread.x;')
 const { output } = await kernel({}, { 'threads.x': 10 })
-```
-
-Generate the N(default 10) first squares:
-```ts
-const kernel = webGpGpu
-	.output({output: f32.array('threads.x')})
-	.kernel('output[thread.x] = thread.x*thread.x;', { 'threads.x': 10 })
-const { output } = await kernel({})
 ```
 
 ## System calls

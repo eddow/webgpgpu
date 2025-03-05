@@ -5,8 +5,9 @@ import type { CodeParts } from './code'
 import type { AnyInference, CreatedInferences, Inferred } from './inference'
 
 export type InputXD<Element, SizesSpec extends readonly any[]> =
-	| (SizesSpec extends [any, ...infer Rest] ? ArrayLike<InputXD<Element, Rest>> : Element)
-	| ArrayBuffer // TODO: | ArrayBufferView -> { buffer: ArrayBuffer, offset+size }
+	| (SizesSpec extends [any, ...infer Rest] ? InputXD<Element, Rest>[] : Element)
+	| ArrayBuffer
+	| ArrayBufferView
 export type Input0D<Element> = InputXD<Element, []>
 export type Input1D<Element> = InputXD<Element, [number]>
 export type Input2D<Element> = InputXD<Element, [number, number]>

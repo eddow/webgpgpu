@@ -57,7 +57,29 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 			.kernel('output[thread.x] = 42;')
 		const { output } = await kernel({})
 		expect(output).to.exist
-		expect(output.flat()).to.deepArrayEqual([42])
+		expect(output).to.deepArrayEqual([42])
+	})
+	it('one constant', async () => {
+		const kernel = webGpGpu
+			.output({ output: f32.array('threads.x') })
+			.define({
+				declaration: 'override myK: f32 = 9;',
+			})
+			.kernel('output[thread.x] = myK;')
+		const { output } = await kernel({})
+		expect(output).to.exist
+		expect(output).to.deepArrayEqual([9])
+	})
+	it('one given constant', async () => {
+		const kernel = webGpGpu
+			.output({ output: f32.array('threads.x') })
+			.define({
+				declaration: 'override myK: f32 = 9;',
+			})
+			.kernel('output[thread.x] = myK;', { myK: 52 })
+		const { output } = await kernel({})
+		expect(output).to.exist
+		expect(output).to.deepArrayEqual([52])
 	})
 })
 describe('inputs', () => {
@@ -68,7 +90,7 @@ describe('inputs', () => {
 			.kernel('output[thread.x] = a;')
 		const { output } = await kernel({ a: Float32Array.from([43]).buffer })
 		expect(output).to.exist
-		expect(output.flat()).to.deepArrayEqual([43])
+		expect(output).to.deepArrayEqual([43])
 	})
 	it('an uniform - value', async () => {
 		const kernel = webGpGpu
@@ -76,7 +98,7 @@ describe('inputs', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
 		const { output } = await kernel({ a: 44 })
-		expect(output.flat()).to.deepArrayEqual([44])
+		expect(output).to.deepArrayEqual([44])
 	})
 	it('a float array - TypedArray', async () => {
 		const kernel = webGpGpu
@@ -88,7 +110,7 @@ describe('inputs', () => {
 			{ a: Float32Array.from([11, 12, 13]).buffer },
 			{ 'threads.x': 3 }
 		)
-		expect(output.flat()).to.deepArrayEqual([33, 36, 39])
+		expect(output).to.deepArrayEqual([33, 36, 39])
 	})
 	it('a float array - value', async () => {
 		const kernel = webGpGpu
@@ -97,7 +119,7 @@ describe('inputs', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]*3;')
 		const { output } = await kernel({ a: [11, 12, 13] }, { 'threads.x': 3 })
-		expect(output.flat()).to.deepArrayEqual([33, 36, 39])
+		expect(output).to.deepArrayEqual([33, 36, 39])
 	})
 	it('a vec2 array - TypedArray', async () => {
 		const kernel = webGpGpu
@@ -109,7 +131,7 @@ describe('inputs', () => {
 			{ a: Float32Array.from([1, 11, 2, 12, 3, 13]).buffer },
 			{ 'threads.x': 3 }
 		)
-		expect(output.flat()).to.deepArrayEqual([36, 42, 48])
+		expect(output).to.deepArrayEqual([36, 42, 48])
 	})
 	it('a vec2 array - value', async () => {
 		const kernel = webGpGpu
@@ -127,7 +149,7 @@ describe('inputs', () => {
 			},
 			{ 'threads.x': 3 }
 		)
-		expect(output.flat()).to.deepArrayEqual([36, 42, 48])
+		expect(output).to.deepArrayEqual([36, 42, 48])
 	})
 	it('a vec2 array - transform', async () => {
 		const kernel = webGpGpu
@@ -145,7 +167,7 @@ describe('inputs', () => {
 			},
 			{ 'threads.x': 3 }
 		)
-		expect(output.flat()).to.deepArrayEqual([36, 42, 48])
+		expect(output).to.deepArrayEqual([36, 42, 48])
 	})
 	it('two arguments', async () => {
 		const kernel = webGpGpu
@@ -161,7 +183,28 @@ describe('inputs', () => {
 			},
 			{ 'threads.x': 3 }
 		)
-		expect(output.flat()).to.deepArrayEqual([5, 10, 15])
+		expect(output).to.deepArrayEqual([5, 10, 15])
+	})
+	it('array with ArrayBuffer', async () => {
+		const kernel = webGpGpu
+			.input({ a: f32.array('threads.x', 2) })
+			.output({ output: f32.array('threads.x') })
+			.kernel('output[thread.x] = a[thread.x*2] + a[thread.x*2+1];')
+		const { output } = await kernel({
+			a: [[1, 2], Float32Array.from([3, 4]), Float32Array.from([5, 6]).buffer],
+		})
+		expect(output).to.deepArrayEqual([3, 7, 11])
+	})
+	it('complex ArrayBuffer', async () => {
+		const buffer = new Float32Array([1, 2, 42, 3, 4, 42, 5, 6]).buffer
+		const kernel = webGpGpu
+			.input({ a: f32.array('threads.x', 2) })
+			.output({ output: f32.array('threads.x') })
+			.kernel('output[thread.x] = a[thread.x*2] + a[thread.x*2+1];')
+		const { output } = await kernel({
+			a: [new DataView(buffer, 0, 8), new DataView(buffer, 12, 8), new DataView(buffer, 24, 8)],
+		})
+		expect(output).to.deepArrayEqual([3, 7, 11])
 	})
 })
 describe('infers size', () => {
@@ -188,7 +231,7 @@ describe('infers size', () => {
 			.bind(outputs({ output: u32.array('threads.x') }))
 			.kernel('output[thread.x] = a[thread.x] + custom.y;')
 		const { output } = await kernel({})
-		expect(output.flat()).to.deepArrayEqual([6, 7, 8])
+		expect(output).to.deepArrayEqual([6, 7, 8])
 	})
 	it('assert infer fails', async () => {
 		expect(() =>
@@ -225,7 +268,7 @@ describe('infers size', () => {
 			.kernel('output[thread.x] = a[thread.x]+3.;')
 
 		const { output } = await kernel({})
-		expect(output.flat()).to.deepArrayEqual([4, 5, 6])
+		expect(output).to.deepArrayEqual([4, 5, 6])
 	})
 	it('effect - input', async () => {
 		const kernel = webGpGpu
@@ -233,7 +276,7 @@ describe('infers size', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a[thread.x]+2.;')
 		const { output } = await kernel({ a: [1, 2, 3] })
-		expect(output.flat()).to.deepArrayEqual([3, 4, 5])
+		expect(output).to.deepArrayEqual([3, 4, 5])
 	})
 	it('infers twice', async () => {
 		const kernel = webGpGpu
@@ -245,7 +288,7 @@ describe('infers size', () => {
 			.kernel('output[thread.x] = a[thread.x] * 2.0;')
 		async function test(a: number[], o: number[]) {
 			const { output } = await kernel({ a })
-			expect(output.flat()).to.deepArrayEqual(o)
+			expect(output).to.deepArrayEqual(o)
 		}
 		await test([1, 2], [2, 4])
 		await test([1, 2, 3], [2, 4, 6])
@@ -260,7 +303,7 @@ describe('diverse', () => {
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = myFunc(a[thread.x], b[thread.x]);')
 		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]).buffer })
-		expect(output.flat()).to.deepArrayEqual([3, 6, 9])
+		expect(output).to.deepArrayEqual([3, 6, 9])
 	})
 	it('name conflict', async () => {
 		const kernel = webGpGpu
@@ -278,8 +321,7 @@ describe('diverse', () => {
 `)
 		const { output } = await kernel({}, { 'threads.x': length })
 		expect(output).to.exist
-		const array = output.flat()
-		expect(array.length).to.equal(length)
+		expect(output.length).to.equal(length)
 	})
 	it('expand workGroupSize', async () => {
 		const kernel = webGpGpu

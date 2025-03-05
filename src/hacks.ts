@@ -55,7 +55,7 @@ export function mapEntries<From, To, Keys extends PropertyKey>(
 	return Object.fromEntries(
 		Object.entries(obj)
 			.map(([key, value]: [PropertyKey, unknown]) => [key, fn(value as From, key)])
-			.filter(([_, value]) => typeof value !== 'undefined')
+			.filter(([_, value]) => value !== undefined)
 	) as { [key in Keys]: To }
 }
 

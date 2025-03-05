@@ -18,6 +18,7 @@ export function makeKernel<
 	Outputs extends Record<string, BufferReader>,
 >(
 	compute: string,
+	constants: Record<string, GPUPipelineConstantValue> | undefined,
 	device: GPUDevice,
 	inferences: Inferences,
 	workGroupSize: [number, number, number] | null,
@@ -29,7 +30,8 @@ export function makeKernel<
 	wgslNames: Record<string, WgslEntry<Inferences>>
 ) {
 	const kernelInferences = { ...inferences }
-	// Extract `threads` *with* its `undefined` values for design-time workgroupSize optimization
+	// TODO: ensure threads.# who have not been used are fixed to 1 (1- find a way to note which inference has been used)
+	// exp. to-do: If no inference on `threads.y` for instance, don't "parallelize" on thread.y, it will be defaulted to 1
 	const kernelWorkGroupSize =
 		workGroupSize || workgroupSize(extractInference(kernelInferences, 'threads', 3), device)
 
@@ -96,7 +98,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		layout: device.createPipelineLayout({
 			bindGroupLayouts: [bindGroupLayout],
 		}),
-		compute: { module: shaderModule, entryPoint: 'main' },
+		compute: { module: shaderModule, entryPoint: 'main', constants },
 	})
 	async function kernel(
 		device: GPUDevice,

@@ -9,10 +9,11 @@ import {
 	type SizeSpec,
 	specifyInferences,
 } from './inference'
+import { log } from './log'
 import { type AnyInput, type IWebGpGpu, type InputType, type Kernel, WebGpGpuError } from './types'
 import type { RootWebGpGpu, WebGpGpu } from './webgpgpu'
 
-class BatchError extends WebGpGpuError {
+export class BatchError extends WebGpGpuError {
 	name = 'InferenceValidationError'
 	constructor(message: string) {
 		super(`Batch error: ${message}`)
@@ -29,6 +30,10 @@ export type RootGGBatch = GGBatch<
 >
 
 const roots = new WeakMap<RootWebGpGpu, RootGGBatch>()
+
+export function tick(): Promise<void> {
+	return new Promise<void>((res) => setTimeout(res))
+}
 
 export class GGBatch<
 	Inferences extends AnyInference,
@@ -121,7 +126,7 @@ export class GGBatch<
 	>(inputs: Specs) {
 		return new GGBatch<Inferences, Inputs & { [K in keyof Specs]: InputType<Specs[K]> }, Outputs>(
 			this.webgpgpu.input(mapEntries(inputs, (input) => input.array('threads.z'))),
-			this.inputs,
+			Object.assign(this.inputs, inputs),
 			this.outputs
 		)
 	}
@@ -138,57 +143,57 @@ export class GGBatch<
 		>(
 			this.webgpgpu.output(mapEntries(outputs, (output) => output.array('threads.z'))),
 			this.inputs,
-			this.outputs
+			Object.assign(this.outputs, outputs)
 		)
 	}
-	// TODO: test
+
 	batch(compute?: string) {
 		const kernel = this.webgpgpu.kernel(compute)
-		return () => {
+		return (start: Promise<void> = tick()) => {
 			const batchInputs = mapEntries(this.inputs, () => [] as ArrayBuffer[])
 			const waiting: ((output: Outputs) => void)[] = []
 			const inferred = { ...kernel.inferred } as Inferences
 			const reasons = { ...this.webgpgpu.inferenceReasons }
 			let consumed = false
-			return {
-				kernel: Object.assign(
-					(inputs: Inputs, infers: Partial<Record<keyof Inferences, number>> = {}) => {
-						if (consumed) throw new BatchError('Batch consumed.')
-						specifyInferences(
+			start.then(async () => {
+				consumed = true
+				if (waiting.length === 0) {
+					log.warn('Empty batch consumed.')
+					return
+				}
+				const outputs = await kernel(batchInputs, inferred)
+				for (let i = 0; i < waiting.length; ++i)
+					waiting[i](mapEntries(outputs, (output: any[]) => output[i]) as Outputs)
+			})
+			return Object.assign(
+				(inputs: Inputs, infers: Partial<Record<keyof Inferences, number>> = {}) => {
+					if (consumed) throw new BatchError('Batch consumed.')
+					specifyInferences(
+						inferred,
+						infers as Partial<Inferences>,
+						'kernel specification',
+						reasons
+					)
+					for (const i in this.inputs) {
+						const ba = this.inputs[i].toArrayBuffer(
+							inputs[i],
 							inferred,
-							infers as Partial<Inferences>,
-							'kernel specification',
+							`Batch input ${i}`,
 							reasons
 						)
-						// TODO .toArrayBuffer here in order to infer asap
-						for (const i in this.inputs) {
-							const ba = this.inputs[i].toArrayBuffer(
-								inputs[i],
-								inferred,
-								`Batch input ${i}`,
-								reasons
-							)
-							batchInputs[i].push(ba)
-						}
-						return new Promise<Outputs>((resolve) => {
-							waiting.push(resolve)
-						})
-					},
-					{
-						toString() {
-							return kernel.toString()
-						},
-						inferred,
+						batchInputs[i].push(ba)
 					}
-				),
-				async execute() {
-					if (consumed) throw new BatchError('Batch consumed.')
-					consumed = true
-					const outputs = await kernel(batchInputs, inferred)
-					for (let i = 0; i < waiting.length; ++i)
-						waiting[i](mapEntries(outputs, (output: any[]) => output[i]) as Outputs)
+					return new Promise<Outputs>((resolve) => {
+						waiting.push((x) => resolve(x))
+					})
 				},
-			}
+				{
+					toString() {
+						return kernel.toString()
+					},
+					inferred,
+				}
+			)
 		}
 	}
 }
