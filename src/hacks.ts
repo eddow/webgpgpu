@@ -48,6 +48,9 @@ Object.setPrototypeOf(
 	})
 )
 
+// #endregion
+// #region shortcuts
+
 export function mapEntries<From, To, Keys extends PropertyKey>(
 	obj: { [key in Keys]: From },
 	fn: (value: From, key: PropertyKey) => To | undefined
@@ -59,9 +62,6 @@ export function mapEntries<From, To, Keys extends PropertyKey>(
 	) as { [key in Keys]: To }
 }
 
-// #endregion
-// #region shortcuts
-
 export function defined<T>(v: T | undefined): v is T {
 	return v !== undefined
 }
@@ -71,6 +71,57 @@ export function elements<Key extends PropertyKey, Item extends { [k in Key]?: un
 	k: Key
 ): Exclude<Item[Key], undefined>[] {
 	return Array.from(items, (item) => item[k]).filter(defined) as Exclude<Item[Key], undefined>[]
+}
+
+// #endregion
+// #region decorators
+
+/**
+ * Cache a property on get.
+ * To cache manually, `propertyCache` can be used.
+ * `isPropertyCached` can be used to check if a property has been cached or not.
+ * To un-cache, deletion is enough - `delete obj.cachedProperty`
+ *
+ * @example
+ * ```ts
+ * class MyClass {
+ *   @cached('a', 'b')
+ *   get c() {
+ *     return this.a + this.b;
+ *   }
+ * }
+ *
+ * const myInstance = new MyClass();
+ *
+ * // First time, the method is executed and the result is cached.
+ * console.log(myInstance.c()); // Output: 5
+ *
+ * // Second time, the cached value is returned without executing the method again.
+ *
+ * ```
+ * @param needed The names of the properties on which depends the result of the getter.
+ * @returns
+ */
+export function cached<T>(...needed: PropertyKey[]) {
+	return (original: () => T, context: ClassGetterDecoratorContext<unknown, T>) => {
+		return function (this: any) {
+			const missing = needed.filter((p) => !isPropertyCached(this, p))
+			const stringName = context.name.toString()
+			if (missing.length)
+				throw new Error(`Missing properties to calculate ${stringName}: ${missing.join(', ')}`)
+			const rv = original.call(this)
+			propertyCache(this, context.name, rv)
+			return rv
+		}
+	}
+}
+
+export function isPropertyCached(object: Object, propertyKey: PropertyKey) {
+	return !!Object.getOwnPropertyDescriptor(object, propertyKey)
+}
+
+export function propertyCache(object: Object, propertyKey: PropertyKey, value: any) {
+	Object.defineProperty(object, propertyKey, { value })
 }
 
 // #endregion

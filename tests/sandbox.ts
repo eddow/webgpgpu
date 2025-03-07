@@ -13,7 +13,7 @@ const rv = Array.from(br)
 // TODO: display BufferReader in node (MaximumCallStack exception)
 console.log(rv)
 */
-
+/*
 function Callable<Args extends any[], Rv>(fct: (this: any, ...args: Args) => Rv) {
 	class Callable {}
 	Object.setPrototypeOf(
@@ -24,7 +24,7 @@ function Callable<Args extends any[], Rv>(fct: (this: any, ...args: Args) => Rv)
 			},
 		})
 	)
-	return Callable as typeof Callable & ((...args: Args) => Rv)
+	return Callable // as typeof Callable & ((...args: Args) => Rv)
 }
 
 const C = Callable((a: string) => `Hello ${a}`)
@@ -34,5 +34,6 @@ class MyCallable extends C implements InstanceType<typeof C> {
 	}
 }
 
-const c = new MyCallable('Dugenou')
-//console.log(c('Benjamin'))
+const c = new MyCallable('Dugenou') as unknown as (a: string) => string
+console.log(c('Benjamin'))
+*/

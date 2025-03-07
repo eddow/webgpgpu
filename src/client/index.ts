@@ -1,4 +1,4 @@
-import { WebGpuNotSupportedError } from 'src/types'
+import { WebGpuNotSupportedError } from '../types'
 import { WebGpGpu } from '../webgpgpu'
 
 export * from '..'

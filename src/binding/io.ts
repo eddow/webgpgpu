@@ -14,14 +14,12 @@ export function layoutGroupEntry(
 	// TODO: If size is already inferred, write it here
 	switch (buffable.sizes.length) {
 		case 0: {
-			if (!readOnly)
-				throw new ParameterError('Uniforms can only be read-only (cannot be used as input)')
 			return {
 				layoutEntry: {
 					visibility: GPUShaderStage.COMPUTE,
-					buffer: { type: 'uniform' },
+					buffer: { type: readOnly ? 'read-only-storage' : 'storage' },
 				},
-				declaration: `var<uniform> ${name} : ${buffable.wgslSpecification};`,
+				declaration: `var<storage, ${readOnly ? 'read' : 'read_write'}> ${name} : ${buffable.wgslSpecification};`,
 			}
 		}
 		default: {
@@ -51,7 +49,7 @@ export function inputGroupEntry(
 			const buffer = device.createBuffer({
 				label: name,
 				size: data.byteLength,
-				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+				usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 			})
 			device.queue.writeBuffer(buffer, 0, data)
 			return { buffer }

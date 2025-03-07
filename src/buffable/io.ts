@@ -219,7 +219,7 @@ export class BufferReader<Element = any, InputSpec extends readonly number[] = n
 	constructor(
 		protected readonly read: Reader<Element>,
 		public readonly buffer: ArrayBuffer,
-		public readonly size: InputSpec,
+		public readonly sizes: InputSpec,
 		public readonly offset: number = 0
 	) {
 		super()
@@ -230,24 +230,24 @@ export class BufferReader<Element = any, InputSpec extends readonly number[] = n
 	 * @returns
 	 */
 	at(...index: InputSpec): Element {
-		const { size, offset } = this
-		if (index.length !== size.length)
+		const { sizes, offset } = this
+		if (index.length !== sizes.length)
 			throw new InferenceValidationError(
-				`Index length mismatch: taking ${index.length}-D index element out of ${size.length}-D buffer`
+				`Index length mismatch: taking ${index.length}-D index element out of ${sizes.length}-D buffer`
 			)
-		return this.read(bufferPosition(index, size) + offset)
+		return this.read(bufferPosition(index, sizes) + offset)
 	}
 	*keys(): IterableIterator<InputSpec> {
-		const { size } = this
-		if (size.some((s) => s === 0)) {
+		const { sizes } = this
+		if (sizes.some((s) => s === 0)) {
 			log.warn('Zero size buffer as output')
 			return
 		}
-		const index: number[] = size.map(() => 0)
+		const index: number[] = sizes.map(() => 0)
 		do {
 			const copy = [...index] as const
 			yield copy as InputSpec
-		} while (nextXdIndex(index, size))
+		} while (nextXdIndex(index, sizes))
 	}
 	/**
 	 * Retrieves the [index, value] pairs, where `index` is the index array and `value` is the value at that index
@@ -259,16 +259,16 @@ export class BufferReader<Element = any, InputSpec extends readonly number[] = n
 	}
 	// TODO: Cache these
 	get flatLength(): number {
-		return prod(this.size)
+		return prod(this.sizes)
 	}
 	get length(): number {
-		return this.size[0]
+		return this.sizes[0]
 	}
 	get stride(): InputSpec {
-		const { size } = this
+		const { sizes } = this
 		let remaining = this.flatLength
 		return [
-			...size.map((s) => {
+			...sizes.map((s) => {
 				remaining /= s
 				return remaining
 			}),
@@ -291,21 +291,26 @@ export class BufferReader<Element = any, InputSpec extends readonly number[] = n
 	section<SSpec extends SubSpec<InputSpec>>(
 		...sSpec: SSpec
 	): IBufferReader<Element, SubtractLengths<InputSpec, SSpec>> {
-		const { stride, buffer, size } = this
+		const { stride, buffer, sizes } = this
 		return new BufferReader(
 			this.read,
 			buffer,
-			size.slice(sSpec.length) as SubtractLengths<InputSpec, SSpec>,
+			sizes.slice(sSpec.length) as SubtractLengths<InputSpec, SSpec>,
 			this.offset + dot(sSpec, stride)
 		)
 	}
 	getAtIndex(index: number): any {
 		// @ts-expect-error We know InputSpec but only programmatically
-		return this.size.length === 1 ? this.at(index) : this.section(index)
+		return this.sizes.length === 1 ? this.at(index) : this.section(index)
 	}
 	// TODO: node displaying a BufferReader throws [Array: Inspection interrupted prematurely. Maximum call stack size exceeded.]
 	toString(): string {
 		return 'BufferReader'
+	}
+	valueOf(): Element[] {
+		if (this.sizes.length) throw new TypeError('Cannot convert BufferReader to primitive')
+		//@ts-expect-error we know it's a number
+		return this.at()
 	}
 	get [Symbol.toStringTag]() {
 		return 'BufferReader'

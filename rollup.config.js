@@ -6,7 +6,7 @@ import typescript from '@rollup/plugin-typescript'
 import pluginDts from 'rollup-plugin-dts'
 
 // clean out the destination folder
-await rm('lib', { recursive: true, force: true })
+await rm('dist', { recursive: true, force: true })
 const banner = `/*
 	webgpgpu.ts - https://github.com/eddow/webgpgpu
 */`
@@ -25,7 +25,7 @@ export default [
 		input,
 		output: {
 			banner,
-			dir: 'lib',
+			dir: 'dist',
 		},
 		plugins: [...plugins, pluginDts()],
 		external,
@@ -35,14 +35,14 @@ export default [
 		output: [
 			{
 				banner,
-				dir: 'lib',
+				dir: 'dist',
 				entryFileNames: '[name].js',
 				sourcemap: true,
 				format: 'esm',
 			},
 			{
 				banner,
-				dir: 'lib',
+				dir: 'dist',
 				entryFileNames: '[name].cjs',
 				chunkFileNames: '[name].cjs',
 				sourcemap: true,

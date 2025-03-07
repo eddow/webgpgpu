@@ -1,5 +1,5 @@
-import { create, globals } from 'webgpu'
-export const createGPU = create
+import { create as createGPU, globals } from 'webgpu'
+export { createGPU }
 import { WebGpGpu } from '../webgpgpu'
 
 /**
@@ -11,7 +11,7 @@ export default function createWebGpGpu(
 	deviceDescriptor?: GPUDeviceDescriptor,
 	...options: string[]
 ) {
-	return WebGpGpu.createRoot(create(options), { deviceDescriptor, adapterOptions })
+	return WebGpGpu.createRoot(createGPU(options), { deviceDescriptor, adapterOptions })
 }
 Object.assign(globalThis, globals)
 export * from '..'

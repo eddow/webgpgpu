@@ -52,18 +52,16 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		expect(empty).to.be.an('object').that.is.empty
 	})
 	it('one output', async () => {
-		const kernel = webGpGpu
-			.output({ output: f32.array('threads.x') })
-			.kernel('output[thread.x] = 42;')
+		const kernel = webGpGpu.output({ output: f32 }).kernel('output = 42;')
 		const { output } = await kernel({})
 		expect(output).to.exist
-		expect(output).to.deepArrayEqual([42])
+		expect(output.at()).to.equal(42)
 	})
 	it('one constant', async () => {
 		const kernel = webGpGpu
 			.output({ output: f32.array('threads.x') })
 			.define({
-				declaration: 'override myK: f32 = 9;',
+				declarations: 'override myK: f32 = 9;',
 			})
 			.kernel('output[thread.x] = myK;')
 		const { output } = await kernel({})
@@ -72,33 +70,30 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	})
 	it('one given constant', async () => {
 		const kernel = webGpGpu
-			.output({ output: f32.array('threads.x') })
+			.output({ output: f32 })
 			.define({
-				declaration: 'override myK: f32 = 9;',
+				declarations: 'override myK: f32 = 9;',
 			})
-			.kernel('output[thread.x] = myK;', { myK: 52 })
+			.kernel('output = myK;', { myK: 52 })
 		const { output } = await kernel({})
 		expect(output).to.exist
-		expect(output).to.deepArrayEqual([52])
+		expect(output.at()).to.equal(52)
 	})
 })
 describe('inputs', () => {
-	it('an uniform - TypedArray', async () => {
+	it('a single - TypedArray', async () => {
 		const kernel = webGpGpu
 			.bind(inputs({ a: f32 }))
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = a;')
-		const { output } = await kernel({ a: Float32Array.from([43]).buffer })
+		const { output } = await kernel({ a: Float32Array.from([43]) })
 		expect(output).to.exist
 		expect(output).to.deepArrayEqual([43])
 	})
-	it('an uniform - value', async () => {
-		const kernel = webGpGpu
-			.input({ a: f32 })
-			.output({ output: f32.array('threads.x') })
-			.kernel('output[thread.x] = a;')
+	it('a single - value', async () => {
+		const kernel = webGpGpu.input({ a: f32 }).output({ output: f32 }).kernel('output = a;')
 		const { output } = await kernel({ a: 44 })
-		expect(output).to.deepArrayEqual([44])
+		expect(output.at()).to.equal(44)
 	})
 	it('a float array - TypedArray', async () => {
 		const kernel = webGpGpu
@@ -299,7 +294,7 @@ describe('diverse', () => {
 		const kernel = webGpGpu
 			.bind(inputs({ a: f32.array('threads.x') }))
 			.common({ b: f32.array('threads.x').value([2, 4, 6]) })
-			.define({ declaration: 'fn myFunc(a: f32, b: f32) -> f32 { return a + b; }' })
+			.define({ declarations: 'fn myFunc(a: f32, b: f32) -> f32 { return a + b; }' })
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = myFunc(a[thread.x], b[thread.x]);')
 		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]).buffer })

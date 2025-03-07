@@ -45,7 +45,7 @@ export class GGBatch<
 > implements IWebGpGpu<Inferences, Inputs, Outputs>
 {
 	static createRoot(webgpgpu: RootWebGpGpu): RootGGBatch {
-		// TODO: assert webgpgpu has no input/output/common/inference/...
+		// TODO: assert webgpgpu has no input/output/inference/...
 		let batch = roots.get(webgpgpu)
 		if (!batch) {
 			batch = new GGBatch<{ 'threads.x': Inferred; 'threads.y': Inferred }, {}, {}>(
@@ -66,7 +66,8 @@ export class GGBatch<
 		return new GGBatch<Inferences, Inputs, Outputs>(webgpgpu, this.inputs, this.outputs)
 	}
 	get inferences(): Inferences {
-		return this.webgpgpu.inferences as Inferences
+		const { 'threads.z': _, ...inferences } = this.webgpgpu.inferences
+		return inferences as Inferences
 	}
 	get device(): GPUDevice {
 		return this.webgpgpu.device
@@ -80,7 +81,7 @@ export class GGBatch<
 	dispose(): void {
 		this.webgpgpu.dispose()
 	}
-	define(...definitions: CodeParts[]) {
+	define(...definitions: (CodeParts | string)[]) {
 		return this.clone(this.webgpgpu.define(...definitions))
 	}
 	import(...imports: PropertyKey[]) {

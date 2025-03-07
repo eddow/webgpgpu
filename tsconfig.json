@@ -3,6 +3,7 @@
 		"module": "es2022",
 		"moduleResolution": "node",
 		"target": "ESNext",
+		"outDir": "./dist",
 		"composite": true,
 		"declaration": true,
 		"sourceMap": true,

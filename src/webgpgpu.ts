@@ -5,7 +5,7 @@ import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
 import { type IBuffable, type IBufferReader, type ValuedBuffable, activateF16 } from './buffable'
-import { type CodeParts, WgslCodeGenerator, preprocess } from './code'
+import { type CodeParts, WgslCodeGenerator, preprocessWgsl } from './code'
 import { mapEntries } from './hacks'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
 import { makeKernel } from './kernel'
@@ -198,9 +198,12 @@ export class WebGpGpu<
 	 * @param definitions WGSL code to add in the end-kernel
 	 * @returns Chainable
 	 */
-	define(...definitions: CodeParts[]) {
+	define(...definitions: (CodeParts | string)[]) {
 		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
-			definitions: [...this.definitions, ...definitions],
+			definitions: [
+				...this.definitions,
+				...definitions.map((d) => (typeof d === 'string' ? preprocessWgsl(d) : d)),
+			],
 		})
 	}
 
@@ -223,10 +226,14 @@ export class WebGpGpu<
 	 * Definitions of standard imports - these can directly be edited by setting/deleting keys
 	 */
 	public static readonly imports: Record<PropertyKey, CodeParts> = Object.create(null)
+	/**
+	 * Named imports definition
+	 * @param imports Definitions to add to the list of standard imports
+	 */
 	public static defineImports(imports: Record<PropertyKey, CodeParts | string>) {
 		Object.assign(
 			WebGpGpu.imports,
-			mapEntries(imports, (i) => (typeof i === 'string' ? preprocess(i) : i))
+			mapEntries(imports, (i) => (typeof i === 'string' ? preprocessWgsl(i) : i))
 		)
 	}
 	protected getImport(name: PropertyKey): CodeParts {
@@ -361,6 +368,7 @@ export class WebGpGpu<
 			declarations,
 			computations,
 			initializations,
+			finalizations,
 			groups,
 			inferenceReasons,
 			wgslNames,
@@ -373,8 +381,9 @@ export class WebGpGpu<
 				inferences,
 				workGroupSize,
 				declarations,
-				computations,
 				initializations,
+				computations,
+				finalizations,
 				groups,
 				WebGpGpu.bindingsOrder,
 				wgslNames

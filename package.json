@@ -15,20 +15,21 @@
 		"sandbox": "tsx tests/sandbox.ts"
 	},
 	"keywords": ["webgpgpu", "gpu", "gpgpu", "webgpu", "typescript", "wgsl"],
-	"main": "./lib/server.ts",
-	"types": "./lib/server.d.ts",
+	"main": "./dist/client.cjs",
+	"module": "./dist/client.js",
+	"types": "./dist/client.d.ts",
 	"exports": {
 		"./biome": "./biome.json",
 		".": {
 			"browser": {
-				"types": "./lib/client.d.ts",
-				"import": "./lib/client.js",
-				"require": "./lib/client.cjs"
+				"types": "./dist/client.d.ts",
+				"import": "./dist/client.js",
+				"require": "./dist/client.cjs"
 			},
 			"node": {
-				"types": "./lib/server.d.ts",
-				"import": "./lib/server.js",
-				"require": "./lib/server.cjs"
+				"types": "./dist/server.d.ts",
+				"import": "./dist/server.js",
+				"require": "./dist/server.cjs"
 			}
 		},
 		"./src": {
@@ -40,13 +41,6 @@
 				"import": "./src/server/index.ts",
 				"types": "./src/server/index.ts"
 			}
-		}
-	},
-	"imports": {
-		"#webgpgpu": {
-			"browser": "./src/client",
-			"node": "./src/server",
-			"default": "./src"
 		}
 	},
 	"repository": {

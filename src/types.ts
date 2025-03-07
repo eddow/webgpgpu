@@ -121,7 +121,7 @@ export interface IWebGpGpu<
 	// Instance methods
 	dispose(): void
 
-	define(...definitions: CodeParts[]): IWebGpGpu<Inferences, Inputs, Outputs>
+	define(...definitions: (CodeParts | string)[]): IWebGpGpu<Inferences, Inputs, Outputs>
 
 	import(...imports: PropertyKey[]): IWebGpGpu<Inferences, Inputs, Outputs>
 

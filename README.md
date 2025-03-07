@@ -124,7 +124,7 @@ output[thread.x] = a[thread.x] * b;
 
 ### define & import
 
-Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `computation`. The former is added outside the function, the latter inside the main function, before the main code
+Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `processing`. The former is added outside the function, the latter inside the main function, before the main code
 
 - direct definition
 ```ts
