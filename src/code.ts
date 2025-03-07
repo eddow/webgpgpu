@@ -31,7 +31,7 @@ export abstract class WgslCodeGenerator {
 		}
 	}
 
-	@cached()
+	// TODO: @cached()
 	protected get allEntries() {
 		const importUsage: PropertyKey[] = []
 		this.untangleImports(this.importUsage, importUsage)
