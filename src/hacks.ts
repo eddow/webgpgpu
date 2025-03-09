@@ -78,7 +78,7 @@ export function elements<Key extends PropertyKey, Item extends { [k in Key]?: un
 
 /**
  * Cache a property on get.
- * To cache manually, `propertyCache` can be used.
+ * To cache manually, `cacheProperty` can be used.
  * `isPropertyCached` can be used to check if a property has been cached or not.
  * To un-cache, deletion is enough - `delete obj.cachedProperty`
  *
@@ -110,7 +110,7 @@ export function cached<T>(...needed: PropertyKey[]) {
 			if (missing.length)
 				throw new Error(`Missing properties to calculate ${stringName}: ${missing.join(', ')}`)
 			const rv = original.call(this)
-			propertyCache(this, context.name, rv)
+			cacheProperty(this, context.name, rv)
 			return rv
 		}
 	}
@@ -120,8 +120,12 @@ export function isPropertyCached(object: Object, propertyKey: PropertyKey) {
 	return !!Object.getOwnPropertyDescriptor(object, propertyKey)
 }
 
-export function propertyCache(object: Object, propertyKey: PropertyKey, value: any) {
-	Object.defineProperty(object, propertyKey, { value })
+export function cacheProperty(object: Object, propertyKey: PropertyKey, value: any) {
+	Object.defineProperty(object, propertyKey, { value, configurable: true })
+}
+export function uncacheProperty(object: Object, propertyKey: PropertyKey) {
+	//@ts-expect-error This is a hack, the property is not supposed to be there
+	delete object[propertyKey]
 }
 
 // #endregion

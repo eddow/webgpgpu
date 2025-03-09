@@ -79,7 +79,13 @@ export const [f32, u32, i32] = typeTriplet<number>(1, '#32', {
 	read: (typedArray, index) => typedArray.at(index)!,
 	write: (typedArray, index, value) => typedArray.set([value], index),
 })
+/*
 
+Matrix Type	# of Columns	Column Type	Alignment per Column	Total Size
+mat2x4<f32>	2	vec4<f32>	16 bytes	32 bytes
+mat4x2<f32>	4	vec2<f32>	16 bytes	64 bytes
+mat4x4<f32>	4	vec4<f32>	16 bytes	64 bytes
+*/
 export const [vec2f, vec2u, vec2i] = typeTriplet<vec2>(2, 'vec2#', vec(2))
 export const [vec3f, vec3u, vec3i] = typeTriplet<vec3>(4, 'vec3#', vec(3))
 export const [vec4f, vec4u, vec4i] = typeTriplet<vec4>(4, 'vec4#', vec(4))

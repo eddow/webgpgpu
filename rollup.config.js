@@ -25,6 +25,7 @@ export default [
 		input,
 		output: {
 			banner,
+			sourcemap: false,
 			dir: 'dist',
 		},
 		plugins: [...plugins, pluginDts()],

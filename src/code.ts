@@ -1,4 +1,4 @@
-import { cached } from './hacks'
+import { cached, uncacheProperty } from './hacks'
 import { CircularImportError } from './types'
 
 export interface CodeParts {
@@ -31,7 +31,7 @@ export abstract class WgslCodeGenerator {
 		}
 	}
 
-	// TODO: @cached()
+	@cached()
 	protected get allEntries() {
 		const importUsage: PropertyKey[] = []
 		this.untangleImports(this.importUsage, importUsage)

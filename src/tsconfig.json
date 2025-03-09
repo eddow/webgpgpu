@@ -1,17 +1,8 @@
 {
+	"extends": "../tsconfig.root.json",
 	"compilerOptions": {
-		"module": "es2022",
-		"target": "ESNext",
-		"moduleResolution": "node",
 		"declaration": false,
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": false,
-		"forceConsistentCasingInFileNames": true,
-		"strictNullChecks": true,
-		"strictBindCallApply": true,
 		"baseUrl": "..",
-		"noImplicitAny": true,
 		"types": ["@webgpu/types"],
 		"lib": ["dom", "es5", "es6", "esnext", "scripthost", "es2015.promise"]
 	},

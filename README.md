@@ -303,7 +303,7 @@ In all array accesses in TS, the multi-dimensional indexes are given *most-impor
   - `value([[1, 2], [3, 4], [5, 6]]).at(2, 1) === 6`
   - `value([[1, 2], [3, 4], [5, 6]]).slice(0) ~ [1, 2]`
 
-In WGSL, a "stride" is computed and accessible in the whole code (as `var<private>` for now - 0.0.7) named after the wgsl name of the value (input/output/...) post-fixed with `Stride`
+In the WGSL part, a "stride" is computed and accessible in the whole code (as `var<private>` for now - 0.0.7) named after the wgsl name of the value (input/output/...) post-fixed with `Stride`
 
 eg: 
 ```ts
