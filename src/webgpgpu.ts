@@ -31,6 +31,15 @@ export type RootWebGpGpu = WebGpGpu<
 	{}
 >
 
+export type AnyWebGpGpu = WebGpGpu<
+	{
+		'threads.x': Inferred
+		'threads.y': Inferred
+		'threads.z': Inferred
+	},
+	Record<string, AnyInput>,
+	Record<string, IBufferReader>
+>
 /**
  * Contains the information shared in a WebGpGpu tree (root and descendants) and referencing the device
  */

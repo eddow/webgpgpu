@@ -307,9 +307,10 @@ export class BufferReader<Element = any, InputSpec extends readonly number[] = n
 	toString(): string {
 		return 'BufferReader'
 	}
-	valueOf(): Element[] {
+
+	valueOf(): InputSpec extends [] ? Element : never {
 		if (this.sizes.length) throw new TypeError('Cannot convert BufferReader to primitive')
-		//@ts-expect-error we know it's a number
+		//@ts-expect-error we know it's an Element
 		return this.at()
 	}
 	get [Symbol.toStringTag]() {
