@@ -1,6 +1,7 @@
-import { cached, uncacheProperty } from './hacks'
+import { cached } from './hacks'
 import { CircularImportError } from './types'
 
+// TODO: separate code mingler from import system?
 export interface CodeParts {
 	imports?: Iterable<PropertyKey>
 	declarations?: string

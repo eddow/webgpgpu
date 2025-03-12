@@ -2,18 +2,7 @@
 
 # WebGpGpu.ts
 
-This package provides WebGPU based GPU computing.
-
-versions:
- - 0.0.x: alpha
-
 ## Getting Started
-
-### Installation
-
-```bash
-npm install --save webgpgpu.ts
-```
 
 ### Usage
 

@@ -105,23 +105,3 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 The 2 reserved variables are `thread` (the `xyz` of the current thread) and `threads` (the size of all the threads). There is no workgroup interaction for now.
 
 Pre-function code chunks can be added freely (the library never parses the wgsl code) and the content of the (guarded) main function as well
-
-### Roadmap
-
-- Structures and automatic organization for size optimization
-- UBO creation: for now, a single `f32` as input *is* an UBO. We need UBO (and their types) built automatically 
-  - CODE PARSING! replace `myUniform` by `UBO0.myUniform`
-- Automatic array strides computations : now var<private> -> uniform ?
-  - Code parsing: allow some operators for like `myArray[<myVec2Index>]` -> `myArray[dot(myVec2Index, myArrayStride)]`
-- Arrays position optimization:
-  - When possible, use fixed-size arrays (if size is completely inferred at layout time)
-  - If such happen, have stride object given as const, not uniform
-  - Check GPU limitations to have input arrays with fixed-size small enough given directly in the UBOs
-
-#### In parallel
-
-- Size assertion/inference when ArrayBuffers are provided directly as X-D inputs (X > 1) 
-- Make BufferReader more ArrayLike (iterator, array prototype forward, ...)
-- Code parsing: `f16` replacement: for immediate values:
-  - `###h` -> `###f` (with `###` being a valid number)
-  - `vec2h`, `vec3h`, `vec4h` -> `vec2f`, `vec3f`, `vec4f`: for now it happens in the JS declarations, so the generated code - but not if used directly in the code
