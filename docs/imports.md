@@ -32,7 +32,7 @@ Imports are defined with code parts.
 
 - `imports` They can simply other imports - circular references will be reported by a `CircularImportError` when the imports are resolved (on code generation).
 
-As these imports are used in a shader (declaring a function), in the case `childImport` imports `parantImport` and is imported in a code generation, then here is how the generated code will look like:
+As these imports are used in a shader (declaring a function), in the case `childImport` imports `parentImport` and is imported in a code generation, then here is how the generated code will look like:
 
 ```
 ...

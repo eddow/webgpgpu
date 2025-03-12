@@ -403,7 +403,8 @@ export class WebGpGpu<
 		return Object.assign(
 			// Kernel function signature
 			(inputs: Inputs, defaultInfers: Partial<Record<keyof Inferences, number>> = {}) =>
-				guarded(() => kernel(getDevice(), inputs, defaultInfers, inferenceReasons)),
+				// We clone `inputs` to guarantee uniqueness between calls
+				guarded(() => kernel(getDevice(), { ...inputs }, defaultInfers, inferenceReasons)),
 			{ toString: () => code, inferred: kernelInferences }
 		)
 		// TODO: input/output in the kernel for type-check ?

@@ -138,6 +138,9 @@ fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 - non-repeating usage
 `WebGpGpu` has a static property `imports` that is editable at will and just contain a named collection of code chunks. The function `webGpGpu.import(...)` can be used with the key of such import making sure the import will be included once.
 
+Imports are covered [here](./imports.md)
+
+
 ### workGroup
 
 If you know what a workgroup is and really want to specify its size, do it here.
@@ -148,7 +151,7 @@ webGpGpu.workGroup(8, 8)
 
 ## Bindings
 
-These functions are shortcuts to [`Bindings`](./src/binding/README.md) creation and are chainable.
+These functions are shortcuts to [`Bindings`](./bindings.md) creation and are chainable.
 
 Example of equivalence:
 ```ts
@@ -468,7 +471,7 @@ Calls to this kernel function will stack the inputs on `threads.z` axis and call
 - `ArraySizeValidationError` Occurs when arguments size are not fitting
 - `ParameterError` Mainly for parameter names conflicts &c.
 - `BatchError` Thrown when there was an error during batch execution
-- `CircularImportError` - TODO: finish and document imports
+- `CircularImportError` - Occurs on imports when circular imports occur
 
 ## Ecosystem
 

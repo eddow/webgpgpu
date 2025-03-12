@@ -1,6 +1,9 @@
 import type { AnyInference, SizeSpec } from '../inference'
-import type { BindingEntryDescription } from './io'
 
+export interface BindingEntryDescription {
+	declaration: string
+	layoutEntry: GPUUnboundGroupLayoutEntry
+}
 export class FieldsDescriptor<FieldInfo extends {}> {
 	public readonly entries: (FieldInfo & { name: string })[] = []
 	private readonly indexes: Record<string, number> = {}

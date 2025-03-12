@@ -1,6 +1,6 @@
 {
 	"name": "webgpgpu.ts",
-	"version": "0.0.8",
+	"version": "0.1.0",
 	"scripts": {
 		"test": "mocha",
 		"test:karma": "karma start ./karma.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
@@ -95,6 +95,7 @@
 	},
 	"dependencies": {
 		"@petamoriken/float16": "^3.9.1",
+		"chevrotain": "^11.0.3",
 		"webgpu": "^0.2.11"
 	}
 }
