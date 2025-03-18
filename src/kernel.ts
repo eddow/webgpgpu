@@ -17,15 +17,12 @@ export function makeKernel<
 	Inputs extends Record<string, AnyInput>,
 	Outputs extends Record<string, IBufferReader>,
 >(
-	compute: string,
 	constants: Record<string, GPUPipelineConstantValue> | undefined,
 	device: GPUDevice,
 	inferences: Inferences,
 	workGroupSize: [number, number, number] | null,
-	declarations: string[],
-	initializations: string[],
-	computations: string[],
-	finalizations: string[],
+	declarations: string,
+	computation: string,
 	groups: Bindings<Inferences>[],
 	bindingsOrder: BindingType<Inferences>[],
 	wgslNames: Record<string, WgslEntry<Inferences>>
@@ -77,17 +74,14 @@ export function makeKernel<
 
 	const code = /*wgsl*/ `
 ${bindingsDeclarations.join('\n')}
-${declarations.join('\n')}
+${declarations}
 ${elements(strides, 'declaration').join('\n')}
 
 @compute @workgroup_size(${kernelWorkGroupSize.join(', ') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
 		${elements(strides, 'calculus').join('\n\t\t')}
-		${initializations.join('\n\t\t')}
-		${computations.join('\n\t\t')}
-		${compute}
-		${finalizations.join('\n\t\t')}
+		${computation}
 	}
 }
 `

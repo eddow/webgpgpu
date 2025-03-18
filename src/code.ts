@@ -1,18 +1,40 @@
-import { cached } from './hacks'
+import { elements } from './hacks'
 import { CircularImportError } from './types'
 
 // TODO: separate code mingler from import system?
 export interface CodeParts {
 	imports?: Iterable<PropertyKey>
+	definitions?: Record<string, string>
 	declarations?: string
 	initializations?: string
 	computations?: string
 	finalizations?: string
 }
 export abstract class WgslCodeGenerator {
+	static uncommented(code: string, comments: string[]) {
+		const commentPattern = /\/\/[^\n]*|\/\*[\s\S]*?\*\//g
+		return code.replace(commentPattern, (match) => {
+			comments.push(match)
+			return `/*${comments.length - 1}*/`
+		})
+	}
+	static commented(code: string, comments: string[]) {
+		return code.replace(/\*\/(\d+)\/\*/g, (_, index) => comments[index])
+	}
+	static define(code: string, definitions: Record<string, string>) {
+		const comments: string[] = []
+		return WgslCodeGenerator.commented(
+			WgslCodeGenerator.uncommented(code, comments).replace(
+				/[a-zA-Z_][a-zA-Z0-9_]*/g,
+				(match) => definitions[match] ?? match
+			),
+			comments
+		)
+	}
 	protected abstract getImport(name: PropertyKey): CodeParts
 	constructor(
-		protected readonly definitions: readonly CodeParts[],
+		protected readonly codeParts: readonly CodeParts[],
+		protected readonly definitions: Record<string, string>,
 		protected readonly importUsage: Iterable<PropertyKey>
 	) {}
 
@@ -32,30 +54,27 @@ export abstract class WgslCodeGenerator {
 		}
 	}
 
-	@cached()
-	protected get allEntries() {
+	protected weave(computation?: string) {
 		const importUsage: PropertyKey[] = []
 		this.untangleImports(this.importUsage, importUsage)
-		return [...importUsage.map((name) => this.getImport(name)), ...this.definitions]
-	}
-	protected get declarations() {
-		return this.allEntries
-			.map(({ declarations: declaration }) => declaration)
-			.filter(Boolean) as string[]
-	}
-	protected get initializations() {
-		return this.allEntries
-			.map(({ initializations: initialization }) => initialization)
-			.filter(Boolean) as string[]
-	}
-	protected get computations() {
-		return this.allEntries.map(({ computations }) => computations).filter(Boolean) as string[]
-	}
-	protected get finalizations() {
-		return this.allEntries
-			.map(({ finalizations: finalization }) => finalization)
-			.filter(Boolean)
-			.reverse() as string[]
+		const allEntries = [...importUsage.map((name) => this.getImport(name)), ...this.codeParts]
+		//const definitions = parts(({ definitions }) => definitions).reduce((acc, cur) => ({ ...acc, ...cur }), this.definitions)
+		const definitions = elements(allEntries, 'definitions').reduce(
+			(acc, cur) => ({ ...acc, ...cur }),
+			this.definitions
+		)
+		return {
+			declarations: elements(allEntries, 'declarations').join('\n'),
+			computation: WgslCodeGenerator.define(
+				[
+					...elements(allEntries, 'initializations'),
+					...elements(allEntries, 'computations'),
+					...(computation ? [computation] : []),
+					...elements(allEntries, 'finalizations'),
+				].join('\n\t\t'),
+				definitions
+			),
+		}
 	}
 }
 
@@ -64,8 +83,8 @@ export function preprocessWgsl(code: string): CodeParts {
 	code = code.replace(/[\r\n]+/g, '\n')
 
 	// Regular expressions for matching comments and section markers
-	const commentPattern = /\/\/[^\n]*|\/\*[\s\S]*?\*\//g // Match single-line and multi-line comments
 	const importPattern = /^\s*@import\s+([\w,\s]+)$/g
+	const definePattern = /^\s*@define\s+(\w+)\s+(.+)$/
 	const pattern = {
 		declare: /^\s*@declare\s*$/g,
 		init: /^\s*@init\s*$/g,
@@ -75,16 +94,13 @@ export function preprocessWgsl(code: string): CodeParts {
 
 	// Arrays to store the comments and their positions
 	const comments: string[] = []
-	let codeWithPlaceholders = code
-
 	// Replace comments with placeholders and store the original comments
-	codeWithPlaceholders = codeWithPlaceholders.replace(commentPattern, (match) => {
-		comments.push(match)
-		return `<!--COMMENT${comments.length - 1}-->`
-	})
+	const codeWithPlaceholders = WgslCodeGenerator.uncommented(code, comments)
 
 	// List to store imports
 	const imports: string[] = []
+	// Object to store definitions
+	const definitions: Record<string, string> = {}
 
 	// Extract section code
 	const sections = {
@@ -101,12 +117,18 @@ export function preprocessWgsl(code: string): CodeParts {
 
 	for (const line of lines) {
 		// Check if the line is inside a comment
-		const analyzeLine = line.replace(/<!--COMMENT\d+-->/g, '')
+		const analyzeLine = line.replace(/\/\*\d+\*\//g, '')
 		const imported = importPattern.exec(analyzeLine)
 		if (imported) {
 			importPattern.lastIndex = 0
 			const importNames = imported[1].split(',').map((name) => name.trim())
 			imports.push(...importNames)
+			continue
+		}
+		const defined = definePattern.exec(analyzeLine)
+		if (defined) {
+			definePattern.lastIndex = 0
+			definitions[defined[1]] = defined[2]
 			continue
 		}
 		let switchTo: Section | undefined
@@ -123,14 +145,15 @@ export function preprocessWgsl(code: string): CodeParts {
 	// Reconstruct the code with comments back in their places
 	for (const c in comments)
 		for (const s in sections)
-			sections[s as Section] = sections[s as Section].replace(`<!--COMMENT${c}-->`, comments[c])
+			sections[s as Section] = sections[s as Section].replace(`/*${c}*/`, comments[c])
 
 	// Return the parsed result
 	return {
 		imports,
-		declarations: sections.declare,
-		initializations: sections.init,
-		computations: sections.process,
-		finalizations: sections.finalize,
+		definitions,
+		declarations: WgslCodeGenerator.commented(sections.declare, comments),
+		initializations: WgslCodeGenerator.commented(sections.init, comments),
+		computations: WgslCodeGenerator.commented(sections.process, comments),
+		finalizations: WgslCodeGenerator.commented(sections.finalize, comments),
 	}
 }

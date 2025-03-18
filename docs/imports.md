@@ -21,6 +21,7 @@ WebGpGpu.defineImports(shaders)
 ```ts
 interface CodeParts {
 	imports?: Iterable<PropertyKey>
+	definitions?: Record<PropertyKey, string>
 	declaration?: string
 	initialization?: string
 	computation?: string
@@ -54,6 +55,8 @@ fn main(...){
 	...
 }
 ```
+
+- `definitions` are used first from the calling webGpGpu then are overridden each time by each imported piece of code
 
 ## Pre-processor directives
 

@@ -81,8 +81,11 @@ export class GGBatch<
 	dispose(): void {
 		this.webgpgpu.dispose()
 	}
-	define(...definitions: (CodeParts | string)[]) {
-		return this.clone(this.webgpgpu.define(...definitions))
+	define(definitions: Record<string, string>) {
+		return this.clone(this.webgpgpu.define(definitions))
+	}
+	code(...codeParts: (CodeParts | string)[]) {
+		return this.clone(this.webgpgpu.code(...codeParts))
 	}
 	import(...imports: PropertyKey[]) {
 		return this.clone(this.webgpgpu.import(...imports))

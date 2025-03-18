@@ -54,7 +54,7 @@ Define inferences that can therefore be used both in the wgsl code and as array 
 
 Creating a specific Bindings class allows to define custom bindings. It can define new inferences, inputs and outputs
 
-## Functionment
+## Functioning
 
 ### Construction/attachment
 

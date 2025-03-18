@@ -60,7 +60,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	it('one constant', async () => {
 		const kernel = webGpGpu
 			.output({ output: f32.array('threads.x') })
-			.define({
+			.code({
 				declarations: 'override myK: f32 = 9;',
 			})
 			.kernel('output[thread.x] = myK;')
@@ -71,7 +71,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 	it('one given constant', async () => {
 		const kernel = webGpGpu
 			.output({ output: f32 })
-			.define({
+			.code({
 				declarations: 'override myK: f32 = 9;',
 			})
 			.kernel('output = myK;', { myK: 52 })
@@ -294,7 +294,7 @@ describe('diverse', () => {
 		const kernel = webGpGpu
 			.bind(inputs({ a: f32.array('threads.x') }))
 			.common({ b: f32.array('threads.x').value([2, 4, 6]) })
-			.define({ declarations: 'fn myFunc(a: f32, b: f32) -> f32 { return a + b; }' })
+			.code({ declarations: 'fn myFunc(a: f32, b: f32) -> f32 { return a + b; }' })
 			.output({ output: f32.array('threads.x') })
 			.kernel('output[thread.x] = myFunc(a[thread.x], b[thread.x]);')
 		const { output } = await kernel({ a: Float32Array.from([1, 2, 3]).buffer })

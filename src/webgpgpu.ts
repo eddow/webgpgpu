@@ -98,7 +98,8 @@ export class WebGpGpu<
 					inferences: {},
 					inferred: {},
 					inferenceReasons: {},
-					definitions: [],
+					codeParts: [],
+					definitions: {},
 					workGroupSize: null,
 					wgslNames: { thread: { sizes: [] } },
 					groups: [],
@@ -163,8 +164,9 @@ export class WebGpGpu<
 	private constructor(
 		parent: WebGpGpu<any, any, any> | undefined,
 		{
-			definitions,
+			codeParts,
 			importUsage,
+			definitions,
 			inferences,
 			inferred,
 			inferenceReasons,
@@ -172,8 +174,9 @@ export class WebGpGpu<
 			wgslNames,
 			groups,
 		}: Partial<{
-			definitions: CodeParts[]
+			codeParts: CodeParts[]
 			importUsage: Iterable<PropertyKey>
+			definitions: Record<string, string>
 			inferences: Inferences
 			inferred: Record<string, 1 | 2 | 3 | 4>
 			inferenceReasons: Record<string, string>
@@ -183,7 +186,11 @@ export class WebGpGpu<
 		}>,
 		rootInfo?: RootInfo
 	) {
-		super(definitions ?? parent!.definitions, importUsage ?? parent!.importUsage)
+		super(
+			codeParts ?? parent!.codeParts,
+			definitions ?? parent!.definitions,
+			importUsage ?? parent!.importUsage
+		)
 		this.inferences = inferences ?? parent!.inferences
 		this.inferred = inferred ?? parent!.inferred
 		this.inferenceReasons = inferenceReasons ?? parent!.inferenceReasons
@@ -202,16 +209,25 @@ export class WebGpGpu<
 	// #endregion Creation
 	// #region Chainable
 
+	define(definitions: Record<string, string>) {
+		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
+			definitions: {
+				...this.definitions,
+				...definitions,
+			},
+		})
+	}
+
 	/**
-	 * Adds a definition (pre-function code) to the kernel
-	 * @param definitions WGSL code to add in the end-kernel
+	 * Adds a code part to the kernel
+	 * @param codeParts WGSL code to add in the end-kernel
 	 * @returns Chainable
 	 */
-	define(...definitions: (CodeParts | string)[]) {
+	code(...codeParts: (CodeParts | string)[]) {
 		return new WebGpGpu<Inferences, Inputs, Outputs>(this, {
-			definitions: [
-				...this.definitions,
-				...definitions.map((d) => (typeof d === 'string' ? preprocessWgsl(d) : d)),
+			codeParts: [
+				...this.codeParts,
+				...codeParts.map((d) => (typeof d === 'string' ? preprocessWgsl(d) : d)),
 			],
 		})
 	}
@@ -232,12 +248,12 @@ export class WebGpGpu<
 	} //
 
 	/**
-	 * Definitions of standard imports - these can directly be edited by setting/deleting keys
+	 * Definition of standard imports - these can directly be edited by setting/deleting keys
 	 */
 	public static readonly imports: Record<PropertyKey, CodeParts> = Object.create(null)
 	/**
 	 * Named imports definition
-	 * @param imports Definitions to add to the list of standard imports
+	 * @param imports Definition to add to the list of standard imports
 	 */
 	public static defineImports(imports: Record<PropertyKey, CodeParts | string>) {
 		Object.assign(
@@ -370,29 +386,16 @@ export class WebGpGpu<
 				throw e
 			}
 		}
-		const {
-			device,
-			inferences,
-			workGroupSize,
-			declarations,
-			computations,
-			initializations,
-			finalizations,
-			groups,
-			inferenceReasons,
-			wgslNames,
-		} = this
+		const { device, inferences, workGroupSize, groups, inferenceReasons, wgslNames } = this
+		const { declarations, computation } = this.weave(compute)
 		const { kernel, code, kernelInferences } = guarded(() =>
 			makeKernel<Inferences, Inputs, Outputs>(
-				compute,
 				constants,
 				device,
 				inferences,
 				workGroupSize,
 				declarations,
-				initializations,
-				computations,
-				finalizations,
+				computation,
 				groups,
 				WebGpGpu.bindingsOrder,
 				wgslNames

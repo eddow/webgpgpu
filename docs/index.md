@@ -111,13 +111,13 @@ output[thread.x] = a[thread.x] * b;
 
 > Note: The kernel function retrieves the *whole* generated code on `toString()`
 
-### define & import
+### code, define & import
 
 Adds a chunk of code to be inserted before the main function. Plays the role of `#define` and `#include`. They use a structure with optionals `declaration` and `processing`. The former is added outside the function, the latter inside the main function, before the main code
 
 - direct definition
 ```ts
-webGpGpu.define({
+webGpGpu.code({
 	declaration: /*wgsl*/`
 fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 `
@@ -126,6 +126,11 @@ fn myFunc(a: f32, b: f32) -> f32 { return a + b; }
 
 - non-repeating usage
 `WebGpGpu` has a static property `imports` that is editable at will and just contain a named collection of code chunks. The function `webGpGpu.import(...)` can be used with the key of such import making sure the import will be included once.
+
+- `define` for `#define`-like behaviour (replace a word by another value)
+```ts
+webGpGpu.define('PI', Math.PI)
+```
 
 Imports are covered [here](./imports.md)
 

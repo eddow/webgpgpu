@@ -12,5 +12,6 @@
 	"karmaTestExplorer.enableExtension": true,
 	"zencoder.enableRepoIndexing": true,
 	"karmaTestExplorer.browser": "ChromeGPU",
-	"mochaExplorer.files": "tests/**/*.test.ts"
+	"mochaExplorer.files": "tests/**/*.test.ts",
+	"editor.defaultFormatter": "biomejs.biome"
 }

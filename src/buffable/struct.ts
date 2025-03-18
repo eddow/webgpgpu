@@ -1,7 +1,14 @@
-import type { AnyInference } from '../inference'
-import { Buffable } from './buffable'
+import { cached } from '../hacks'
+import type { AnyInference, Inference } from '../inference'
+import { Buffable, type IBuffable } from './buffable'
 import type { Writer } from './io'
-// TODO: Type inference for Element
+
+interface StructureElement<Inferences extends AnyInference> {
+	name: string
+	offset: number
+	type: IBuffable<Inferences>
+	alignment?: number
+}
 export class Struct<
 	Inferences extends AnyInference,
 	// TODO It's possible to have one array as the last member if variable-sized, or many fixed-size arrays.
@@ -28,9 +35,27 @@ export class Struct<
 	) {
 		super([])
 	}
-	get paddedDescriptor() {
-		// TODO Struct.paddedDescriptor
-		return this.descriptor
+	// TODO Different for SBOs
+	private paddingSize(orgSize: number) {
+		const frac = orgSize & 15
+		return frac ? 16 - frac : 0
+	}
+	@cached()
+	get paddedDescriptor(): StructureElement<Inferences>[] {
+		let offset = 0
+		return Object.entries(this.descriptor)
+			.sort(([_a, a], [_b, b]) => b.bytesPerAtomic - a.bytesPerAtomic)
+			.map(([name, type]) => {
+				const padding = this.paddingSize(type.bytesPerAtomic)
+				const rv = {
+					name,
+					offset,
+					type,
+					alignment: 16,
+				}
+				offset += padding + type.bytesPerAtomic
+				return rv
+			})
 	}
 	get base() {
 		return this
@@ -42,10 +67,12 @@ export class Struct<
 		return new Struct(newName ?? this.name, { ...this.descriptor, ...newValue })
 	}
 	get wgsl() {
+		const members = this.paddedDescriptor.map(
+			({ name, type, alignment, offset }) =>
+				`@align(${alignment}) @offset(${offset}) var ${name}: ${type.wgslSpecification};`
+		)
 		return `struct ${this.name} {
-	${Object.entries(this.paddedDescriptor)
-		.map(([name, value]) => `${name}: ${value.wgslSpecification},`)
-		.join('\n')}
+	${members.join('\n\t')}
 };`
 	}
 }
