@@ -35,7 +35,7 @@ export class Struct<
 	) {
 		super([])
 	}
-	// TODO Different for SBOs
+	// TODO try packing f32 on align4 - difference of padding between UBO/SBO is *only* in arrays (array/ubo -> pad16/elm)
 	private paddingSize(orgSize: number) {
 		const frac = orgSize & 15
 		return frac ? 16 - frac : 0

@@ -49,7 +49,7 @@ export abstract class WgslCodeGenerator {
 			if (circularIndex !== -1)
 				throw new CircularImportError(importing.slice(circularIndex).concat([imp]))
 			const subImports = this.getImport(imp).imports
-			if (subImports) this.untangleImports([...subImports], [...importing, imp], done)
+			if (subImports) this.untangleImports([...subImports], done, [...importing, imp])
 			done.push(imp)
 		}
 	}

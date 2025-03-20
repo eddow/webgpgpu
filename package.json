@@ -95,7 +95,6 @@
 	},
 	"dependencies": {
 		"@petamoriken/float16": "^3.9.1",
-		"chevrotain": "^11.0.3",
 		"webgpu": "^0.2.11"
 	}
 }

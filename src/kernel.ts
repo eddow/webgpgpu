@@ -113,8 +113,9 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 					log.error(formatted)
 				} else log.warn(formatted)
 			}
+			log.info('WGSL:', code)
 
-			if (hasError) throw new CompilationError(messages)
+			if (hasError) throw new CompilationError(messages, code)
 		}
 		const callReasons = { ...inferenceReasons }
 		const callInfer = specifyInferences(

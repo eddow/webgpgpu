@@ -46,8 +46,11 @@ export class ParameterError extends WebGpGpuError {
 
 export class CompilationError extends WebGpGpuError {
 	name = 'CompilationError'
-	constructor(public messages: readonly GPUCompilationMessage[]) {
-		super('Compilation error', { cause: messages })
+	constructor(
+		public readonly messages: readonly GPUCompilationMessage[],
+		public readonly code: string
+	) {
+		super('Compilation error', { cause: { messages, code } })
 	}
 }
 
