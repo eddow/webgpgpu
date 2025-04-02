@@ -1,4 +1,4 @@
-import { inference } from './binding'
+import { inferences } from './binding'
 import type { BindingType, Bindings, BoundTypes, WgslEntry } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inferences'
@@ -110,7 +110,7 @@ export class WebGpGpu<
 				}
 			)
 			return zero.bind(
-				inference<{}, { threads: readonly [undefined, undefined, undefined] }>({
+				inferences<{}, { threads: readonly [undefined, undefined, undefined] }>({
 					threads: infer3D,
 				})
 			)
