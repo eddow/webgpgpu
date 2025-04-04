@@ -1,5 +1,4 @@
-import { cached } from '../hacks'
-import type { AnyInference, Inference } from '../inference'
+import type { AnyInference } from '../inference'
 import { Buffable, type IBuffable } from './buffable'
 import type { Writer } from './io'
 
@@ -40,7 +39,7 @@ export class Struct<
 		const frac = orgSize & 15
 		return frac ? 16 - frac : 0
 	}
-	@cached()
+	//@cached()
 	get paddedDescriptor(): StructureElement<Inferences>[] {
 		let offset = 0
 		return Object.entries(this.descriptor)

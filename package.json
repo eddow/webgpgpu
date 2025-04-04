@@ -1,6 +1,6 @@
 {
 	"name": "webgpgpu.ts",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"scripts": {
 		"test": "mocha",
 		"test:karma": "karma start ./karma.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
@@ -88,7 +88,6 @@
 		"sinon": "^19.0.2",
 		"stream-browserify": "^3.0.0",
 		"ts-node": "^10.9.2",
-		"tslib": "2.8.1",
 		"tsx": "^4.19.3",
 		"typedoc": "0.27.9",
 		"typescript": "5.7.3"
