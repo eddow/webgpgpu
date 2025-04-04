@@ -18,7 +18,7 @@ const plugins = [
 		tsconfig: './src/tsconfig.json',
 	}),
 ]
-const external = (id) => id.includes('node_modules')
+const external = (id) => id === 'tslib' || id.includes('node_modules')
 
 export default [
 	{
