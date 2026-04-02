@@ -9,10 +9,10 @@ import createWebGpGpu, {
 	mat4x2f,
 	mat4x3f,
 	mat4x4f,
+	type RootWebGpGpu,
 	vec2f,
 	vec3f,
 	vec4f,
-	type RootWebGpGpu,
 } from 'webgpgpu'
 import './chai-ext'
 
@@ -23,7 +23,7 @@ describe('atomic', () => {
 		webGpGpu = await createWebGpGpu()
 	})
 	after(() => {
-		webGpGpu.dispose()
+		webGpGpu?.dispose()
 	})
 	describe('vec', () => {
 		it('vec2', async () => {

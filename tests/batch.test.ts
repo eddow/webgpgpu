@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import createWebGpGpu, { type RootWebGpGpu, f32, type RootGGBatch, GGBatch } from 'webgpgpu'
+import createWebGpGpu, { f32, GGBatch, type RootGGBatch, type RootWebGpGpu } from 'webgpgpu'
 
 let webGpGpu: RootWebGpGpu
 let ggBatch: RootGGBatch
@@ -9,7 +9,7 @@ before(async () => {
 	ggBatch = GGBatch.createRoot(webGpGpu)
 })
 after(() => {
-	webGpGpu.dispose()
+	webGpGpu?.dispose()
 })
 describe('batch', () => {
 	it('batches', async () => {

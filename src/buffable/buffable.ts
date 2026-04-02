@@ -3,11 +3,11 @@ import {
 	type AnyInference,
 	type InferencesList,
 	type Inferred,
-	type SizeSpec,
 	resolvedSize,
+	type SizeSpec,
 } from '../inference'
 import type { InputXD, NumericSizesSpec, TypedArray, TypedArrayConstructor } from '../types'
-import { BufferReader, type IBufferReader, type Reader, type Writer, toArrayBuffer } from './io'
+import { BufferReader, type IBufferReader, type Reader, toArrayBuffer, type Writer } from './io'
 
 export type ValuedBuffable<
 	Inferences extends AnyInference = AnyInference,

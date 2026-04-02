@@ -1,4 +1,4 @@
-import type { BindingType, Bindings, WgslEntry } from './binding'
+import type { Bindings, BindingType, WgslEntry } from './binding'
 import type { IBufferReader } from './buffable'
 import { elements } from './hacks'
 import {

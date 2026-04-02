@@ -19,7 +19,7 @@ export abstract class WgslCodeGenerator {
 		})
 	}
 	static commented(code: string, comments: string[]) {
-		return code.replace(/\*\/(\d+)\/\*/g, (_, index) => comments[index])
+		return code.replace(/\/\*(\d+)\*\//g, (_, index) => comments[index])
 	}
 	static define(code: string, definitions: Record<string, string>) {
 		const comments: string[] = []

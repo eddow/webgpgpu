@@ -1,5 +1,5 @@
 import type { IBuffable } from '../buffable/buffable'
-import type { BindingEntryDescription, GPUUnboundGroupLayoutEntry, WgslEntry } from './bindings'
+import type { BindingEntryDescription, WgslEntry } from './bindings'
 // TODO: dynamically create UBOs with values of fixed size (when `#define` is usable: code parsing)
 export function layoutGroupEntry(
 	name: string,

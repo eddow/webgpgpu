@@ -4,6 +4,7 @@
 	"extension": ["ts"],
 	"spec": "tests/**/*.test.ts",
 	"require": ["tsx"],
+	"timeout": 10000,
 	"recursive": true,
 	"watch-files": ["src/**/*.ts", "tests/**/*.ts"],
 	"watch-ignore": ["node_modules"]

@@ -1,4 +1,4 @@
-import { type IBuffable, type ValuedBuffable, isBuffable } from '../buffable'
+import { type IBuffable, isBuffable, type ValuedBuffable } from '../buffable'
 import { mapEntries } from '../hacks'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { type AnyInput, ParameterError } from '../types'
@@ -46,7 +46,7 @@ export class CommonBindings<
 		})
 		return commonSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
 	}
-	entries(inputs: {}, inferences: Inferences) {
+	entries(_inputs: {}, _inferences: Inferences) {
 		return this.precomputedEntries!
 	}
 }

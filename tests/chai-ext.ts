@@ -1,5 +1,5 @@
-import { Float16Array } from '@petamoriken/float16'
 import chai from 'chai'
+
 // Recursive function to compare nested structures
 function arrayLikeContentEqual(actual: ArrayLike<any>, expected: Array<any>): boolean {
 	if (!Array.isArray(expected)) return actual === expected // Direct number comparison

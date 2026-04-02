@@ -8,12 +8,12 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 	public readonly entries: (FieldInfo & { name: string })[] = []
 	private readonly indexes: Record<string, number> = {}
 	index(name: string) {
-		if (!this.indexes[name]) throw new Error(`Unknown name: ${name}`)
+		if (!(name in this.indexes)) throw new Error(`Unknown name: ${name}`)
 		return this.indexes[name]
 	}
 	add(info: FieldInfo & { name: string }) {
 		const { name } = info
-		if (this.indexes[name]) throw new Error(`Name conflict: ${name}`)
+		if (name in this.indexes) throw new Error(`Name conflict: ${name}`)
 		this.indexes[name] = this.entries.length
 		this.entries.push(info)
 	}
@@ -21,13 +21,14 @@ export class FieldsDescriptor<FieldInfo extends {}> {
 export type GPUUnboundGroupEntry = Omit<GPUBindGroupEntry, 'binding'>
 export type GPUUnboundGroupLayoutEntry = Omit<GPUBindGroupLayoutEntry, 'binding'>
 
-export type BoundTypes<BG> = BG extends Bindings<any>
-	? {
-			inputs: Parameters<BG['entries']>[0]
-			outputs: Awaited<ReturnType<BG['read']>>
-			inferences: BG['addedInferences']
-		}
-	: never
+export type BoundTypes<BG> =
+	BG extends Bindings<any>
+		? {
+				inputs: Parameters<BG['entries']>[0]
+				outputs: Awaited<ReturnType<BG['read']>>
+				inferences: BG['addedInferences']
+			}
+		: never
 
 export type BindingType<Inferences extends AnyInference> = {
 	new (...args: any[]): Bindings<Inferences>
@@ -72,20 +73,20 @@ export abstract class Bindings<Inferences extends AnyInference> {
 	 */
 	public abstract readonly wgslEntries: Record<string, WgslEntry<Inferences>>
 	protected init(
-		inferences: Inferences,
-		reasons: Record<string, string>
+		_inferences: Inferences,
+		_reasons: Record<string, string>
 	): BindingEntryDescription[] {
 		return []
 	}
 	entries(
-		inputs: {},
-		inferences: AnyInference,
-		reasons: Record<string, string>
+		_inputs: {},
+		_inferences: AnyInference,
+		_reasons: Record<string, string>
 	): GPUUnboundGroupEntry[] {
 		return []
 	}
-	encoder(inputs: {}, commandEncoder: GPUCommandEncoder) {}
-	read(inputs: {}): {} {
+	encoder(_inputs: {}, _commandEncoder: GPUCommandEncoder) {}
+	read(_inputs: {}): {} {
 		return {}
 	}
 

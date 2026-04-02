@@ -1,5 +1,7 @@
 import { create as createGPU, globals } from 'webgpu'
+
 export { createGPU }
+
 import { WebGpGpu } from '../webgpgpu'
 
 /**
@@ -11,7 +13,16 @@ export default function createWebGpGpu(
 	deviceDescriptor?: GPUDeviceDescriptor,
 	...options: string[]
 ) {
-	return WebGpGpu.createRoot(createGPU(options), { deviceDescriptor, adapterOptions })
+	const gpu = createGPU(options)
+
+	// dawn.node requires the object returned by `create()` to stay referenced
+	// for the whole lifetime of the underlying implementation.
+	return WebGpGpu.createRoot(gpu, {
+		deviceDescriptor,
+		adapterOptions,
+		dispose: () => void gpu,
+	})
 }
 Object.assign(globalThis, globals)
+
 export * from '..'

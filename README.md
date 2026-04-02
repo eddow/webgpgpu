@@ -30,7 +30,28 @@ If the library tries to access `navigator.gpu` while running under node, it mean
 
 ```
 
+### Entry points (Node vs browser)
 
+The package root `webgpgpu.ts` resolves by environment: **Node** gets the Dawn-based server build; **browsers and most bundlers** get the client build (see `package.json` `exports`).
+
+If a tool still pulls the **client** entry into a **Node** bundle, set `customConditions` as above, or import explicitly:
+
+- `webgpgpu.ts/server` — Node (Dawn / `webgpu` native)
+- `webgpgpu.ts/client` — browser (`navigator.gpu`)
+
+TypeScript consumers can also use `webgpgpu.ts/src` for source resolution (`node` vs `default` conditions).
+
+### Tests / CI
+
+From the package root:
+
+- `pnpm run lint` — Biome
+- `pnpm run build` — Rollup client + server
+- `pnpm test` — Mocha, **Node** (same suite as below, different runtime)
+
+Browser + real WebGPU (Chrome with flags; not suitable for headless CI by default):
+
+- `pnpm run test:browser` — Karma, **single run**, `ChromeGPU` launcher from `karma.conf.js`
 
 ### Usage
 

@@ -1,16 +1,16 @@
 import { expect } from 'chai'
 import createWebGpGpu, {
-	inference,
-	InferenceValidationError,
-	ParameterError,
-	Vector2,
-	type RootWebGpGpu,
-	f32,
-	u32,
-	vec2f,
-	inputs,
 	commons,
+	f32,
+	InferenceValidationError,
+	inference,
+	inputs,
 	outputs,
+	ParameterError,
+	type RootWebGpGpu,
+	u32,
+	Vector2,
+	vec2f,
 } from 'webgpgpu'
 
 let webGpGpu: RootWebGpGpu
@@ -19,7 +19,7 @@ before(async () => {
 	webGpGpu = await createWebGpGpu()
 })
 after(() => {
-	webGpGpu.dispose()
+	webGpGpu?.dispose()
 })
 describe('overall', () => {
 	it('toString', async () => {
@@ -239,7 +239,7 @@ describe('infers size', () => {
 		).to.throw(InferenceValidationError)
 	})
 	it('assert infer exist', async () => {
-		const t = f32.array('qwe').value([4, 5, 6, 7, 8])
+		const _t = f32.array('qwe').value([4, 5, 6, 7, 8])
 
 		expect(() =>
 			webGpGpu.common({

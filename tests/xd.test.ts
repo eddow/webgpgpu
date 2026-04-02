@@ -1,10 +1,8 @@
 import { expect } from 'chai'
 import createWebGpGpu, {
 	type AnyInference,
-	type InputXD,
-	type RootWebGpGpu,
-	type SizeSpec,
 	f32,
+	type InputXD,
 	type mat2x3,
 	mat2x3f,
 	type mat3x2,
@@ -13,10 +11,10 @@ import createWebGpGpu, {
 	mat3x3f,
 	type mat4x3,
 	mat4x3f,
+	type RootWebGpGpu,
 	resolvedSize,
+	type SizeSpec,
 	u32,
-	type vec2,
-	vec2f,
 	type vec3,
 	vec3f,
 	vec3i,
@@ -50,7 +48,7 @@ before(async () => {
 	webGpGpu = await createWebGpGpu()
 })
 after(() => {
-	webGpGpu.dispose()
+	webGpGpu?.dispose()
 })
 describe('xd-arrays', () => {
 	// multiply two 1D-arrays to create a matrix of all products

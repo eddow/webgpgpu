@@ -10,7 +10,7 @@ import {
 	specifyInferences,
 } from './inference'
 import { log } from './log'
-import { type AnyInput, type IWebGpGpu, type InputType, type Kernel, WebGpGpuError } from './types'
+import { type AnyInput, type InputType, type IWebGpGpu, type Kernel, WebGpGpuError } from './types'
 import type { RootWebGpGpu, WebGpGpu } from './webgpgpu'
 
 export class BatchError extends WebGpGpuError {
@@ -76,7 +76,7 @@ export class GGBatch<
 		return this.webgpgpu.disposed
 	}
 	get f16(): boolean {
-		return true
+		return this.webgpgpu.f16
 	}
 	dispose(): void {
 		this.webgpgpu.dispose()
@@ -98,7 +98,7 @@ export class GGBatch<
 	}
 
 	bind<BG extends Bindings<Inferences>>(
-		group: BG
+		_group: BG
 	): IWebGpGpu<
 		Inferences & BoundTypes<BG>['inferences'],
 		Inputs & BoundTypes<BG>['inputs'],

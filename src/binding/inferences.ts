@@ -2,8 +2,8 @@ import { mapEntries } from '../hacks'
 import {
 	type AnyInference,
 	type CreatedInferences,
-	type Inferred,
 	extractInference,
+	type Inferred,
 	infer,
 } from '../inference'
 import { Bindings, type WgslEntry } from './bindings'
@@ -35,7 +35,7 @@ export class InferenceBindings<
 			dimension: (Array.isArray(value) ? value.length : 1) as 1 | 2 | 3 | 4,
 		}))
 	}
-	init(inferences: Inferences, reasons: Record<string, string>) {
+	init(_inferences: Inferences, _reasons: Record<string, string>) {
 		// TODO: manage constants
 		function typeName(dimension: 1 | 2 | 3 | 4) {
 			const type = [undefined, 'u32', 'vec2u', 'vec3u', 'vec4u'][dimension]
@@ -50,7 +50,7 @@ export class InferenceBindings<
 			},
 		}))
 	}
-	entries(inputs: {}, inferences: AnyInference) {
+	entries(_inputs: {}, inferences: AnyInference) {
 		const { device } = this
 		return this.dimensioned.map(({ name, dimension }) => {
 			const buffer = device.createBuffer({

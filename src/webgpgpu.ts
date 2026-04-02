@@ -1,11 +1,11 @@
 import { inferences } from './binding'
-import type { BindingType, Bindings, BoundTypes, WgslEntry } from './binding/bindings'
+import type { Bindings, BindingType, BoundTypes, WgslEntry } from './binding/bindings'
 import { CommonBindings } from './binding/commons'
 import { InferenceBindings } from './binding/inferences'
 import { InputBindings } from './binding/inputs'
 import { OutputBindings } from './binding/outputs'
-import { type IBuffable, type IBufferReader, type ValuedBuffable, activateF16 } from './buffable'
-import { type CodeParts, WgslCodeGenerator, preprocessWgsl } from './code'
+import { activateF16, type IBuffable, type IBufferReader, type ValuedBuffable } from './buffable'
+import { type CodeParts, preprocessWgsl, WgslCodeGenerator } from './code'
 import { mapEntries } from './hacks'
 import { type AnyInference, type Inferred, infer3D, specifyInferences } from './inference'
 import { makeKernel } from './kernel'
@@ -136,7 +136,7 @@ export class WebGpGpu<
 		}
 	}
 	get disposed() {
-		return !!this.rootInfo.device
+		return !this.rootInfo.device
 	}
 	get f16() {
 		// TODO: Parse code and replace immediate values if needed?

@@ -1,5 +1,5 @@
 import { Indexable } from '../hacks'
-import { type AnyInference, type SizeSpec, assertSize } from '../inference'
+import { type AnyInference, assertSize, type SizeSpec } from '../inference'
 import { log } from '../log'
 import { InferenceValidationError, type InputXD, ParameterError } from '../types'
 export type Writer<Element> = (index: number, value: Element) => void
@@ -17,7 +17,7 @@ type SubtractLengths<A extends readonly any[], B extends readonly any[]> = A ext
 	? Rest
 	: never
 
-function assertElementSize(given: any, expected: number) {
+function _assertElementSize(given: any, expected: number) {
 	if (given !== expected)
 		throw new ParameterError(`Element size mismatch: ${given} received while expecting ${expected}`)
 }
@@ -185,7 +185,7 @@ export function toArrayBuffer<
 	writeInputData(buffer, bytesPerElement, 0, data, sizes, write)
 	return buffer
 }
-const customInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
+const _customInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
 
 type IndexableReturn<Element, InputSpec extends readonly number[]> = InputSpec extends [number]
 	? Element

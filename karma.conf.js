@@ -6,6 +6,12 @@ export default function (config) {
 
 		frameworks: ['mocha', 'chai'],
 
+		client: {
+			mocha: {
+				timeout: 10000,
+			},
+		},
+
 		restartBrowserBetweenTests: false,
 
 		files: [

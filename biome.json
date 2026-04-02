@@ -1,8 +1,15 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
 	"files": {
-		"include": ["src/**/*.ts", "tests/**/*.ts", "./*.[tj]s", "*.json"],
-		"ignore": [".*/**/*.*", "tests/*.js", "dist"]
+		"includes": [
+			"**/src/**/*.ts",
+			"**/tests/**/*.ts",
+			"**/*.\\[tj\\]s",
+			"**/*.json",
+			"!**/.*/**/*.*",
+			"!**/tests/**/*.js",
+			"!**/dist"
+		]
 	},
 	"javascript": {
 		"formatter": {
@@ -16,8 +23,8 @@
 	"linter": {
 		"rules": {
 			"style": {
-				"noParameterAssign": "off",
 				"noNonNullAssertion": "off",
+				"noParameterAssign": "off",
 				"useSingleVarDeclarator": {
 					"level": "warn",
 					"fix": "safe"
@@ -25,23 +32,55 @@
 				"useTemplate": {
 					"level": "warn",
 					"fix": "safe"
+				},
+				"useImportType": {
+					"level": "warn",
+					"fix": "safe"
+				},
+				"useConst": {
+					"level": "info",
+					"fix": "none"
 				}
 			},
 			"suspicious": {
 				"noExplicitAny": "off",
-				"noDebugger": "error",
-				"noConsole": "off"
+				"noDebugger": "warn",
+				"noConsole": "off",
+				"noConfusingVoidType": "off",
+				"noAssignInExpressions": "off",
+				"noImplicitAnyLet": "off",
+				"useIterableCallbackReturn": "off",
+				"noRedeclare": "off",
+				"noShadowRestrictedNames": "off"
 			},
 			"performance": {
 				"noAccumulatingSpread": "off"
 			},
 			"complexity": {
 				"useArrowFunction": "off",
-				"noBannedTypes": "off"
+				"noBannedTypes": "off",
+				"noArguments": "off"
 			},
 			"security": {},
-			"correctness": {},
+			"correctness": {
+				"noUnusedImports": {
+					"level": "info",
+					"fix": "safe"
+				},
+				"noUnusedFunctionParameters": {
+					"level": "info",
+					"fix": "safe"
+				},
+				"noUnusedLabels": "off"
+			},
 			"nursery": {}
+		}
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
 		}
 	}
 }

@@ -78,17 +78,14 @@ export interface Kernel<
 
 // #region Kill me when bind has multiple arguments
 
-export type WebGpGpuTypes<WGG> = WGG extends IWebGpGpu<
-	infer Inferences,
-	infer Inputs,
-	infer Outputs
->
-	? {
-			inputs: Inputs
-			outputs: Outputs
-			inferences: Inferences
-		}
-	: never
+export type WebGpGpuTypes<WGG> =
+	WGG extends IWebGpGpu<infer Inferences, infer Inputs, infer Outputs>
+		? {
+				inputs: Inputs
+				outputs: Outputs
+				inferences: Inferences
+			}
+		: never
 
 export type MixedTypes<TDs extends { inputs: any; outputs: any; inferences: any }[]> = TDs extends [
 	infer First,

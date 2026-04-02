@@ -25,11 +25,11 @@ export abstract class Indexable<T> implements ArrayLike<T> {
 Object.setPrototypeOf(
 	Indexable.prototype,
 	new Proxy(Indexable.prototype, {
-		get(target, propKey, receiver) {
+		get(_target, propKey, receiver) {
 			const index = prop2index(propKey, !receiver.getAtIndex)
 			return Number.isNaN(index) ? undefined : receiver.getAtIndex(index)
 		},
-		set(target, propKey, value, receiver) {
+		set(_target, propKey, value, receiver) {
 			const index = prop2index(propKey, !receiver.setAtIndex)
 			if (Number.isNaN(index))
 				Object.defineProperty(receiver, propKey, {

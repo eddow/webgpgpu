@@ -2,7 +2,7 @@ import { type IBuffable, isBuffable } from '../buffable/buffable'
 import { type AnyInference, type DeducedInference, resolvedSize } from '../inference'
 import { type OutputType, ParameterError } from '../types'
 import { Bindings, type WgslEntry } from './bindings'
-import { type OutputEntryDescription, layoutGroupEntry, outputGroupEntry, wgslEntries } from './io'
+import { layoutGroupEntry, type OutputEntryDescription, outputGroupEntry, wgslEntries } from './io'
 
 type Outputs<Specs extends Record<string, IBuffable>> = { [K in keyof Specs]: OutputType<Specs[K]> }
 type SubInferences<

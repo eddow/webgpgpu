@@ -3,6 +3,7 @@
 	"version": "0.1.2",
 	"scripts": {
 		"test": "mocha",
+		"test:browser": "karma start ./karma.conf.js --browsers ChromeGPU --single-run",
 		"test:karma": "karma start ./karma.conf.js --browsers ChromeGPU --single-run=false --auto-watch=true",
 		"test:watch": "mocha watch",
 		"build": "rollup -c",
@@ -14,23 +15,41 @@
 		"benchmark": "tsx tests/benchmark.ts",
 		"sandbox": "tsx tests/sandbox.ts"
 	},
-	"keywords": ["webgpgpu", "gpu", "gpgpu", "webgpu", "typescript", "wgsl"],
+	"keywords": [
+		"webgpgpu",
+		"gpu",
+		"gpgpu",
+		"webgpu",
+		"typescript",
+		"wgsl"
+	],
 	"main": "./dist/client.cjs",
 	"module": "./dist/client.js",
 	"types": "./dist/client.d.ts",
 	"exports": {
 		"./biome": "./biome.json",
 		".": {
+			"types": "./dist/client.d.ts",
 			"node": {
 				"types": "./dist/server.d.ts",
 				"import": "./dist/server.js",
 				"require": "./dist/server.cjs"
 			},
-			"default": {
-				"types": "./dist/client.d.ts",
-				"import": "./dist/client.js",
-				"require": "./dist/client.cjs"
-			}
+			"import": "./dist/client.js",
+			"default": "./dist/client.js",
+			"require": "./dist/client.cjs"
+		},
+		"./client": {
+			"types": "./dist/client.d.ts",
+			"import": "./dist/client.js",
+			"default": "./dist/client.js",
+			"require": "./dist/client.cjs"
+		},
+		"./server": {
+			"types": "./dist/server.d.ts",
+			"import": "./dist/server.js",
+			"default": "./dist/server.js",
+			"require": "./dist/server.cjs"
 		},
 		"./src": {
 			"node": {
@@ -52,26 +71,26 @@
 	"author": "François Marie <eeddow@gmail.com>",
 	"license": "ISC",
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@rollup/plugin-commonjs": "28.0.2",
+		"@biomejs/biome": "2.4.10",
+		"@rollup/plugin-commonjs": "29.0.2",
 		"@rollup/plugin-json": "6.1.0",
-		"@rollup/plugin-node-resolve": "16.0.0",
+		"@rollup/plugin-node-resolve": "16.0.3",
 		"@rollup/plugin-strip": "3.0.4",
-		"@rollup/plugin-typescript": "^12.1.2",
+		"@rollup/plugin-typescript": "^12.3.0",
 		"@types/chai": "^4.3.4",
 		"@types/karma-chai": "^0.1.7",
 		"@types/mocha": "^10.0.1",
-		"@types/node": "^18.11.13",
-		"@types/websocket": "1.0.5",
+		"@types/node": "^22.19.15",
+		"@types/websocket": "1.0.10",
 		"@webgpu/types": "^0.1.54",
 		"c8": "^10.1.3",
 		"chai": "^4.3.7",
 		"cross-env": "^7.0.3",
 		"glob": "^11.0.1",
 		"jsdom-global": "^3.0.2",
-		"karma": "6.4.1",
+		"karma": "6.4.4",
 		"karma-chai": "^0.1.0",
-		"karma-chrome-launcher": "3.1.1",
+		"karma-chrome-launcher": "3.2.0",
 		"karma-coverage-istanbul-reporter": "3.0.3",
 		"karma-esbuild": "^2.3.0",
 		"karma-firefox-launcher": "^2.1.3",
@@ -79,21 +98,23 @@
 		"karma-mocha-reporter": "^2.2.5",
 		"karma-rollup-preprocessor": "7.0.8",
 		"karma-sourcemap-loader": "0.3.8",
-		"mocha": "^10.2.0",
+		"mocha": "^11.7.5",
 		"phantomjs-polyfill-object-assign": "0.0.2",
-		"rollup": "4.34.8",
-		"rollup-plugin-dts": "^6.1.1",
+		"rollup": "4.60.1",
+		"rollup-plugin-dts": "^6.4.1",
 		"rollup-plugin-istanbul": "5.0.0",
 		"rollup-plugin-node-builtins": "2.1.2",
 		"sinon": "^19.0.2",
 		"stream-browserify": "^3.0.0",
 		"ts-node": "^10.9.2",
-		"tsx": "^4.19.3",
-		"typedoc": "0.27.9",
-		"typescript": "5.7.3"
+		"tslib": "^2.8.1",
+		"tsx": "^4.21.0",
+		"typedoc": "0.28.18",
+		"typescript": "5.9.3"
 	},
 	"dependencies": {
 		"@petamoriken/float16": "^3.9.1",
 		"webgpu": "^0.2.11"
-	}
+	},
+	"packageManager": "pnpm@10.7.1+sha512.2d92c86b7928dc8284f53494fb4201f983da65f0fb4f0d40baafa5cf628fa31dae3e5968f12466f17df7e97310e30f343a648baea1b9b350685dafafffdf5808"
 }
