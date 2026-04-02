@@ -17,6 +17,21 @@ The complete documentation is available on [github pages](https://eddow.github.i
 npm install --save webgpgpu.ts
 ```
 
+If the library tries to access `navigator.gpu` while running under node, it means the client-part has been bundled, so `tsconfig.json` should contain:
+
+```json
+{
+  "compilerOptions": {
+	//...
+	"customConditions": ["node"],
+	//...
+  }
+}
+
+```
+
+
+
 ### Usage
 
 ```ts

@@ -21,25 +21,25 @@
 	"exports": {
 		"./biome": "./biome.json",
 		".": {
-			"browser": {
-				"types": "./dist/client.d.ts",
-				"import": "./dist/client.js",
-				"require": "./dist/client.cjs"
-			},
 			"node": {
 				"types": "./dist/server.d.ts",
 				"import": "./dist/server.js",
 				"require": "./dist/server.cjs"
+			},
+			"default": {
+				"types": "./dist/client.d.ts",
+				"import": "./dist/client.js",
+				"require": "./dist/client.cjs"
 			}
 		},
 		"./src": {
-			"browser": {
-				"import": "./src/client/index.ts",
-				"types": "./src/client/index.ts"
-			},
 			"node": {
 				"import": "./src/server/index.ts",
 				"types": "./src/server/index.ts"
+			},
+			"default": {
+				"import": "./src/client/index.ts",
+				"types": "./src/client/index.ts"
 			}
 		}
 	},

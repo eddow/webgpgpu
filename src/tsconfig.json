@@ -1,8 +1,6 @@
 {
 	"extends": "../tsconfig.root.json",
 	"compilerOptions": {
-        "importHelpers": false,
-        "noEmitHelpers": true,
 		"declaration": false,
 		"baseUrl": "..",
 		"types": ["@webgpu/types"],
