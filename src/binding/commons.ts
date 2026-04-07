@@ -44,7 +44,11 @@ export class CommonBindings<
 			)
 			return { resource }
 		})
-		return commonSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, true))
+		return {
+			entryDescriptors: commonSpecs.map(({ name, buffable }) =>
+				layoutGroupEntry(name, buffable, true)
+			),
+		}
 	}
 	entries(_inputs: {}, _inferences: Inferences) {
 		return this.precomputedEntries!

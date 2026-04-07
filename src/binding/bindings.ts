@@ -4,6 +4,11 @@ export interface BindingEntryDescription {
 	declaration: string
 	layoutEntry: GPUUnboundGroupLayoutEntry
 }
+export interface InitResult {
+	entryDescriptors: BindingEntryDescription[]
+	definitions?: string
+	preamble?: string
+}
 export class FieldsDescriptor<FieldInfo extends {}> {
 	public readonly entries: (FieldInfo & { name: string })[] = []
 	private readonly indexes: Record<string, number> = {}
@@ -51,6 +56,7 @@ export abstract class Bindings<Inferences extends AnyInference> {
 		declarations: string[]
 		layoutEntries: GPUUnboundGroupLayoutEntry[]
 		definitions?: string
+		preamble?: string
 	}
 	public get statics() {
 		if (!this.staticGenerated) throw new Error('Binding group not initialized')
@@ -59,10 +65,12 @@ export abstract class Bindings<Inferences extends AnyInference> {
 	setScope(device: GPUDevice, inferences: Inferences, reasons: Record<string, string>) {
 		if (this.deviceRef) throw new Error('Binding group already initialized')
 		this.deviceRef = new WeakRef(device)
-		const entryDescriptors = this.init(inferences, reasons)
+		const { entryDescriptors, definitions, preamble } = this.init(inferences, reasons)
 		this.staticGenerated = {
 			declarations: entryDescriptors.map(({ declaration }) => declaration),
 			layoutEntries: entryDescriptors.map(({ layoutEntry }) => layoutEntry),
+			definitions,
+			preamble,
 		}
 	}
 
@@ -72,11 +80,8 @@ export abstract class Bindings<Inferences extends AnyInference> {
 	 * Specifies the names used in the wgsl code
 	 */
 	public abstract readonly wgslEntries: Record<string, WgslEntry<Inferences>>
-	protected init(
-		_inferences: Inferences,
-		_reasons: Record<string, string>
-	): BindingEntryDescription[] {
-		return []
+	protected init(_inferences: Inferences, _reasons: Record<string, string>): InitResult {
+		return { entryDescriptors: [] }
 	}
 	entries(
 		_inputs: {},
@@ -89,6 +94,7 @@ export abstract class Bindings<Inferences extends AnyInference> {
 	read(_inputs: {}): {} {
 		return {}
 	}
+	dispose(_inputs: {}) {}
 
 	// #endregion
 }

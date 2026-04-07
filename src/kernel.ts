@@ -49,6 +49,14 @@ export function makeKernel<
 			.flatMap(({ statics: { layoutEntries } }) => layoutEntries)
 			.map((layoutEntry, binding) => ({ ...layoutEntry, binding })),
 	})
+	const groupDefinitions = orderedGroups
+		.map(({ statics: { definitions } }) => definitions)
+		.filter(Boolean)
+		.join('\n')
+	const groupPreambles = orderedGroups
+		.map(({ statics: { preamble } }) => preamble)
+		.filter(Boolean)
+		.join('\n\t\t')
 	const bindingsDeclarations = orderedGroups
 		.flatMap(({ statics: { declarations } }) => declarations)
 		.map((wgsl, binding) => `@group(${0}) @binding(${binding}) ${wgsl}`)
@@ -73,6 +81,7 @@ export function makeKernel<
 		})
 
 	const code = /*wgsl*/ `
+${groupDefinitions}
 ${bindingsDeclarations.join('\n')}
 ${declarations}
 ${elements(strides, 'declaration').join('\n')}
@@ -80,6 +89,7 @@ ${elements(strides, 'declaration').join('\n')}
 @compute @workgroup_size(${kernelWorkGroupSize.join(', ') || '1'})
 fn main(@builtin(global_invocation_id) thread : vec3u) {
 	if(all(thread < threads)) {
+		${groupPreambles}
 		${elements(strides, 'calculus').join('\n\t\t')}
 		${computation}
 	}
@@ -159,6 +169,7 @@ fn main(@builtin(global_invocation_id) thread : vec3u) {
 		device.queue.submit([commandEncoder.finish()])
 
 		const reads = await Promise.all(orderedGroups.map((bindings) => bindings.read(inputs)))
+		for (const bindings of orderedGroups) bindings.dispose(inputs)
 		return reads.reduce(
 			(acc, read) => ({
 				...acc,

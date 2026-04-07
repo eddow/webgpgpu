@@ -79,6 +79,8 @@ async function main() {
 }
 ```
 
+**Packed inputs (Tier A vs Tier B):** Inputs with **no** array dimension (`f32`, `vec3f`, …) are **Tier A**: the library packs them into one WGSL `_Params` struct and **one** GPU binding (uniform when small enough, otherwise read-only storage). Inputs built with **`.array(...)`** are **Tier B**: each stays its own storage buffer + binding. You can mix both in the same `.input({ ... })` as in the example above—no API change required.
+
 ### Presentation
 
 Basically, WebGpGpu manages purely `compute` shaders in order to make in-memory GPU computing possible.
@@ -101,7 +103,8 @@ With real pieces of :
 - TypeScript, as the whole is highly typed.
 - Sizes assertion and even inference.
 - Optimizations
-  - buffer re-usage
+  - **Automatic parameter packing**: scalar inputs (f32, vec2f, …) are bundled into a single WGSL struct and bound as one uniform buffer; array inputs stay as separate storage bindings. No API change — your kernel code works as-is.
+  - **Per-dispatch buffer cleanup**: GPU buffers created during a kernel call are destroyed after results are read back.
   - workgroup-size calculation
   - `ArrayBuffer` optimization js-side (no superfluous read/writes, ...)
   - etc.

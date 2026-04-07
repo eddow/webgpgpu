@@ -202,6 +202,41 @@ describe('inputs', () => {
 		expect(output).to.deepArrayEqual([3, 7, 11])
 	})
 })
+describe('packed params (Tier A)', () => {
+	it('two scalars packed into one binding', async () => {
+		const kernel = webGpGpu
+			.input({ a: f32, b: f32 })
+			.output({ output: f32 })
+			.kernel('output = a + b;')
+		const { output } = await kernel({ a: 3, b: 4 })
+		expect(output.at()).to.equal(7)
+	})
+	it('mixed scalar + array in same .input()', async () => {
+		const kernel = webGpGpu
+			.input({ scale: f32, data: f32.array('threads.x') })
+			.output({ output: f32.array('threads.x') })
+			.kernel('output[thread.x] = data[thread.x] * scale;')
+		const { output } = await kernel({ scale: 10, data: [1, 2, 3] })
+		expect(output).to.deepArrayEqual([10, 20, 30])
+	})
+	it('vec scalar packed with array', async () => {
+		const kernel = webGpGpu
+			.input({ offset: vec2f, pts: vec2f.array('threads.x') })
+			.output({ output: vec2f.array('threads.x') })
+			.kernel('output[thread.x] = pts[thread.x] + offset;')
+		const { output } = await kernel({
+			offset: [10, 20],
+			pts: [
+				[1, 2],
+				[3, 4],
+			],
+		})
+		expect(output.flat()).to.deepArrayEqual([
+			[11, 22],
+			[13, 24],
+		])
+	})
+})
 describe('infers size', () => {
 	it('infer', async () => {
 		const kernel = webGpGpu

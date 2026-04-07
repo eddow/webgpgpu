@@ -67,6 +67,7 @@ export interface OutputEntryDescription {
 	resource: GPUBindingResource
 	encoder(commandEncoder: GPUCommandEncoder): void
 	read(): Promise<ArrayBuffer>
+	destroy(): void
 }
 
 export function outputGroupEntry(
@@ -99,7 +100,11 @@ export function outputGroupEntry(
 			readBuffer.unmap()
 		}
 	}
-	return { resource: { buffer: outputBuffer }, encoder, read, name }
+	function destroy() {
+		outputBuffer.destroy()
+		readBuffer.destroy()
+	}
+	return { resource: { buffer: outputBuffer }, encoder, read, destroy, name }
 }
 
 export function wgslEntries(buf: Record<string, IBuffable>) {

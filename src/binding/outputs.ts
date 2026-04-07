@@ -34,7 +34,11 @@ export class OutputBindings<
 		})
 	}
 	init() {
-		return this.outputSpecs.map(({ name, buffable }) => layoutGroupEntry(name, buffable, false))
+		return {
+			entryDescriptors: this.outputSpecs.map(({ name, buffable }) =>
+				layoutGroupEntry(name, buffable, false)
+			),
+		}
 	}
 	private readonly callInfo = new WeakMap<{}, OutputDescription<Inferences>>()
 	entries(inputs: {}, inferences: Inferences) {
@@ -59,12 +63,14 @@ export class OutputBindings<
 		const { entries, inferences } = this.callInfo.get(inputs)!
 		this.callInfo.delete(inputs)
 		const buffers = await Promise.all(entries.map(({ read }) => read()))
-		return Object.fromEntries(
+		const result = Object.fromEntries(
 			this.outputSpecs.map(({ name, buffable }, i) => [
 				name,
 				buffable.readArrayBuffer(buffers[i], inferences),
 			])
 		) as Outputs<OutputSpecs>
+		for (const entry of entries) entry.destroy()
+		return result
 	}
 }
 

@@ -20,10 +20,16 @@ const common = new CommonBindings({
 
 `InputBinding(Record<string, Buffable>)`: Defines an input binding. The keys must match the names of the inputs defined by the shader program.
 
-Defines the inputs the kernel can take.
+Defines the inputs the kernel can take. Inputs are automatically partitioned:
+
+- **Tier A** (scalars, vectors, matrices — `sizes.length === 0`): packed into one WGSL struct and bound as a single uniform buffer (or read-only storage if it exceeds `maxUniformBufferBindingSize`). Field names remain usable as-is in WGSL via `let` aliases.
+- **Tier B** (arrays — `sizes.length > 0`): each gets its own storage buffer binding, as before.
 
 ```ts
-const input = new InputBinding({ a: f32.array('threads.x') });
+const input = new InputBinding({
+	scale: f32,                    // Tier A — packed into struct
+	data: f32.array('threads.x')   // Tier B — separate storage buffer
+});
 ```
 
 ### OutputBindings
@@ -60,8 +66,13 @@ Creating a specific Bindings class allows to define custom bindings. It can defi
 
 Even if a binding is made to be attached to one WebGpGpu instance, it is constructed independently *then* attached to it.
 
-The object then has its method `init` when attached once it is provided with a `device`. If overridden, this function should return an array of:
+The object then has its method `init` when attached once it is provided with a `device`. If overridden, this function should return an `InitResult`:
 ```ts
+interface InitResult {
+	entryDescriptors: BindingEntryDescription[]
+	definitions?: string   // WGSL emitted before binding declarations (e.g. struct defs)
+	preamble?: string      // code injected inside fn main() before user computation
+}
 interface BindingEntryDescription {
 	declaration: string
 	layoutEntry: GPUUnboundGroupLayoutEntry
@@ -69,7 +80,7 @@ interface BindingEntryDescription {
 
 /*where*/ type GPUUnboundGroupLayoutEntry = Omit<GPUBindGroupLayoutEntry, 'binding'>
 ```
-where `declaration` is the WGSL declaration of a variable and `layoutEntry` is the layout entry corresponding to it.
+where `declaration` is the WGSL declaration of a variable, `layoutEntry` is the layout entry corresponding to it, and the optional `definitions`/`preamble` allow struct definitions and alias declarations.
 
 #### Produced inferences
 

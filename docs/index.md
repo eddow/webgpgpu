@@ -507,15 +507,16 @@ For instance, for now, a complete mocha testing run is impossible: some async fi
 
 ### Roadmap
 
-- Structures and automatic organization for size optimization
-- UBO creation: for now, a single `f32` as input *is* an UBO. We need UBO (and their types) built automatically 
-  - CODE PARSING! replace `myUniform` by `UBO0.myUniform`
+- ~~Structures and automatic organization for size optimization~~ ✅ `Struct` + Tier A packing
+- ~~UBO creation: for now, a single `f32` as input *is* an UBO. We need UBO (and their types) built automatically~~ ✅ Scalar inputs auto-packed into `_Params` struct → uniform buffer
+  - ~~CODE PARSING! replace `myUniform` by `UBO0.myUniform`~~ ✅ Solved with `let` aliases in preamble — no code parsing needed
 - Automatic array strides computations : now var<private> -> uniform ?
   - Code parsing: allow some operators for like `myArray[<myVec2Index>]` -> `myArray[dot(myVec2Index, myArrayStride)]`
 - Arrays position optimization:
   - When possible, use fixed-size arrays (if size is completely inferred at layout time)
   - If such happen, have stride object given as const, not uniform
   - Check GPU limitations to have input arrays with fixed-size small enough given directly in the UBOs
+- Buffer lifecycle: `destroy()` per-dispatch buffers or pooling
 
 #### In parallel
 

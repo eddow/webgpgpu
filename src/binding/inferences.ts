@@ -21,6 +21,7 @@ export class InferenceBindings<
 > extends Bindings<Inferences> {
 	public readonly wgslEntries: Record<string, WgslEntry>
 	public readonly addedInferences: CreatedInferences<Input>
+	private readonly dispatchBuffers = new WeakMap<{}, GPUBuffer[]>()
 
 	constructor(private inferred: Input) {
 		super()
@@ -42,27 +43,38 @@ export class InferenceBindings<
 			if (type === undefined) throw new Error(`Invalid inferred dimension ${dimension}`)
 			return type
 		}
-		return this.dimensioned.map(({ name, dimension }) => ({
-			declaration: `var<uniform> ${name} : ${typeName(dimension)};`,
-			layoutEntry: {
-				visibility: GPUShaderStage.COMPUTE,
-				buffer: { type: 'uniform' } as GPUBufferBindingLayout,
-			},
-		}))
+		return {
+			entryDescriptors: this.dimensioned.map(({ name, dimension }) => ({
+				declaration: `var<uniform> ${name} : ${typeName(dimension)};`,
+				layoutEntry: {
+					visibility: GPUShaderStage.COMPUTE,
+					buffer: { type: 'uniform' } as GPUBufferBindingLayout,
+				},
+			})),
+		}
 	}
-	entries(_inputs: {}, inferences: AnyInference) {
+	entries(inputs: {}, inferences: AnyInference) {
 		const { device } = this
-		return this.dimensioned.map(({ name, dimension }) => {
+		const buffers: GPUBuffer[] = []
+		const entries = this.dimensioned.map(({ name, dimension }) => {
 			const buffer = device.createBuffer({
 				size: 16,
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			})
 			const value = extractInference(inferences, name, dimension, 1)
 			device.queue.writeBuffer(buffer, 0, new Uint32Array(value!))
-			return {
-				resource: { buffer },
-			}
+			buffers.push(buffer)
+			return { resource: { buffer } }
 		})
+		this.dispatchBuffers.set(inputs, buffers)
+		return entries
+	}
+	dispose(inputs: {}) {
+		const buffers = this.dispatchBuffers.get(inputs)
+		if (buffers) {
+			for (const buf of buffers) buf.destroy()
+			this.dispatchBuffers.delete(inputs)
+		}
 	}
 }
 

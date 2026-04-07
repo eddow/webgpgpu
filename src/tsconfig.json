@@ -2,7 +2,6 @@
 	"extends": "../tsconfig.root.json",
 	"compilerOptions": {
 		"declaration": false,
-		"baseUrl": "..",
 		"types": ["@webgpu/types"],
 		"lib": ["dom", "esnext"]
 	},

@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ES2023",
 		"module": "ESNext",
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"allowSyntheticDefaultImports": true,
 		"strict": true,
 		"esModuleInterop": true,

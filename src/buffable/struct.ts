@@ -1,11 +1,11 @@
 import type { AnyInference } from '../inference'
-import { Buffable, type IBuffable } from './buffable'
+import { Buffable } from './buffable'
 import type { Writer } from './io'
 
 interface StructureElement<Inferences extends AnyInference> {
 	name: string
 	offset: number
-	type: IBuffable<Inferences>
+	type: Buffable<Inferences>
 	alignment?: number
 }
 export class Struct<
@@ -16,14 +16,44 @@ export class Struct<
 	get elementSizes() {
 		return [] as [] // :-D
 	}
-	writer(_buffer: ArrayBuffer): Writer<any> {
-		throw new Error('Method not implemented: Struct.write')
-	}
-	reader(_buffer: ArrayBuffer): (index: number) => any {
-		throw new Error('Method not implemented: Struct.read')
-	}
 	get bytesPerAtomic(): number {
-		throw new Error('Method not implemented: Struct.bytesPerAtomic')
+		const desc = this.paddedDescriptor
+		if (!desc.length) return 0
+		const last = desc[desc.length - 1]
+		const end = last.offset + last.type.bytesPerAtomic
+		return end + this.paddingSize(end)
+	}
+	writer(buffer: ArrayBuffer): Writer<any> {
+		const stride = this.bytesPerAtomic
+		const target = new Uint8Array(buffer)
+		const fields = this.paddedDescriptor.map(({ name, offset, type }) => {
+			const tmp = new ArrayBuffer(type.bytesPerAtomic)
+			return { name, offset, write: type.writer(tmp), bytes: new Uint8Array(tmp) }
+		})
+		return (index: number, value: any) => {
+			const base = index * stride
+			for (const { name, offset, write, bytes } of fields) {
+				write(0, value[name])
+				target.set(bytes, base + offset)
+			}
+		}
+	}
+	reader(buffer: ArrayBuffer): (index: number) => any {
+		const stride = this.bytesPerAtomic
+		const source = new Uint8Array(buffer)
+		const fields = this.paddedDescriptor.map(({ name, offset, type }) => {
+			const tmp = new ArrayBuffer(type.bytesPerAtomic)
+			return { name, offset, read: type.reader(tmp), bytes: new Uint8Array(tmp) }
+		})
+		return (index: number) => {
+			const base = index * stride
+			const result: Record<string, any> = {}
+			for (const { name, offset, read, bytes } of fields) {
+				bytes.set(source.subarray(base + offset, base + offset + bytes.length))
+				result[name] = read(0)
+			}
+			return result
+		}
 	}
 	get wgslSpecification() {
 		return this.name
@@ -67,11 +97,8 @@ export class Struct<
 	}
 	get wgsl() {
 		const members = this.paddedDescriptor.map(
-			({ name, type, alignment, offset }) =>
-				`@align(${alignment}) @offset(${offset}) var ${name}: ${type.wgslSpecification};`
+			({ name, type, alignment }) => `@align(${alignment}) ${name}: ${type.wgslSpecification},`
 		)
-		return `struct ${this.name} {
-	${members.join('\n\t')}
-};`
+		return `struct ${this.name} {\n\t${members.join('\n\t')}\n}`
 	}
 }
